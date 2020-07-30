@@ -1,0 +1,56 @@
+# File: .gitlab-ci.yml
+# Description: File to configure our Gitlab CI
+
+# Stages
+stages:
+  - download
+  - build-deps
+  - build
+  - unit-test
+  - integration-test
+  - install
+
+.lb-setup: &lb-setup
+  - eval $(ssh-agent -s)
+  - ssh-add ~/.ssh/gitlab_rsa
+  - module load git cmake gcc/9.2 openmpi/4.0 PETSc
+
+.lb-tear-down: &lb-tear-down
+  - echo $SSH_AUTH_SOCK
+  - rm -rf $(dirname $(echo $SSH_AUTH_SOCK))
+  - ssh-agent -k
+
+cuas-dowload:
+  stage: download
+  tags:
+    - general
+  before_script: *lb-setup
+  variables:
+    GIT_STRATEGY: clone
+  script:
+    - *lb-tear-down
+
+build-cuas:
+  stage: build
+  tags:
+    - general
+  before_script: *lb-setup
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - mkdir build && cd build
+    - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DPETSC_DIR=$PETSC_ROOT ..
+    - make -j $(cat /proc/cpuinfo | grep processor | wc -l)
+    - *lb-tear-down
+
+test-cuas:
+  stage: integration-test
+  tags:
+    - general
+  before_script: *lb-setup
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - cd test/integration
+    - ./runner.sh
+
