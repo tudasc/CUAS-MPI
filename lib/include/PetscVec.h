@@ -1,3 +1,6 @@
+#ifndef CUAS_PETSCVEC_H
+#define CUAS_PETSCVEC_H
+
 #include "petsc.h"
 
 class PetscVec {
@@ -12,3 +15,5 @@ class PetscVec {
  private:
   Vec vec;
 };
+
+#endif

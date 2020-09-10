@@ -1,3 +1,6 @@
+#ifndef CUAS_PETSCMAT_H
+#define CUAS_PETSCMAT_H
+
 #include "petsc.h"
 
 class PetscMat {
@@ -23,3 +26,5 @@ class PetscMat {
 
   ~PetscMat();
 };
+
+#endif
