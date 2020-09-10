@@ -1,3 +1,6 @@
+#ifndef CUAS_PETSCGRID_H
+#define CUAS_PETSCGRID_H
+
 #include "petsc.h"
 
 class PetscGrid {
@@ -58,3 +61,5 @@ class PetscGrid {
 
   int cornerX, cornerY, cornerXGhost, cornerYGhost;
 };
+
+#endif

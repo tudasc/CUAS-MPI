@@ -1,3 +1,6 @@
+#ifndef CUAS_PHYSICALCONSTANTS_H
+#define CUAS_PHYSICALCONSTANTS_H
+
 #include <float.h>
 // Physical constants
 // Also a tiny value and NOFLOW value which are not really constants but here anyway
@@ -14,3 +17,5 @@
 #define DIRICHLET_FLAG 1       // connection to the ocean
 #define DIRICHLET_LAKE_FLAG 3  // connected to periglacial lake, not tidal influenced
 #define INVALID_FLAG 5         // from gen_bnd_mask.py
+
+#endif
