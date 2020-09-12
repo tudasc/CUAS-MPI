@@ -33,7 +33,7 @@ class PetscGrid {
   int countNonZero() const;
 
   int getLocalNumOfCols() const { return localNumOfCols; }
-  int getLocalGhostNumOfCols() const { return localNumOfCols; }
+  int getLocalGhostNumOfCols() const { return localGhostNumOfCols; }
   int getLocalNumOfRows() const { return localNumOfRows; }
   int getLocalGhostNumOfRows() const { return localGhostNumOfRows; }
   int getTotalNumOfRows() const { return totalNumOfRows; }
