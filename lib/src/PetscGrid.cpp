@@ -1,7 +1,5 @@
 #include "PetscGrid.h"
 
-#include "petsc.h"
-
 #include <iostream>
 
 PetscGrid::PetscGrid(int numOfCols, int numOfRows) : totalNumOfCols(numOfCols), totalNumOfRows(numOfRows) {

@@ -1,6 +1,5 @@
 #include "PetscGrid.h"
 
-#include "petsc.h"
 #include <iostream>
 
 int main(int argc, char **argv) {
