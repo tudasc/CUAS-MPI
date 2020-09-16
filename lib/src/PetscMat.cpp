@@ -1,7 +1,5 @@
 #include "PetscMat.h"
 
-#include "petsc.h"
-
 #include <iostream>
 
 PetscMat::PetscMat(int numOfCols, int numOfRows) : cols(numOfCols), rows(numOfRows) {

@@ -2,6 +2,7 @@
 #define CUAS_PHYSICALCONSTANTS_H
 
 #include <float.h>
+
 // Physical constants
 // Also a tiny value and NOFLOW value which are not really constants but here anyway
 #define TINY FLT_EPSILON
