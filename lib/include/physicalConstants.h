@@ -7,7 +7,7 @@
 // Also a tiny value and NOFLOW value which are not really constants but here anyway
 #define TINY FLT_EPSILON
 #define RHO_ICE 910
-#define RHOW_WATER 1000
+#define RHO_WATER 1000
 #define LATENT_HEAT 334000
 #define GRAVITY 9.81
 #define SPY 3.154e7
