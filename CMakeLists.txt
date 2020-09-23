@@ -10,6 +10,8 @@ message (STATUS "PETSC COMPILER ${PETSC_COMPILER}")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(ToolchainOptions)
+
 add_subdirectory(lib)
 add_subdirectory(tools)
 
