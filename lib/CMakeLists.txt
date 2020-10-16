@@ -2,6 +2,7 @@ add_library(cuascore
   src/PetscVec.cpp
   src/PetscMat.cpp
   src/PetscGrid.cpp
+  src/specialgradient.cpp
 )
 
 target_include_directories(cuascore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

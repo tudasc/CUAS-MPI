@@ -19,3 +19,9 @@ add_executable(grid-test
 target_link_libraries(grid-test cuascore)
 target_include_directories(grid-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
 
+add_executable(gradient-test
+  GradientTest.cpp
+)
+
+target_link_libraries(gradient-test cuascore)
+target_include_directories(gradient-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
