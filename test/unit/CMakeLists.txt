@@ -25,3 +25,10 @@ add_executable(gradient-test
 
 target_link_libraries(gradient-test cuascore)
 target_include_directories(gradient-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
+
+add_executable(nodata-test
+  noData.cpp
+)
+
+target_link_libraries(nodata-test cuascore)
+target_include_directories(nodata-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
