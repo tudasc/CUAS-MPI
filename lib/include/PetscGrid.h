@@ -42,7 +42,9 @@ class PetscGrid {
   DM getDM() { return dm; }
 
   int getCornerX() const { return cornerX; }
+  int getCornerXGhost() const { return cornerXGhost; }
   int getCornerY() const { return cornerY; }
+  int getCornerYGhost() const { return cornerYGhost; }
 
  private:
   DM dm;

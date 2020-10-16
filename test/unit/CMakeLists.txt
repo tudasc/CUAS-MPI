@@ -32,3 +32,18 @@ add_executable(nodata-test
 
 target_link_libraries(nodata-test cuascore)
 target_include_directories(nodata-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
+
+add_executable(fillMatrix-test
+  fill_matrix_test.cpp
+)
+
+target_link_libraries(fillMatrix-test cuascore)
+target_include_directories(fillMatrix-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
+
+add_executable(helper-test
+  helperTest.cpp
+)
+
+target_link_libraries(helper-test cuascore)
+target_include_directories(helper-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
+
