@@ -4,6 +4,7 @@ add_library(cuascore
   src/PetscGrid.cpp
   src/specialgradient.cpp
   src/CUASModel.cpp
+  src/parseCxxopts.cpp
 )
 
 target_include_directories(cuascore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
