@@ -48,6 +48,6 @@ void overburdenPressure(PetscGrid *result, PetscGrid *thk) {
   thk->restoreGlobal2dArr(thk2d);
 }
 
-}
+}  // namespace CUAS
 
 #endif

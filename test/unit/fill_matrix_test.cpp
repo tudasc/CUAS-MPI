@@ -1,8 +1,8 @@
 #include "CUASModel.h"
-#include "helper.h"
 #include "PetscGrid.h"
 #include "fillModel.h"
 #include "fill_matrix_coo.h"
+#include "helper.h"
 
 #include "petsc.h"
 

@@ -47,3 +47,9 @@ add_executable(helper-test
 target_link_libraries(helper-test cuascore)
 target_include_directories(helper-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
 
+add_executable(args-test
+  cxxoptsTest.cpp
+)
+
+target_link_libraries(args-test cuascore)
+target_include_directories(args-test PRIVATE ${PROJECT_SOURCE_DIR}/lib/include)
