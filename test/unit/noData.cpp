@@ -9,6 +9,7 @@ int main(int argc, char **argv) {
   fillNoData(model);
   model->init();
 
+  delete model;
   PetscFinalize();
   return 0;
 }
