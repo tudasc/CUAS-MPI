@@ -20,7 +20,9 @@ void fillNoData(CUAS::CUASModel *model) {
   model->rows = y;
 
   PetscGrid *usurf = model->usurf;
+  PetscGrid *thk = model->thk;
   PetscScalar **usurfLocal2d = usurf->getAsGlobal2dArr();
+  PetscScalar **thkGlobal2d = thk->getAsGlobal2dArr();
   int numOfCols = usurf->getLocalNumOfCols();
   int numOfRows = usurf->getLocalNumOfRows();
   int cornerX = usurf->getCornerX();
@@ -30,24 +32,23 @@ void fillNoData(CUAS::CUASModel *model) {
   for (int j = 0; j < numOfRows; ++j) {
     for (int i = 0; i < numOfCols; ++i) {
       usurfLocal2d[j][i] = val - (cornerX + i) * 100;
+      thkGlobal2d[j][i] = val - (cornerX + i) * 100;
     }
   }
   usurf->setAsGlobal2dArr(usurfLocal2d);
+  thk->setAsGlobal2dArr(thkGlobal2d);
 
   PetscGrid *topg = model->topg;
-  PetscScalar **topgLocal2d = topg->getAsGlobal2dArr();
+  PetscScalar **topgGlobal2d = topg->getAsGlobal2dArr();
   numOfCols = topg->getLocalNumOfCols();
   numOfRows = topg->getLocalNumOfRows();
 
   for (int j = 0; j < numOfRows; ++j) {
     for (int i = 0; i < numOfCols; ++i) {
-      topgLocal2d[j][i] = 0;
+      topgGlobal2d[j][i] = 0;
     }
   }
-  topg->setAsGlobal2dArr(topgLocal2d);
-
-  // as usurf and thk are exactly the same and not being changed: pointer-exchange is okay
-  model->thk = model->usurf;
+  topg->setAsGlobal2dArr(topgGlobal2d);
 
   // bnd-mask: just last row -> DIRICHLET_Flag
   // first row + first&last col -> NOFLOW_Flag
