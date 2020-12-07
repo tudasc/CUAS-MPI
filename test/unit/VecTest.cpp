@@ -12,6 +12,8 @@ int main(int argc, char **argv) {
   vec->setValue(0, 7);
   vec->assemble();
   vec->view();
+  vec->setConst(10);
+  vec->view();
   delete vec;
   PetscFinalize();
   return 0;

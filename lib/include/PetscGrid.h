@@ -18,6 +18,8 @@ class PetscGrid {
 
   // call getAsGlobal2dArr before; parameter: changed return values.
   void setAsGlobal2dArr(PetscScalar **values);
+  void setConst(PetscScalar value);
+  void setZero() { setConst(0); }
 
   void restoreLocal2dArr(PetscScalar **values);
   void restoreGlobal2dArr(PetscScalar **values);

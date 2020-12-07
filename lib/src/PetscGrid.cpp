@@ -47,6 +47,11 @@ void PetscGrid::setAsGlobal2dArr(PetscScalar **globalValues) {
   DMGlobalToLocal(dm, global, INSERT_VALUES, local);
 }
 
+void PetscGrid::setConst(PetscScalar value) {
+  VecSet(local, value);
+  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
+}
+
 void PetscGrid::viewGridWithGhost() const {
   PetscScalar **gridArr2d;
   VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &gridArr2d);

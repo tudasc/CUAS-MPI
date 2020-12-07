@@ -15,14 +15,9 @@ int main(int argc, char **argv) {
   // not sure if init is needed
   model->init();
   PetscMat *matToBeFilled = new PetscMat(200, 200);
+
   PetscGrid *Se = new PetscGrid(20, 10);
-  PetscScalar **SeGlobal = Se->getAsGlobal2dArr();
-  for (int j = 0; j < Se->getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < Se->getLocalNumOfCols(); ++i) {
-      SeGlobal[j][i] = 9.82977696 * pow(10, -5);  // normally: physconst.Ss * args.layerthickness * args.Ssmulti
-    }
-  }
-  Se->setAsGlobal2dArr(SeGlobal);
+  Se->setConst(9.82977696 * pow(10, -5));  // normally: physconst.Ss * args.layerthickness * args.Ssmulti
   PetscGrid *noFlow_mask = new PetscGrid(20, 10);
   PetscScalar **noFlow_maskGlobal = noFlow_mask->getAsGlobal2dArr();
   PetscScalar **bnd_mask2d = model->bnd_mask->getAsGlobal2dArr();
@@ -72,13 +67,8 @@ int main(int argc, char **argv) {
   noFlow_mask->restoreGlobal2dArr(noFlow_maskGlobal);
   // stolen from output from nodata test
   PetscGrid *WertfuerQ = new PetscGrid(20, 10);
-  PetscScalar **WertfuerQGlobal = WertfuerQ->getAsGlobal2dArr();
-  for (int j = 0; j < WertfuerQ->getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < WertfuerQ->getLocalNumOfCols(); ++i) {
-      WertfuerQGlobal[j][i] = 3.17 * pow(10, -8);  // normally: (args.conductivity * args.layerthickness)^args.exponent
-    }
-  }
-  WertfuerQ->setAsGlobal2dArr(WertfuerQGlobal);
+  WertfuerQ->setConst(3.17 * pow(10, -8));
+
   PetscScalar dt = 43200;
   PetscScalar theta = 1;
   // different values
