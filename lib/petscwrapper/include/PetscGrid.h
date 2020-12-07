@@ -18,21 +18,24 @@ class PetscGrid {
 
   // call getAsGlobal2dArr before; parameter: changed return values.
   void setAsGlobal2dArr(PetscScalar **values);
-  void setConst(PetscScalar value);
-  void setZero() { setConst(0); }
 
   void restoreLocal2dArr(PetscScalar **values);
   void restoreGlobal2dArr(PetscScalar **values);
 
-  Vec getLocalVec() { return local; }
-  Vec getGlobalVec() { return global; }
-
   void setGlobalVecAndUpdate(Vec glob);
+
+  void setConst(PetscScalar value);
+  void setZero() { setConst(0); }
+
+  int countNonZero() const;
 
   void viewGridWithGhost() const;
   void viewGridNoGhost() const;
 
-  int countNonZero() const;
+/* getter */
+
+  Vec getLocalVec() { return local; }
+  Vec getGlobalVec() { return global; }
 
   int getLocalNumOfCols() const { return localNumOfCols; }
   int getLocalGhostNumOfCols() const { return localGhostNumOfCols; }
@@ -41,12 +44,12 @@ class PetscGrid {
   int getTotalNumOfRows() const { return totalNumOfRows; }
   int getTotalNumOfCols() const { return totalNumOfCols; }
 
-  DM getDM() { return dm; }
-
   int getCornerX() const { return cornerX; }
   int getCornerXGhost() const { return cornerXGhost; }
   int getCornerY() const { return cornerY; }
   int getCornerYGhost() const { return cornerYGhost; }
+
+  DM getDM() { return dm; }
 
  private:
   DM dm;
