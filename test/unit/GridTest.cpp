@@ -9,9 +9,7 @@ int main(int argc, char **argv) {
 
   PetscGrid *grid = new PetscGrid(10, 10);
 
-  Vec myglobal = grid->getGlobalVec();
-  VecSet(myglobal, 0);
-  grid->setGlobalVecAndUpdate(myglobal);
+  grid->setZero();
 
   PetscScalar **mylocalarr, **myglobarr;
   mylocalarr = grid->getAsLocal2dArr();
@@ -28,9 +26,19 @@ int main(int argc, char **argv) {
   myglobarr = grid->getAsGlobal2dArr();
   grid->restoreGlobal2dArr(myglobarr);
 
-  // only makes sense to view one at a time.
+  // they should all be the rank
   grid->viewGridWithGhost();
-  // grid->viewGridNoGhost();
+  grid->viewGridNoGhost();
+
+  // all values should be 5
+  grid->setConst(5);
+  grid->viewGridNoGhost();
+  grid->viewGridWithGhost();
+
+  // all values should be 0
+  grid->setZero();
+  grid->viewGridNoGhost();
+  grid->viewGridWithGhost();
 
   int nonZero = grid->countNonZero();
   if (rank == 0) {

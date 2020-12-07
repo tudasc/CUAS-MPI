@@ -38,17 +38,7 @@ void fillNoData(CUAS::CUASModel *model) {
   usurf->setAsGlobal2dArr(usurfLocal2d);
   thk->setAsGlobal2dArr(thkGlobal2d);
 
-  PetscGrid *topg = model->topg;
-  PetscScalar **topgGlobal2d = topg->getAsGlobal2dArr();
-  numOfCols = topg->getLocalNumOfCols();
-  numOfRows = topg->getLocalNumOfRows();
-
-  for (int j = 0; j < numOfRows; ++j) {
-    for (int i = 0; i < numOfCols; ++i) {
-      topgGlobal2d[j][i] = 0;
-    }
-  }
-  topg->setAsGlobal2dArr(topgGlobal2d);
+  model->topg->setZero();
 
   // bnd-mask: just last row -> DIRICHLET_Flag
   // first row + first&last col -> NOFLOW_Flag
@@ -80,16 +70,7 @@ void fillNoData(CUAS::CUASModel *model) {
   bnd_mask->setAsGlobal2dArr(bnd_maskLocal2d);
 
   PetscGrid *bmelt = model->Q;
-  PetscScalar **bmeltLocal2d = bmelt->getAsGlobal2dArr();
-  numOfCols = bmelt->getLocalNumOfCols();
-  numOfRows = bmelt->getLocalNumOfRows();
-
-  for (int i = 0; i < numOfCols; ++i) {
-    for (int j = 0; j < numOfRows; ++j) {
-      bmeltLocal2d[j][i] = 1;
-    }
-  }
-  bmelt->setAsGlobal2dArr(bmeltLocal2d);
+  bmelt->setConst(1);
 
   model->time_forcing = NULL;
 }

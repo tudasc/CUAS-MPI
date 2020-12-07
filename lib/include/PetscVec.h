@@ -8,12 +8,16 @@ class PetscVec {
   PetscVec(int size);
   ~PetscVec();
   void setValue(int position, PetscScalar value);
+  void setConst(PetscScalar value);
+  void setZero() { setConst(0); };
   void assemble();
   void view();
   void zero();
+  int getSize() const { return size; }
 
  private:
   Vec vec;
+  const int size;
 };
 
 #endif

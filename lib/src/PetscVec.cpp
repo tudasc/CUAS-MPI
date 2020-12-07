@@ -1,6 +1,6 @@
 #include "PetscVec.h"
 
-PetscVec::PetscVec(int size) {
+PetscVec::PetscVec(int size) : size(size) {
   VecCreate(PETSC_COMM_WORLD, &vec);
   VecSetSizes(vec, PETSC_DECIDE, size);
   VecSetFromOptions(vec);
@@ -12,6 +12,8 @@ void PetscVec::assemble() {
   VecAssemblyBegin(vec);
   VecAssemblyEnd(vec);
 }
+
+void PetscVec::setConst(PetscScalar value) { VecSet(vec, value); }
 
 void PetscVec::view() { VecView(vec, PETSC_VIEWER_STDOUT_WORLD); }
 
