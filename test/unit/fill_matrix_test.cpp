@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   Teff->setAsGlobal2dArr(TeffGlobal);
   // u_n = select_initial_head... --> standard: nzero --> pressure2head
   PetscGrid *u_n = new PetscGrid(20, 10);
-  CUAS::pressure2head(u_n, model->p_ice, model->topg, 0.0);
+  CUAS::pressure2head(*u_n, *model->p_ice, *model->topg, 0.0);
   PetscGrid *dirichlet_mask = new PetscGrid(20, 10);
   PetscScalar **dirichlet_maskGlobal = dirichlet_mask->getAsGlobal2dArr();
   bool dirich_mask1;
@@ -73,10 +73,10 @@ int main(int argc, char **argv) {
   PetscScalar theta = 1;
   // different values
   PetscGrid *dirichlet_values = new PetscGrid(20, 10);
-  CUAS::pressure2head(dirichlet_values, model->p_ice, model->topg, 0.0);
+  CUAS::pressure2head(*dirichlet_values, *model->p_ice, *model->topg, 0.0);
   PetscVec *b = new PetscVec(model->Ncols * model->Nrows);
-  CUAS::fill_matrix_coo(matToBeFilled, b, model->Nrows, model->Nrows, Se, Teff, model->dx, dt, theta, u_n, WertfuerQ,
-                        dirichlet_values, dirichlet_mask);
+  CUAS::fill_matrix_coo(*matToBeFilled, *b, model->Nrows, model->Nrows, *Se, *Teff, model->dx, dt, theta, *u_n,
+                        *WertfuerQ, *dirichlet_values, *dirichlet_mask);
   matToBeFilled->viewGlobal();
   b->view();
   PetscFinalize();

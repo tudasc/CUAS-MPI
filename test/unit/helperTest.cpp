@@ -24,9 +24,9 @@ int main(int argc, char **argv) {
   pressure->setAsGlobal2dArr(pressure2d);
   bed_elevation->setAsGlobal2dArr(bed_elevation2d);
   head->setAsGlobal2dArr(head2d);
-  CUAS::pressure2head(head, pressure, bed_elevation, sea_level);
-  CUAS::pressure2head(pressure, head, bed_elevation, sea_level);
-  CUAS::overburdenPressure(pressure, head);
+  CUAS::pressure2head(*head, *pressure, *bed_elevation, sea_level);
+  CUAS::pressure2head(*pressure, *head, *bed_elevation, sea_level);
+  CUAS::overburdenPressure(*pressure, *head);
   delete pressure;
   delete bed_elevation;
   delete head;

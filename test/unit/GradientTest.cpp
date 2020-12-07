@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
   grid->setAsGlobal2dArr(myglobarr);
   grid->restoreLocal2dArr(mylocalarr);
   PetscGrid *gradient_1 = new PetscGrid(5, 5);
-  CUAS::gradient2(grid, gradient_1, 1.0);
+  CUAS::gradient2(*grid, *gradient_1, 1.0);
   PetscGrid *gradient_2 = new PetscGrid(5, 5);
-  CUAS::gradient2_central(grid, gradient_2, 1.0);
+  CUAS::gradient2_central(*grid, *gradient_2, 1.0);
   gradient_1->viewGridNoGhost();
   gradient_2->viewGridNoGhost();
   delete gradient_1;

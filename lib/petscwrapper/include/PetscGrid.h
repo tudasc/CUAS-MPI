@@ -32,7 +32,7 @@ class PetscGrid {
   void viewGridWithGhost() const;
   void viewGridNoGhost() const;
 
-/* getter */
+  /* getter */
 
   Vec getLocalVec() { return local; }
   Vec getGlobalVec() { return global; }
