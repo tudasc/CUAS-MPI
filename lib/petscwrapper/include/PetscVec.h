@@ -11,8 +11,9 @@ class PetscVec {
   void setConst(PetscScalar value);
   void setZero() { setConst(0); };
   void assemble();
-  void view();
   void zero();
+
+  Vec getPetscRaw() { return vec; }
   int getSize() const { return size; }
 
  private:

@@ -1,5 +1,7 @@
 #include "specialgradient.h"
 
+#include "petscdump.h"
+
 int main(int argc, char **argv) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   int rank;
@@ -22,8 +24,8 @@ int main(int argc, char **argv) {
   CUAS::gradient2(*grid, *gradient_1, 1.0);
   PetscGrid *gradient_2 = new PetscGrid(5, 5);
   CUAS::gradient2_central(*grid, *gradient_2, 1.0);
-  gradient_1->viewGridNoGhost();
-  gradient_2->viewGridNoGhost();
+  dump(*gradient_1, false);
+  dump(*gradient_2, false);
   delete gradient_1;
   delete gradient_2;
   delete grid;

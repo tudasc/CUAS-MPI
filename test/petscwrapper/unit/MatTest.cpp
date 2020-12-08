@@ -1,5 +1,7 @@
 #include "PetscMat.h"
 
+#include "petscdump.h"
+
 #include <iostream>
 
 int main(int argc, char **argv) {
@@ -16,12 +18,11 @@ int main(int argc, char **argv) {
     mat->setValue(i, i, 100);
   }
   mat->assemble();
-  mat->viewGlobal();
+  dump(*mat, true);
   mat->setValue(3, 2, 500);
   mat->assemble();
-  mat->viewGlobal();
-  Mat mat2 = mat->getMat();
+  dump(*mat, true);
   mat->assemble();
-  mat->viewLocal();
+  dump(*mat, false);
   delete mat;
 }
