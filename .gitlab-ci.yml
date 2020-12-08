@@ -51,6 +51,6 @@ test-cuas:
   variables:
     GIT_STRATEGY: none
   script:
-    - cd test/integration
+    - cd test/cuascore/integration
     - ./runner.sh
 

@@ -18,7 +18,6 @@ add_subdirectory(tools)
 option(BUILD_TESTS "Build test programs" ON)
 
 if(BUILD_TESTS)
-  add_subdirectory(test/unit)
-  add_subdirectory(test/integration)
+  add_subdirectory(test)
 endif()
 
