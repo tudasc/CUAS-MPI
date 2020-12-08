@@ -16,15 +16,15 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       cxxopts::value<std::string>()->default_value("12 hourse"))("saveEvery", "Save every nth timestep to netcdf.",
                                                                  cxxopts::value<int>()->default_value("100"))(
       "conductivity", "Conductivity of layer.", cxxopts::value<PetscScalar>()->default_value("10"))(
-      "dochannels", "Evolve channels?")("disableUnconfied", "Disable unconfied aquifer case.")(
+      "dochannels", "Evolve channels?")("disableUnconfined", "Disable unconfined aquifer case.")(
       "flowConstant", "Ice Flow Constant A.", cxxopts::value<PetscScalar>()->default_value("5e-25"))(
       "roughnessFactor", "Roughness factor for opening term.", cxxopts::value<PetscScalar>()->default_value("1.0"))(
       "supplyMultiplier", "Multiplier for supply.", cxxopts::value<PetscScalar>()->default_value("1.0"))(
       "layerThickness", "Water layer thickness (m)", cxxopts::value<PetscScalar>()->default_value("0.1"))(
-      "unconfSmooth", "Unconfied confined transition (m)", cxxopts::value<PetscScalar>()->default_value("0.0"))(
+      "unconfSmooth", "Unconfined confined transition (m)", cxxopts::value<PetscScalar>()->default_value("0.0"))(
       "restart", "Restart from this file.", cxxopts::value<std::string>()->default_value(""))(
       "Ssmulti", "Multiplier for specific storage Ss.", cxxopts::value<PetscScalar>()->default_value("1.0"))(
-      "Sy", "Specific yield for unconfied.", cxxopts::value<PetscScalar>()->default_value("0.4"))(
+      "Sy", "Specific yield for unconfined.", cxxopts::value<PetscScalar>()->default_value("0.4"))(
       "Texp", "Exponent of T.", cxxopts::value<PetscScalar>()->default_value("1"))(
       "noSmoothMelt", "Smooth melt term before computing change in T?")(
       "loopForcing",
@@ -54,7 +54,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.saveEvery = result["saveEvery"].as<int>();
   args.conductivity = result["conductivity"].as<PetscScalar>();
   args.dochannels = result["dochannels"].as<bool>();
-  args.disableUnconfied = result["disableUnconfied"].as<bool>();
+  args.disableUnconfined = result["disableUnconfined"].as<bool>();
   args.flowConstant = result["flowConstant"].as<PetscScalar>();
   args.roughnessFactor = result["roughnessFactor"].as<PetscScalar>();
   args.supplyMultiplier = result["supplyMultiplier"].as<PetscScalar>();
