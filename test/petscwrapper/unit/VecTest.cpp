@@ -1,5 +1,7 @@
 #include "PetscVec.h"
 
+#include "petscdump.h"
+
 #include <iostream>
 
 int main(int argc, char **argv) {
@@ -11,9 +13,9 @@ int main(int argc, char **argv) {
   vec->zero();
   vec->setValue(0, 7);
   vec->assemble();
-  vec->view();
+  dump(*vec);
   vec->setConst(10);
-  vec->view();
+  dump(*vec);
   delete vec;
   PetscFinalize();
   return 0;

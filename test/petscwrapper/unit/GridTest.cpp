@@ -1,5 +1,7 @@
 #include "PetscGrid.h"
 
+#include "petscdump.h"
+
 #include <iostream>
 
 int main(int argc, char **argv) {
@@ -27,18 +29,18 @@ int main(int argc, char **argv) {
   grid->restoreGlobal2dArr(myglobarr);
 
   // they should all be the rank
-  grid->viewGridWithGhost();
-  grid->viewGridNoGhost();
+  dump(*grid, true);
+  dump(*grid, false);
 
   // all values should be 5
   grid->setConst(5);
-  grid->viewGridNoGhost();
-  grid->viewGridWithGhost();
+  dump(*grid, true);
+  dump(*grid, false);
 
   // all values should be 0
   grid->setZero();
-  grid->viewGridNoGhost();
-  grid->viewGridWithGhost();
+  dump(*grid, true);
+  dump(*grid, false);
 
   int nonZero = grid->countNonZero();
   if (rank == 0) {

@@ -15,8 +15,6 @@ void PetscVec::assemble() {
 
 void PetscVec::setConst(PetscScalar value) { VecSet(vec, value); }
 
-void PetscVec::view() { VecView(vec, PETSC_VIEWER_STDOUT_WORLD); }
-
 void PetscVec::zero() { VecZeroEntries(vec); }
 
 PetscVec::~PetscVec() { VecDestroy(&vec); }

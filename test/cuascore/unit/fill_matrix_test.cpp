@@ -1,10 +1,10 @@
 #include "CUASModel.h"
-#include "PetscGrid.h"
 #include "fillModel.h"
 #include "fill_matrix_coo.h"
 #include "helper.h"
 
-#include "petsc.h"
+#include "PetscGrid.h"
+#include "petscdump.h"
 
 #include <math.h>
 
@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
   PetscVec *b = new PetscVec(model->Ncols * model->Nrows);
   CUAS::fill_matrix_coo(*matToBeFilled, *b, model->Nrows, model->Nrows, *Se, *Teff, model->dx, dt, theta, *u_n,
                         *WertfuerQ, *dirichlet_values, *dirichlet_mask);
-  matToBeFilled->viewGlobal();
-  b->view();
+  dump(*matToBeFilled, true);
+  dump(*b);
   PetscFinalize();
   return 0;
 }

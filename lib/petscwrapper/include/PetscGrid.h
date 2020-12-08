@@ -29,9 +29,6 @@ class PetscGrid {
 
   int countNonZero() const;
 
-  void viewGridWithGhost() const;
-  void viewGridNoGhost() const;
-
   /* getter */
 
   Vec getLocalVec() { return local; }

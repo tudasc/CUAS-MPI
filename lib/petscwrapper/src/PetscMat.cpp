@@ -16,8 +16,4 @@ void PetscMat::assemble() {
   MatAssemblyEnd(M, MAT_FINAL_ASSEMBLY);
 }
 
-void PetscMat::viewGlobal() const { MatView(M, PETSC_VIEWER_STDOUT_WORLD); }
-
-void PetscMat::viewLocal() const { MatView(M, PETSC_VIEWER_STDOUT_SELF); }
-
 PetscMat::~PetscMat() { MatDestroy(&M); }
