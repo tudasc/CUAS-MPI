@@ -15,7 +15,7 @@ struct CUASArgs {
   int saveEvery;
   PetscScalar conductivity;
   bool dochannels;
-  bool disableUnconfied;
+  bool disableUnconfined;
   PetscScalar flowConstant;
   PetscScalar roughnessFactor;
   PetscScalar supplyMultiplier;
