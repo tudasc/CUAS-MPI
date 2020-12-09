@@ -5,15 +5,13 @@
 int Factorial(int n) {
   int r = 1;
   for (int i = 1; i <= n; ++i) {
-    r*=i;
+    r *= i;
   }
   return r;
 }
 
 // Tests factorial of 0.
-TEST(FactorialTest, HandlesZeroInput) {
-  EXPECT_EQ(Factorial(0), 1);
-}
+TEST(FactorialTest, HandlesZeroInput) { EXPECT_EQ(Factorial(0), 1); }
 
 // Tests factorial of positive numbers.
 TEST(FactorialTest, HandlesPositiveInput) {
@@ -23,7 +21,7 @@ TEST(FactorialTest, HandlesPositiveInput) {
   EXPECT_EQ(Factorial(8), 40320);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   int result = 0;
 
   ::testing::InitGoogleTest(&argc, argv);

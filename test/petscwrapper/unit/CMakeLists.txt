@@ -1,8 +1,3 @@
-add_executable(vec-test
-  VecTest.cpp
-)
-target_link_libraries(vec-test cuascore)
-
 add_executable(mat-test
   MatTest.cpp
 )
@@ -20,9 +15,16 @@ target_link_libraries(grid-test cuascore)
 #target_link_libraries(example gtest_main)
 #add_test(NAME example_test COMMAND example)
 
+add_executable(test-petscvec
+  VecTest.cpp
+)
+target_link_libraries(test-petscvec petscwrapper)
+target_link_libraries(test-petscvec gtest)
+set_property(TARGET test-petscvec PROPERTY CXX_STANDARD 14)
+
 add_executable(test-petscsolver
-        SolverTest.cpp
-        )
+SolverTest.cpp
+)
 target_link_libraries(test-petscsolver petscwrapper)
 target_link_libraries(test-petscsolver gtest)
 set_property(TARGET test-petscsolver PROPERTY CXX_STANDARD 14)
