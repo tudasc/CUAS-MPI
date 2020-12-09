@@ -19,6 +19,8 @@ class PetscVec {
  private:
   Vec vec;
   const int size;
+
+  friend class PetscSolver;
 };
 
 #endif

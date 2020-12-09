@@ -5,7 +5,7 @@
 
 class PetscMat {
  private:
-  Mat M;
+  Mat mat;
   const int cols;
   const int rows;
 
@@ -13,7 +13,7 @@ class PetscMat {
   // constructor
   PetscMat(int numOfRows, int numOfCols);
   // getter
-  Mat getPetscRaw() { return M; }
+  Mat getPetscRaw() { return mat; }
   int getCols() const { return cols; }
   int getRows() const { return rows; }
   // setter
@@ -22,6 +22,8 @@ class PetscMat {
   void assemble();
 
   ~PetscMat();
+
+  friend class PetscSolver;
 };
 
 #endif
