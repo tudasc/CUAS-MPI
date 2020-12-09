@@ -55,8 +55,8 @@ test-petscwrapper:
   script:
     - cd build/test/petscwrapper/unit
     - mpirun -n 5 --timeout 10 ./test-petscvec
+    - mpirun -n 5 --timeout 10 ./test-petscmat
     - mpirun -n 4 --timeout 10 ./test-petscsolver
-
 
 test-cuas:
   stage: integration-test

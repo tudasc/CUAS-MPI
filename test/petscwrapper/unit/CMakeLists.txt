@@ -1,12 +1,9 @@
-add_executable(mat-test
-  MatTest.cpp
-)
-target_link_libraries(mat-test cuascore)
-
-add_executable(grid-test
+add_executable(test-grid
   GridTest.cpp
 )
-target_link_libraries(grid-test cuascore)
+target_link_libraries(test-grid cuascore)
+target_link_libraries(test-grid gtest)
+set_property(TARGET test-grid PROPERTY CXX_STANDARD 14)
 
 
 
@@ -22,9 +19,16 @@ target_link_libraries(test-petscvec petscwrapper)
 target_link_libraries(test-petscvec gtest)
 set_property(TARGET test-petscvec PROPERTY CXX_STANDARD 14)
 
+add_executable(test-petscmat
+        MatTest.cpp
+        )
+target_link_libraries(test-petscmat cuascore)
+target_link_libraries(test-petscmat gtest)
+set_property(TARGET test-petscmat PROPERTY CXX_STANDARD 14)
+
 add_executable(test-petscsolver
-SolverTest.cpp
-)
+        SolverTest.cpp
+        )
 target_link_libraries(test-petscsolver petscwrapper)
 target_link_libraries(test-petscsolver gtest)
 set_property(TARGET test-petscsolver PROPERTY CXX_STANDARD 14)
