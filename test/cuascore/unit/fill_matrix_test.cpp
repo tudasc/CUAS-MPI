@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   PetscGrid *dirichlet_values = new PetscGrid(20, 10);
   CUAS::pressure2head(*dirichlet_values, *model->p_ice, *model->topg, 0.0);
   PetscVec *b = new PetscVec(model->Ncols * model->Nrows);
-  CUAS::fill_matrix_coo(*matToBeFilled, *b, model->Nrows, model->Nrows, *Se, *Teff, model->dx, dt, theta, *u_n,
+  CUAS::fill_matrix_coo(*matToBeFilled, *b, model->Nrows, model->Ncols, *Se, *Teff, model->dx, dt, theta, *u_n,
                         *WertfuerQ, *dirichlet_values, *dirichlet_mask);
   dump(*matToBeFilled, true);
   dump(*b);
