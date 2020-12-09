@@ -11,6 +11,18 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   bnd_mask = new PetscGrid(numOfCols, numOfRows);
   Q = new PetscGrid(numOfCols, numOfRows);
   p_ice = new PetscGrid(numOfCols, numOfRows);
+
+  // grids for setup
+  S = new PetscGrid(numOfCols, numOfRows);
+  Sp = new PetscGrid(numOfCols, numOfRows);
+  K = new PetscGrid(numOfCols, numOfRows);
+  T = new PetscGrid(numOfCols, numOfRows);
+  T_n = new PetscGrid(numOfCols, numOfRows);
+  no_flow_mask = new PetscGrid(numOfCols, numOfRows);
+  grad_mask = new PetscGrid(numOfCols, numOfRows);
+  sea_level_forcing_mask = new PetscGrid(numOfCols, numOfRows);
+  dirichlet_mask = new PetscGrid(numOfCols, numOfRows);
+  dirichlet_values = new PetscGrid(numOfCols, numOfRows);
 }
 
 // call init before using Model but after thk has been set
@@ -36,6 +48,18 @@ CUASModel::~CUASModel() {
   delete bnd_mask;
   delete Q;
   delete p_ice;
+
+  // delete grids for setup
+  delete S;
+  delete Sp;
+  delete K;
+  delete T;
+  delete T_n;
+  delete no_flow_mask;
+  delete grad_mask;
+  delete sea_level_forcing_mask;
+  delete dirichlet_mask;
+  delete dirichlet_values;
 }
 
 }  // namespace CUAS

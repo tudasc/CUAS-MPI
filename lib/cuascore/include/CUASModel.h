@@ -20,6 +20,19 @@ class CUASModel {
   PetscGrid *bnd_mask;
   PetscGrid *Q;
   PetscGrid *p_ice;
+
+  // grids for setup
+  PetscGrid *S;
+  PetscGrid *Sp;
+  PetscGrid *K;
+  PetscGrid *T;
+  PetscGrid *T_n;
+  PetscGrid *no_flow_mask;
+  PetscGrid *grad_mask;
+  PetscGrid *sea_level_forcing_mask;
+  PetscGrid *dirichlet_mask;
+  PetscGrid *dirichlet_values;
+
   // type not sure; if NULL: assume constant forcing
   void *time_forcing = nullptr;
 
