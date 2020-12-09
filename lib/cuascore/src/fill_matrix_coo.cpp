@@ -28,7 +28,7 @@ void fill_matrix_coo(PetscMat &A, PetscVec &b, int const Nx, int const Ny, Petsc
   PetscScalar S_P, d_N, d_S, d_W, d_E, d_P;
   PetscScalar A_N, A_S, A_W, A_E, A_P;
   // not sure if needed
-  b.zero();
+  b.setZero();
   int p = 0;
   int currJ = 0;
   int currI = 0;

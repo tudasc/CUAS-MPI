@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
 
   PetscVec *vec = new PetscVec(5);
-  vec->zero();
+  vec->setZero();
   vec->setValue(0, 7);
   vec->assemble();
   dump(*vec);
