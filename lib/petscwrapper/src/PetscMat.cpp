@@ -1,7 +1,5 @@
 #include "PetscMat.h"
 
-#include <iostream>
-
 PetscMat::PetscMat(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
   MatCreate(PETSC_COMM_WORLD, &mat);
   MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, numOfRows, numOfCols);

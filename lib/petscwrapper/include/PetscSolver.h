@@ -4,6 +4,8 @@
 #include "PetscMat.h"
 #include "PetscVec.h"
 
+#include "petsc.h"
+
 class PetscSolver {
  public:
   inline void solve(PetscMat const &A, PetscVec const &b, PetscVec &solution) {

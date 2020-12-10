@@ -1,7 +1,5 @@
 #include "PetscMat.h"
 
-#include "petscdump.h"
-
 #include "gtest/gtest.h"
 
 #include <memory>

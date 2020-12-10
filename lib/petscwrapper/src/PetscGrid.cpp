@@ -1,7 +1,5 @@
 #include "PetscGrid.h"
 
-#include <iostream>
-
 PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
     : totalNumOfCols(numOfCols), totalNumOfRows(numOfRows) {
   DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,

@@ -1,5 +1,9 @@
 #include "parseCxxopts.h"
 
+#include "cxxopts.hpp"
+
+namespace CUAS {
+
 void parseArgs(int argc, char **argv, CUASArgs &args) {
   cxxopts::Options options("CUAS", "MPI parallel version of CUAS");
 
@@ -74,3 +78,5 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
 }
+
+}  // namespace CUAS

@@ -4,7 +4,7 @@
 #include "CUASModel.h"
 #include "physicalConstants.h"
 
-void fillNoData(CUAS::CUASModel *model) {
+void fillNoData(CUAS::CUASModel &model) {
   PetscScalar x[20];
   PetscScalar y[10];
   // initialize x and y like in python: x = np.arange(20) * 1000.0
@@ -16,11 +16,11 @@ void fillNoData(CUAS::CUASModel *model) {
     }
   }
 
-  model->cols = x;
-  model->rows = y;
+  model.cols = x;
+  model.rows = y;
 
-  PetscGrid *usurf = model->usurf;
-  PetscGrid *thk = model->thk;
+  PetscGrid *usurf = model.usurf;
+  PetscGrid *thk = model.thk;
   PetscScalar **usurfLocal2d = usurf->getAsGlobal2dArr();
   PetscScalar **thkGlobal2d = thk->getAsGlobal2dArr();
   int numOfCols = usurf->getLocalNumOfCols();
@@ -38,12 +38,12 @@ void fillNoData(CUAS::CUASModel *model) {
   usurf->setAsGlobal2dArr(usurfLocal2d);
   thk->setAsGlobal2dArr(thkGlobal2d);
 
-  model->topg->setZero();
+  model.topg->setZero();
 
   // bnd-mask: just last row -> DIRICHLET_Flag
   // first row + first&last col -> NOFLOW_Flag
   // inside: 0
-  PetscGrid *bnd_mask = model->bnd_mask;
+  auto bnd_mask = model.bnd_mask;
   PetscScalar **bnd_maskLocal2d = bnd_mask->getAsGlobal2dArr();
   numOfCols = bnd_mask->getLocalNumOfCols();
   numOfRows = bnd_mask->getLocalNumOfRows();
@@ -69,10 +69,10 @@ void fillNoData(CUAS::CUASModel *model) {
   }
   bnd_mask->setAsGlobal2dArr(bnd_maskLocal2d);
 
-  PetscGrid *bmelt = model->Q;
+  PetscGrid *bmelt = model.Q;
   bmelt->setConst(1);
 
-  model->time_forcing = NULL;
+  model.time_forcing = NULL;
 }
 
 #endif

@@ -1,6 +1,4 @@
-#include "PetscMat.h"
-
-#include "petscdump.h"
+#include "PetscGrid.h"
 
 #include "gtest/gtest.h"
 
