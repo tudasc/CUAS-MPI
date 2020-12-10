@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-PetscMat::PetscMat(int numOfCols, int numOfRows) : cols(numOfCols), rows(numOfRows) {
+PetscMat::PetscMat(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
   MatCreate(PETSC_COMM_WORLD, &M);
-  MatSetSizes(M, PETSC_DECIDE, PETSC_DECIDE, numOfCols, numOfRows);
+  MatSetSizes(M, PETSC_DECIDE, PETSC_DECIDE, numOfRows, numOfCols);
   MatSetFromOptions(M);
   MatSetUp(M);
 }
