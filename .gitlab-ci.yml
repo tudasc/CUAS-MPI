@@ -13,7 +13,9 @@ stages:
 .lb-setup: &lb-setup
   - eval $(ssh-agent -s)
   - ssh-add ~/.ssh/gitlab_rsa
-  - module load git cmake gcc/9.2 openmpi/4.0 PETSc
+  - module use /work/projects/project01298/.modules
+  - module load ISSMProject/GCC83 petsc
+#  - module load git cmake gcc/9.2 openmpi/4.0 PETSc
 
 .lb-tear-down: &lb-tear-down
   - echo $SSH_AUTH_SOCK
@@ -42,6 +44,17 @@ build-cuas:
     - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DPETSC_DIR=$PETSC_ROOT ..
     - make -j $(cat /proc/cpuinfo | grep processor | wc -l)
     - *lb-tear-down
+
+test-petscwrapper:
+  stage: unit-test
+  tags:
+    - general
+  before_script: *lb-setup
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - cd build/test/petscwrapper/unit
+    - mpirun -n 4 --timeout 10 ./test-petscsolver
 
 test-cuas:
   stage: integration-test
