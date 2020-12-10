@@ -9,9 +9,8 @@ class PetscVec {
   ~PetscVec();
   void setValue(int position, PetscScalar value);
   void setConst(PetscScalar value);
-  void setZero() { setConst(0); };
+  void setZero() { VecZeroEntries(vec); };
   void assemble();
-  void zero();
 
   Vec getPetscRaw() { return vec; }
   int getSize() const { return size; }
