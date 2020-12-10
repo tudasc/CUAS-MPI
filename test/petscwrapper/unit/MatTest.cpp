@@ -23,6 +23,6 @@ int main(int argc, char **argv) {
   mat->assemble();
   dump(*mat, true);
   mat->assemble();
-  dump(*mat, false);
+  //dump(*mat, false);
   delete mat;
 }

@@ -11,7 +11,7 @@ class PetscMat {
 
  public:
   // constructor
-  PetscMat(int numOfCols, int numOfRows);
+  PetscMat(int numOfRows, int numOfCols);
   // getter
   Mat getPetscRaw() { return M; }
   int getCols() const { return cols; }
