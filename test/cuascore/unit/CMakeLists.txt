@@ -1,8 +1,3 @@
-add_executable(gradient-test
-  GradientTest.cpp
-)
-target_link_libraries(gradient-test cuascore)
-
 add_executable(nodata-test
   noData.cpp
 )
@@ -41,3 +36,10 @@ add_executable(test-binarydialation
 target_link_libraries(test-binarydialation cuascore)
 target_link_libraries(test-binarydialation gtest)
 set_property(TARGET test-binarydialation PROPERTY CXX_STANDARD 14)
+
+add_executable(test-gradient
+        GradientTest.cpp
+        )
+target_link_libraries(test-gradient cuascore)
+target_link_libraries(test-gradient gtest)
+set_property(TARGET test-gradient PROPERTY CXX_STANDARD 14)
