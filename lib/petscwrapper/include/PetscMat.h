@@ -3,6 +3,27 @@
 
 #include "petsc.h"
 
+/*
+ * Matrices in PETSc are stored row major
+ * access values[j * cols + i]
+ * keep in mind that we ues Compressed Sparse Row (CSR) structure
+ * therefore the following is only an abstraction
+ *
+ * +------------------>(cols, i, n)
+ * | 0  1  2  3  4  5  6
+ * | 7  8  9 10 11 12 13
+ * |
+ * v
+ * (rows, j, m)
+ *
+ * +------------------>(cols, i, n)
+ * | process 0
+ * | process 1
+ * | process 2
+ * v
+ * (rows, j, m)
+ */
+
 class PetscMat {
  private:
   Mat mat;
