@@ -5,6 +5,7 @@
 #include "PetscVec.h"
 
 class PetscSolver {
+ public:
   inline void solve(PetscMat const &A, PetscVec const &b, PetscVec &solution) {
     KSP ksp;
     PC pc;
