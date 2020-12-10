@@ -23,6 +23,11 @@ add_executable(args-test
 )
 target_link_libraries(args-test cuascore)
 
+add_executable(setup-test
+  SetupTest.cpp
+)
+target_link_libraries(setup-test cuascore)
+set_property(TARGET setup-test PROPERTY CXX_STANDARD 14)
 
 
 # Now simply link against gtest or gtest_main as needed. Eg
