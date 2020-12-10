@@ -20,9 +20,9 @@ inline void dump(PetscGrid &grid, bool showGhostCells = true) {
       MPI_Barrier(PETSC_COMM_WORLD);
       if (rank == proc) {
         std::cout << "process num: " << rank << std::endl;
-        for (int j = 0; j < grid.getLocalGhostNumOfRows(); ++j) {
-          for (int i = 0; i < grid.getLocalGhostNumOfCols(); ++i) {
-            std::cout << gridArr2d[j][i];
+        for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+          for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
+            std::cout << gridArr2d[i][j];
           }
           std::cout << std::endl;
         }
@@ -39,9 +39,9 @@ inline void dump(PetscGrid &grid, bool showGhostCells = true) {
       MPI_Barrier(PETSC_COMM_WORLD);
       if (rank == proc) {
         std::cout << "process num: " << rank << std::endl;
-        for (int j = 0; j < grid.getLocalNumOfRows(); ++j) {
-          for (int i = 0; i < grid.getLocalNumOfCols(); ++i) {
-            std::cout << gridArr2d[j][i];
+        for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+          for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+            std::cout << gridArr2d[i][j];
           }
           std::cout << std::endl;
         }
