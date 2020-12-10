@@ -11,7 +11,7 @@
 int main(int argc, char **argv) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   CUAS::CUASModel *model = new CUAS::CUASModel(20, 10);
-  fillNoData(model);
+  fillNoData(*model);
   // not sure if init is needed
   model->init();
   PetscMat *matToBeFilled = new PetscMat(200, 200);

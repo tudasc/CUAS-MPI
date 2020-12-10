@@ -1,11 +1,11 @@
 #ifndef CUAS_PARSECXXOPTS_H
 #define CUAS_PARSECXXOPTS_H
 
-#include "cxxopts.hpp"
-
 #include "petsc.h"
 
 #include <string.h>
+
+namespace CUAS {
 
 struct CUASArgs {
   PetscScalar tMax;
@@ -37,5 +37,7 @@ struct CUASArgs {
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);
+
+}
 
 #endif
