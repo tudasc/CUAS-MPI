@@ -42,16 +42,16 @@ int main(int argc, char **argv) {
   dump(*grid, true);
   dump(*grid, false);
 
-  int nonZero = grid->countNonZero();
-  if (rank == 0) {
-    std::cout << nonZero << std::endl;
-  }
+  // int nonZero = grid->countNonZero();
+  // if (rank == 0) {
+  //   std::cout << nonZero << std::endl;
+  // }
 
   // test getters from header
-  DM myGrid = grid->getDM();
-  DMView(myGrid, PETSC_VIEWER_STDOUT_WORLD);
+  // DM myGrid = grid->getDM();
+  // DMView(myGrid, PETSC_VIEWER_STDOUT_WORLD);
   if (rank == 0) {
-    VecView(grid->getLocalVec(), PETSC_VIEWER_STDOUT_SELF);
+    // VecView(grid->getLocalVec(), PETSC_VIEWER_STDOUT_SELF);
     std::cout << grid->getLocalNumOfCols() << grid->getLocalGhostNumOfCols() << grid->getLocalNumOfRows()
               << grid->getLocalGhostNumOfRows() << grid->getTotalNumOfRows() << grid->getTotalNumOfCols()
               << grid->getCornerX() << grid->getCornerY() << std::endl;
