@@ -3,35 +3,38 @@
 
 #include "PetscGrid.h"
 
+#include <memory>
+#include <vector>
+
 namespace CUAS {
 
 class CUASModel {
  public:
   CUASModel(int numOfCols, int numOfRows);
-  ~CUASModel();
+  //~CUASModel();
 
   // x = cols, y = rows
   int const Ncols, Nrows;
-  PetscScalar *cols, *rows;
+  std::vector<PetscScalar> cols, rows;
   PetscScalar dx;
-  PetscGrid *usurf;
-  PetscGrid *topg;
-  PetscGrid *thk;
-  PetscGrid *bnd_mask;
-  PetscGrid *Q;
-  PetscGrid *p_ice;
+  std::unique_ptr<PetscGrid> usurf;
+  std::unique_ptr<PetscGrid> topg;
+  std::unique_ptr<PetscGrid> thk;
+  std::unique_ptr<PetscGrid> bnd_mask;
+  std::unique_ptr<PetscGrid> Q;
+  std::unique_ptr<PetscGrid> p_ice;
 
   // grids for setup
-  PetscGrid *S;
-  PetscGrid *Sp;
-  PetscGrid *K;
-  PetscGrid *T;
-  PetscGrid *T_n;
-  PetscGrid *no_flow_mask;
-  PetscGrid *grad_mask;
-  PetscGrid *sea_level_forcing_mask;
-  PetscGrid *dirichlet_mask;
-  PetscGrid *dirichlet_values;
+  std::unique_ptr<PetscGrid> S;
+  std::unique_ptr<PetscGrid> Sp;
+  std::unique_ptr<PetscGrid> K;
+  std::unique_ptr<PetscGrid> T;
+  std::unique_ptr<PetscGrid> T_n;
+  std::unique_ptr<PetscGrid> no_flow_mask;
+  std::unique_ptr<PetscGrid> grad_mask;
+  std::unique_ptr<PetscGrid> sea_level_forcing_mask;
+  std::unique_ptr<PetscGrid> dirichlet_mask;
+  std::unique_ptr<PetscGrid> dirichlet_values;
 
   // type not sure; if NULL: assume constant forcing
   void *time_forcing = nullptr;
