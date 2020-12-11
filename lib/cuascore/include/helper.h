@@ -9,9 +9,9 @@ namespace CUAS {
 
 inline void pressure2head(PetscGrid &result, PetscGrid &pressure, PetscGrid &bed_elevation,
                           PetscScalar const sea_level) {
-  PetscScalar **result2d = result.getAsGlobal2dArr();
-  PetscScalar **pressure2d = pressure.getAsGlobal2dArr();
-  PetscScalar **bed_elevation2d = bed_elevation.getAsGlobal2dArr();
+  auto result2d = result.getAsGlobal2dArr();
+  auto pressure2d = pressure.getAsGlobal2dArr();
+  auto bed_elevation2d = bed_elevation.getAsGlobal2dArr();
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       double effective_bed_elevation = bed_elevation2d[j][i] - sea_level;
@@ -24,9 +24,9 @@ inline void pressure2head(PetscGrid &result, PetscGrid &pressure, PetscGrid &bed
 }
 
 inline void head2pressure(PetscGrid &result, PetscGrid &head, PetscGrid &bed_elevation, PetscScalar const sea_level) {
-  PetscScalar **result2d = result.getAsGlobal2dArr();
-  PetscScalar **head2d = head.getAsGlobal2dArr();
-  PetscScalar **bed_elevation2d = bed_elevation.getAsGlobal2dArr();
+  auto result2d = result.getAsGlobal2dArr();
+  auto head2d = head.getAsGlobal2dArr();
+  auto bed_elevation2d = bed_elevation.getAsGlobal2dArr();
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       double effective_bed_elevation = bed_elevation2d[j][i] - sea_level;
@@ -39,8 +39,8 @@ inline void head2pressure(PetscGrid &result, PetscGrid &head, PetscGrid &bed_ele
 }
 
 inline void overburdenPressure(PetscGrid &result, PetscGrid &thk) {
-  PetscScalar **result2d = result.getAsGlobal2dArr();
-  PetscScalar **thk2d = thk.getAsGlobal2dArr();
+  auto result2d = result.getAsGlobal2dArr();
+  auto thk2d = thk.getAsGlobal2dArr();
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       result2d[j][i] = thk2d[j][i] * RHO_ICE * GRAVITY;

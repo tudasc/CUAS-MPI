@@ -18,7 +18,7 @@ PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
 }
 
 void PetscGrid::setGlobalBoundariesConst(PetscScalar value) {
-  PetscScalar **local2d = getAsLocal2dArr();
+  auto local2d = getAsLocal2dArr();
   for (int i = 0; i < localGhostNumOfRows; ++i) {
     for (int j = 0; j < localGhostNumOfCols; ++j) {
       if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||

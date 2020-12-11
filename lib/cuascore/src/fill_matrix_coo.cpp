@@ -12,19 +12,19 @@ void fill_matrix_coo(PetscMat &A, PetscVec &b, int const Nx, int const Ny, Petsc
                      PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PetscGrid &u_n, PetscGrid &Q,
                      PetscGrid &dirichlet_values, PetscGrid &dirichlet_mask) {
   // we take localnumOfCols, so that we can iterate over the normal boundaries
-  int numOfCols = S.getLocalNumOfCols();
-  int numOfRows = S.getLocalNumOfRows();
-  int cornerX = S.getCornerX();
-  int cornerY = S.getCornerY();
-  int cornerXGhost = S.getCornerXGhost();
-  int cornerYGhost = S.getCornerYGhost();
+  auto numOfCols = S.getLocalNumOfCols();
+  auto numOfRows = S.getLocalNumOfRows();
+  auto cornerX = S.getCornerX();
+  auto cornerY = S.getCornerY();
+  auto cornerXGhost = S.getCornerXGhost();
+  auto cornerYGhost = S.getCornerYGhost();
   // note: T and u_n are taken local, because we potentially need to access ghost-cells
-  PetscScalar **diri_mask2d = dirichlet_mask.getAsGlobal2dArr();
-  PetscScalar **diri_values2d = dirichlet_values.getAsGlobal2dArr();
-  PetscScalar **S_2d = S.getAsGlobal2dArr();
-  PetscScalar **T_2d = T.getAsLocal2dArr();
-  PetscScalar **u_n2d = u_n.getAsLocal2dArr();
-  PetscScalar **Q_2d = Q.getAsGlobal2dArr();
+  auto diri_mask2d = dirichlet_mask.getAsGlobal2dArr();
+  auto diri_values2d = dirichlet_values.getAsGlobal2dArr();
+  auto S_2d = S.getAsGlobal2dArr();
+  auto T_2d = T.getAsLocal2dArr();
+  auto u_n2d = u_n.getAsLocal2dArr();
+  auto Q_2d = Q.getAsGlobal2dArr();
   PetscScalar S_P, d_N, d_S, d_W, d_E, d_P;
   PetscScalar A_N, A_S, A_W, A_E, A_P;
   // not sure if needed

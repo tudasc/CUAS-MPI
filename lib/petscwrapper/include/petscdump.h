@@ -11,7 +11,7 @@
 
 inline void dump(PetscGrid &grid, bool showGhostCells = true) {
   if (showGhostCells) {
-    PetscScalar **gridArr2d = grid.getAsLocal2dArr();
+    auto gridArr2d = grid.getAsLocal2dArr();
 
     int size, rank;
     MPI_Comm_size(PETSC_COMM_WORLD, &size);
@@ -31,7 +31,7 @@ inline void dump(PetscGrid &grid, bool showGhostCells = true) {
     }
     grid.restoreLocal2dArr(gridArr2d);
   } else {
-    PetscScalar **gridArr2d = grid.getAsGlobal2dArr();
+    auto gridArr2d = grid.getAsGlobal2dArr();
     int size, rank;
     MPI_Comm_size(PETSC_COMM_WORLD, &size);
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
