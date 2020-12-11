@@ -45,7 +45,7 @@ TEST(PetscMatTest, setandgetGlobal) {
   const int cols = GRID_COLS;
   const int rows = GRID_ROWS;
   auto grid = std::make_unique<PetscGrid>(cols, rows);
-  PetscScalar **glob = grid->getAsGlobal2dArr();
+  auto glob = grid->getAsGlobal2dArr();
   for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
       glob[i][j] = mpiRank;
@@ -53,7 +53,7 @@ TEST(PetscMatTest, setandgetGlobal) {
   }
   grid->setAsGlobal2dArr(glob);
 
-  PetscScalar **glob2 = grid->getAsGlobal2dArr();
+  auto glob2 = grid->getAsGlobal2dArr();
   for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
       ASSERT_EQ(glob2[i][j], mpiRank);
@@ -71,7 +71,7 @@ TEST(PetscMatTest, constandzero) {
 
   grid->setConst(5);
 
-  PetscScalar **loc = grid->getAsLocal2dArr();
+  auto loc = grid->getAsLocal2dArr();
   for (int i = 0; i < grid->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalGhostNumOfCols(); ++j) {
       ASSERT_EQ(loc[i][j], 5);
@@ -81,7 +81,7 @@ TEST(PetscMatTest, constandzero) {
 
   grid->setZero();
 
-  PetscScalar **loc2 = grid->getAsLocal2dArr();
+  auto loc2 = grid->getAsLocal2dArr();
   for (int i = 0; i < grid->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalGhostNumOfCols(); ++j) {
       ASSERT_EQ(loc2[i][j], 0);
@@ -139,7 +139,7 @@ TEST(PetscMatTest, boundaryTest) {
 
   grid->setAsGlobal2dArr(grid->getAsGlobal2dArr());
 
-  PetscScalar **loc = grid->getAsLocal2dArr();
+  auto loc = grid->getAsLocal2dArr();
   for (int i = 0; i < grid->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalGhostNumOfCols(); ++j) {
       if (mpiRank == 0 && (i == 0 || j == 0)) {

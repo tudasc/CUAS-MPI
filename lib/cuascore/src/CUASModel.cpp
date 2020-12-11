@@ -30,8 +30,8 @@ void CUASModel::init() {
   dx = cols[1] - cols[0];
 
   // p_ice = thk * RHO_ICE * GRAVITY (python)
-  PetscScalar **thk2d = thk->getAsGlobal2dArr();
-  PetscScalar **p_iceGlobal = p_ice->getAsGlobal2dArr();
+  auto thk2d = thk->getAsGlobal2dArr();
+  auto p_iceGlobal = p_ice->getAsGlobal2dArr();
   for (int j = 0; j < thk->getLocalNumOfRows(); ++j) {
     for (int i = 0; i < thk->getLocalNumOfCols(); ++i) {
       p_iceGlobal[j][i] = thk2d[j][i] * RHO_ICE * GRAVITY;

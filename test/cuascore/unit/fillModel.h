@@ -16,8 +16,8 @@ void fillNoData(CUAS::CUASModel &model) {
     }
   }
 
-  PetscScalar **usurfLocal2d = model.usurf->getAsGlobal2dArr();
-  PetscScalar **thkGlobal2d = model.thk->getAsGlobal2dArr();
+  auto usurfLocal2d = model.usurf->getAsGlobal2dArr();
+  auto thkGlobal2d = model.thk->getAsGlobal2dArr();
   int numOfCols = model.usurf->getLocalNumOfCols();
   int numOfRows = model.usurf->getLocalNumOfRows();
   int cornerX = model.usurf->getCornerX();
@@ -38,7 +38,7 @@ void fillNoData(CUAS::CUASModel &model) {
   // bnd-mask: just last row -> DIRICHLET_Flag
   // first row + first&last col -> NOFLOW_Flag
   // inside: 0
-  PetscScalar **bnd_maskLocal2d = model.bnd_mask->getAsGlobal2dArr();
+  auto bnd_maskLocal2d = model.bnd_mask->getAsGlobal2dArr();
   numOfCols = model.bnd_mask->getLocalNumOfCols();
   numOfRows = model.bnd_mask->getLocalNumOfRows();
   int totalNumOfCols = model.bnd_mask->getTotalNumOfCols();
@@ -63,7 +63,7 @@ void fillNoData(CUAS::CUASModel &model) {
   }
   model.bnd_mask->setAsGlobal2dArr(bnd_maskLocal2d);
 
-  auto& bmelt = *model.Q;
+  auto &bmelt = *model.Q;
   bmelt.setConst(1);
 
   model.time_forcing = NULL;
