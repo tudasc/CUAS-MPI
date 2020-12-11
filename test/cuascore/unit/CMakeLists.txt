@@ -29,3 +29,10 @@ target_link_libraries(args-test cuascore)
 #add_executable(example example.cpp)
 #target_link_libraries(example gtest_main)
 #add_test(NAME example_test COMMAND example)
+
+add_executable(test-binarydialation
+        BinaryDialationTest.cpp
+        )
+target_link_libraries(test-binarydialation cuascore)
+target_link_libraries(test-binarydialation gtest)
+set_property(TARGET test-binarydialation PROPERTY CXX_STANDARD 14)

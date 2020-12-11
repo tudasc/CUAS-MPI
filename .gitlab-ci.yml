@@ -59,6 +59,17 @@ test-petscwrapper:
     - mpirun -n 4 --timeout 10 ./test-petscsolver
     - mpirun -n 4 --timeout 10 ./test-petscgrid
 
+test-cuascore:
+  stage: unit-test
+  tags:
+    - general
+  before_script: *lb-setup
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - cd build/test/cuascore/unit
+    - mpirun -n 9 --timeout 10 ./test-binarydialation
+
 test-cuas:
   stage: integration-test
   tags:
