@@ -1,34 +1,94 @@
 #include "specialgradient.h"
 
-#include "petscdump.h"
+#include "PetscGrid.h"
 
-int main(int argc, char **argv) {
-  PetscInitialize(&argc, &argv, nullptr, nullptr);
-  int rank;
-  MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
-  PetscGrid *grid = new PetscGrid(5, 5);
+#include "gtest/gtest.h"
+
+#include <memory>
+
+int mpiRank;
+int mpiSize;
+
+#define MPI_SIZE 9
+
+TEST(GradientTest, result) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  auto grid = std::make_unique<PetscGrid>(20, 20);
   grid->setZero();
 
-  PetscScalar **mylocalarr, **myglobarr;
-  myglobarr = grid->getAsGlobal2dArr();
+  auto myglobarr = grid->getAsGlobal2dArr();
   for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
-      myglobarr[i][j] = i;
+      myglobarr[i][j] = j;
     }
   }
+
   grid->setAsGlobal2dArr(myglobarr);
 
-  dump(*grid);
+  auto gradient1 = std::make_unique<PetscGrid>(20, 20);
+  CUAS::gradient2(*grid, *gradient1, 1.0);
+  auto grad_arr_1 = gradient1->getAsGlobal2dArr();
+  ASSERT_EQ(grad_arr_1[3][3], 1);
+  if (gradient1->getCornerX() == 0) {
+    ASSERT_EQ(grad_arr_1[0][0], 0.5);
+  }
+  if (gradient1->getCornerX() == 0 && gradient1->getCornerY() == 0) {
+    ASSERT_EQ(grad_arr_1[0][0], 0.5);
+    ASSERT_EQ(grad_arr_1[0][6], 36.5);
+  }
+  gradient1->restoreGlobal2dArr(grad_arr_1);
+}
 
-  PetscGrid *gradient_1 = new PetscGrid(5, 5);
-  CUAS::gradient2(*grid, *gradient_1, 1.0);
-  PetscGrid *gradient_2 = new PetscGrid(5, 5);
-  CUAS::gradient2_central(*grid, *gradient_2, 1.0);
-  dump(*gradient_1, false);
-  dump(*gradient_2, false);
-  delete gradient_1;
-  delete gradient_2;
-  delete grid;
+TEST(GradientTest, ghostCells) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  auto grid = std::make_unique<PetscGrid>(20, 20);
+  grid->setZero();
+
+  auto myglobarr = grid->getAsGlobal2dArr();
+  for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
+      myglobarr[i][j] = j;
+    }
+  }
+
+  grid->setAsGlobal2dArr(myglobarr);
+
+  auto gradient1 = std::make_unique<PetscGrid>(20, 20);
+  CUAS::gradient2(*grid, *gradient1, 1.0);
+
+  int localGhostNumOfRows = gradient1->getLocalGhostNumOfRows();
+  int localGhostNumOfCols = gradient1->getLocalGhostNumOfCols();
+
+  int cornerYGhost = gradient1->getCornerYGhost();
+  int cornerXGhost = gradient1->getCornerXGhost();
+
+  int totalNumOfRows = gradient1->getTotalNumOfRows();
+  int totalNumOfCols = gradient1->getTotalNumOfCols();
+
+  auto local2d = gradient1->getAsLocal2dArr();
+  for (int i = 0; i < localGhostNumOfRows; ++i) {
+    for (int j = 0; j < localGhostNumOfCols; ++j) {
+      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
+          cornerYGhost + localGhostNumOfRows - 1 == totalNumOfRows && i == localGhostNumOfRows - 1 ||
+          cornerXGhost + localGhostNumOfCols - 1 == totalNumOfCols && j == localGhostNumOfCols - 1) {
+        ASSERT_EQ(local2d[i][j], 0);
+      }
+    }
+  }
+  gradient1->restoreLocal2dArr(local2d);
+}
+
+int main(int argc, char *argv[]) {
+  int result = 0;
+
+  ::testing::InitGoogleTest(&argc, argv);
+  PetscInitialize(&argc, &argv, nullptr, nullptr);
+  MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
+  MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
+  result = RUN_ALL_TESTS();
   PetscFinalize();
-  return 0;
+
+  return result;
 }
