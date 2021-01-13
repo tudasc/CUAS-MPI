@@ -26,8 +26,8 @@ void setup(CUASModel &model, CUASArgs const &args) {
   auto rows = model.no_flow_mask->getLocalNumOfRows();
   auto cols = model.no_flow_mask->getLocalNumOfCols();
 
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < cols; ++j) {
       if (mask[i][j] == (PetscScalar)NOFLOW_FLAG) {
         global_mask[i][j] = true;
         K_arr[i][j] = NOFLOW_VALUE;
@@ -40,28 +40,17 @@ void setup(CUASModel &model, CUASArgs const &args) {
 
   model.no_flow_mask->setAsGlobal2dArr(global_mask);
   model.K->setAsGlobal2dArr(K_arr);
-
-  auto T_n_arr = model.T_n->getAsGlobal2dArr();
-
-  rows = model.T->getLocalNumOfRows();
-  cols = model.T->getLocalNumOfCols();
-
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
-      T_n_arr[i][j] = T_arr[i][j];
-    }
-  }
-
-  model.T_n->setAsGlobal2dArr(T_n_arr);
   model.T->setAsGlobal2dArr(T_arr);
+
+  model.T_n->copy(*model.T);
 
   auto Q_arr = model.Q->getAsGlobal2dArr();
 
   rows = model.Q->getLocalNumOfRows();
   cols = model.Q->getLocalNumOfCols();
 
-  for (int i = 0; i < rows; i++) {
-    for (int j = 0; j < cols; j++) {
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < cols; ++j) {
       Q_arr[i][j] = (Q_arr[i][j]) / SPY * args.supplyMultiplier;
     }
   }

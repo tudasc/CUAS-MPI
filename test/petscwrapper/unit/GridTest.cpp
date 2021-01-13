@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include "petscdump.h"
+
 int mpiRank;
 int mpiSize;
 
@@ -162,6 +164,45 @@ TEST(PetscMatTest, boundaryTest) {
   }
   ASSERT_EQ(counter, 17);
   grid->restoreLocal2dArr(loc);
+}
+
+TEST(PetscMatTest, copyTest) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = GRID_COLS;
+  const int rows = GRID_ROWS;
+  auto grid_1 = std::make_unique<PetscGrid>(cols, rows, 5);
+
+  grid_1->setConst(5);
+
+  auto grid_2 = std::make_unique<PetscGrid>(cols, rows, 10);
+
+  grid_2->setConst(10);
+
+  if(grid_1->copy(*grid_2.get())) {
+    FAIL() << "Did not expect an error!";
+  }
+
+  // test if all values have been written to the other grid
+
+  auto loc = grid_1->getAsLocal2dArr();
+  for (int i = 0; i < grid_1->getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < grid_1->getLocalGhostNumOfCols(); ++j) {
+      ASSERT_EQ(loc[i][j], 10);
+    }
+  }
+
+  grid_1->restoreLocal2dArr(loc);
+
+  // test if an error is thrown when the grids have different sizes
+
+  auto grid_3 = std::make_unique<PetscGrid>(cols + 1, rows, 15);
+
+  grid_3->setConst(15);
+
+  if(int error = grid_1->copy(*grid_3.get())) {
+    EXPECT_EQ(error, -1);
+  }
 }
 
 int main(int argc, char *argv[]) {

@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
 
   {
-    auto model = std::make_unique<CUAS::CUASModel>(10, 10);
+    auto model = std::make_unique<CUAS::CUASModel>(20, 10);
     fillNoData(*model);
     model->init();
 
