@@ -68,6 +68,17 @@ void PetscGrid::setConst(PetscScalar value) {
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
 }
 
+int PetscGrid::copy(PetscGrid const &input) {
+  if (input.getLocalNumOfCols() != localNumOfCols || input.getLocalNumOfRows() != localNumOfRows) {
+    return -1;
+  }
+
+  VecCopy(input.local, local);
+  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
+
+  return 0;
+}
+
 // int PetscGrid::countNonZero() const {
 //   PetscScalar **gridArr2d;
 //   VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &gridArr2d);

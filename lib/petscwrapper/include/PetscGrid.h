@@ -68,6 +68,9 @@ class PetscGrid {
   // zeroes each entry of grid
   void setZero() { setConst(0); }
 
+  // copys the content of one grid to another
+  int copy(PetscGrid const &input);
+
   // int countNonZero() const;
 
   /* getter */
