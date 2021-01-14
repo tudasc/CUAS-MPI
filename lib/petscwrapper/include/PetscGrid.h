@@ -3,6 +3,8 @@
 
 #include "petsc.h"
 
+#include "PetscVec.h"
+
 /*
  * We interpret grids in row major
  * access values[i * cols + j]
@@ -60,7 +62,8 @@ class PetscGrid {
   // restores the values from getAsGlobal2dArr()
   void restoreGlobal2dArr(PetscScalar **values);
 
-  // void setGlobalVecAndUpdate(Vec glob);
+  //sets the grids values from globalVec using the column major layout 
+  void setGlobalVecColMajor(PetscVec &globalVec);
 
   // sets each entry of grid to value
   void setConst(PetscScalar value);
