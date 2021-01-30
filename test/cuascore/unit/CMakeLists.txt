@@ -3,10 +3,13 @@ add_executable(nodata-test
 )
 target_link_libraries(nodata-test cuascore)
 
-add_executable(fillMatrix-test
+add_executable(test-fillMatrix
   fill_matrix_test.cpp
 )
-target_link_libraries(fillMatrix-test cuascore)
+target_link_libraries(test-fillMatrix cuascore)
+target_link_libraries(test-fillMatrix gtest)
+set_property(TARGET test-fillMatrix PROPERTY CXX_STANDARD 14)
+
 
 add_executable(test-helper
   helperTest.cpp
