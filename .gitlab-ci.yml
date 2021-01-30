@@ -71,6 +71,7 @@ test-cuascore:
     - mpirun -n 9 --timeout 10 ./test-binarydialation
     - mpirun -n 9 --timeout 10 ./test-gradient
     - mpirun -n 9 --timeout 10 ./test-cxxargs
+    - mpirun -n 9 --timeout 10 ./test-helper
 
 test-cuas:
   stage: integration-test

@@ -8,10 +8,12 @@ add_executable(fillMatrix-test
 )
 target_link_libraries(fillMatrix-test cuascore)
 
-add_executable(helper-test
+add_executable(test-helper
   helperTest.cpp
 )
-target_link_libraries(helper-test cuascore)
+target_link_libraries(test-helper cuascore)
+target_link_libraries(test-helper gtest)
+set_property(TARGET test-helper PROPERTY CXX_STANDARD 14)
 
 add_executable(test-cxxargs
         cxxoptsTest.cpp
