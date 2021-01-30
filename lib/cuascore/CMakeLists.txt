@@ -4,6 +4,7 @@ add_library(cuascore
   src/parseCxxopts.cpp
   src/fill_matrix_coo.cpp
   src/setup.cpp
+  src/solver.cpp
 )
 
 target_include_directories(cuascore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
