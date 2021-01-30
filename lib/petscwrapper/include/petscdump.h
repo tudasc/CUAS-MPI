@@ -22,7 +22,7 @@ inline void dump(PetscGrid &grid, bool showGhostCells = true) {
         std::cout << "process num: " << rank << std::endl;
         for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
           for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
-            std::cout << gridArr2d[i][j];
+            std::cout << gridArr2d[i][j] << " ";
           }
           std::cout << std::endl;
         }

@@ -1,7 +1,9 @@
-add_executable(nodata-test
-  noData.cpp
-)
-target_link_libraries(nodata-test cuascore)
+add_executable(test-nodata
+        noData.cpp
+        )
+target_link_libraries(test-nodata cuascore)
+target_link_libraries(test-nodata gtest)
+set_property(TARGET test-nodata PROPERTY CXX_STANDARD 14)
 
 add_executable(test-fillMatrix
   fill_matrix_test.cpp
@@ -30,7 +32,6 @@ add_executable(setup-test
 )
 target_link_libraries(setup-test cuascore)
 set_property(TARGET setup-test PROPERTY CXX_STANDARD 14)
-
 
 # Now simply link against gtest or gtest_main as needed. Eg
 #add_executable(example example.cpp)
