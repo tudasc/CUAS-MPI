@@ -70,6 +70,7 @@ test-cuascore:
     - cd build/test/cuascore/unit
     - mpirun -n 9 --timeout 10 ./test-binarydialation
     - mpirun -n 9 --timeout 10 ./test-gradient
+    - mpirun -n 9 --timeout 10 ./test-cxxargs
 
 test-cuas:
   stage: integration-test

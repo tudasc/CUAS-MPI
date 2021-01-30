@@ -33,8 +33,8 @@ void PetscGrid::setGlobalBoundariesConst(PetscScalar value) {
 }
 
 void PetscGrid::setGlobalVecColMajor(PetscVec &globalVec) {
-  //the following lines are copying the globalVec Vector to each processor.
-  //could probably be optimized to get the specific needed values.
+  // the following lines are copying the globalVec Vector to each processor.
+  // could probably be optimized to get the specific needed values.
   VecScatter vs;
   Vec accessVector;
   VecScatterCreateToAll(globalVec.getPetscRaw(), &vs, &accessVector);
@@ -46,11 +46,11 @@ void PetscGrid::setGlobalVecColMajor(PetscVec &globalVec) {
   VecGetArray(accessVector, &vecArr);
 
   auto global2d = getAsGlobal2dArr();
-  for(int i = 0; i < localNumOfRows; ++i){
+  for (int i = 0; i < localNumOfRows; ++i) {
     int indexI = getCornerY() + i;
-    for(int j = 0; j < localNumOfCols; ++j) {
+    for (int j = 0; j < localNumOfCols; ++j) {
       int indexJ = getCornerX() + j;
-      //index is calculated so that column-major layout (like numpy.resize with order F) is achieved
+      // index is calculated so that column-major layout (like numpy.resize with order F) is achieved
       global2d[i][j] = vecArr[totalNumOfRows * indexJ + indexI];
     }
   }

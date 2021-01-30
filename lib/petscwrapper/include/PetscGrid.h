@@ -62,7 +62,7 @@ class PetscGrid {
   // restores the values from getAsGlobal2dArr()
   void restoreGlobal2dArr(PetscScalar **values);
 
-  //sets the grids values from globalVec using the column major layout 
+  // sets the grids values from globalVec using the column major layout
   void setGlobalVecColMajor(PetscVec &globalVec);
 
   // sets each entry of grid to value
