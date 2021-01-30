@@ -13,10 +13,12 @@ add_executable(helper-test
 )
 target_link_libraries(helper-test cuascore)
 
-add_executable(args-test
-  cxxoptsTest.cpp
+add_executable(test-cxxargs
+        cxxoptsTest.cpp
 )
-target_link_libraries(args-test cuascore)
+target_link_libraries(test-cxxargs cuascore)
+target_link_libraries(test-cxxargs gtest)
+set_property(TARGET test-cxxargs PROPERTY CXX_STANDARD 14)
 
 add_executable(setup-test
   SetupTest.cpp

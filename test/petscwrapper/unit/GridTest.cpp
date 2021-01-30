@@ -235,7 +235,7 @@ TEST(PetscGridTest, setGlobalVecTest) {
   }
   grid.restoreGlobal2dArr(loc2);
 
-  for(int i = 0; i < cols * rows; ++i){
+  for (int i = 0; i < cols * rows; ++i) {
     global.setValue(i, i);
   }
   global.assemble();
