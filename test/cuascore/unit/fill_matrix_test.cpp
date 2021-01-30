@@ -26,54 +26,52 @@ TEST(fillMatrixTest, result) {
   PetscGrid Se(20, 10);
   Se.setConst(9.82977696 * pow(10, -5));  // normally: physconst.Ss * args.layerthickness * args.Ssmulti
   PetscGrid noFlow_mask(20, 10);
-  auto noFlow_maskGlobal = noFlow_mask.getAsGlobal2dArr();
-  auto bnd_mask2d = model.bnd_mask->getAsGlobal2dArr();
+  auto noFlow_maskGlobal = noFlow_mask.getWriteHandle();
+  auto &bnd_mask2d = model.bnd_mask->getReadHandle();
   for (int j = 0; j < noFlow_mask.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < noFlow_mask.getLocalNumOfCols(); ++i) {
-      if (bnd_mask2d[j][i] == NOFLOW_FLAG) {
-        noFlow_maskGlobal[j][i] = true;
+      if (bnd_mask2d(j, i) == NOFLOW_FLAG) {
+        noFlow_maskGlobal(j, i) = true;
       } else {
-        noFlow_maskGlobal[j][i] = false;
+        noFlow_maskGlobal(j, i) = false;
       }
     }
   }
-  noFlow_mask.setAsGlobal2dArr(noFlow_maskGlobal);
+  noFlow_maskGlobal.setValues();
 
-  noFlow_maskGlobal = noFlow_mask.getAsGlobal2dArr();
+  auto &noFlow_maskRead = noFlow_mask.getReadHandle();
   PetscGrid Teff(20, 10);
-  auto TeffGlobal = Teff.getAsGlobal2dArr();
+  auto TeffGlobal = Teff.getWriteHandle();
   for (int j = 0; j < Teff.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < Teff.getLocalNumOfCols(); ++i) {
-      if (noFlow_maskGlobal[j][i]) {
-        TeffGlobal[j][i] = NOFLOW_VALUE;
+      if (noFlow_maskRead(j, i)) {
+        TeffGlobal(j, i) = NOFLOW_VALUE;
       } else {
-        TeffGlobal[j][i] = 0.2;
+        TeffGlobal(j, i) = 0.2;
       }
     }
   }
-  Teff.setAsGlobal2dArr(TeffGlobal);
+  TeffGlobal.setValues();
 
   // u_n = select_initial_head... --> standard: nzero --> pressure2head
   PetscGrid u_n(20, 10);
   CUAS::pressure2head(u_n, *model.p_ice, *model.topg, 0.0);
   PetscGrid dirichlet_mask(20, 10);
-  auto dirichlet_maskGlobal = dirichlet_mask.getAsGlobal2dArr();
+  auto dirichlet_maskGlobal = dirichlet_mask.getWriteHandle();
   bool dirich_mask1;
   for (int j = 0; j < dirichlet_mask.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < dirichlet_mask.getLocalNumOfCols(); ++i) {
-      if (bnd_mask2d[j][i] == DIRICHLET_FLAG) {
+      if (bnd_mask2d(j, i) == DIRICHLET_FLAG) {
         dirich_mask1 = true;
       } else {
         dirich_mask1 = false;
       }
-      dirich_mask1 = dirich_mask1 || (bnd_mask2d[j][i] == DIRICHLET_LAKE_FLAG);
-      dirich_mask1 = dirich_mask1 || noFlow_maskGlobal[j][i];
-      dirichlet_maskGlobal[j][i] = dirich_mask1;
+      dirich_mask1 = dirich_mask1 || (bnd_mask2d(j, i) == DIRICHLET_LAKE_FLAG);
+      dirich_mask1 = dirich_mask1 || noFlow_maskGlobal(j, i);
+      dirichlet_maskGlobal(j, i) = dirich_mask1;
     }
   }
-  dirichlet_mask.setAsGlobal2dArr(dirichlet_maskGlobal);
-  model.bnd_mask->restoreGlobal2dArr(bnd_mask2d);
-  noFlow_mask.restoreGlobal2dArr(noFlow_maskGlobal);
+  dirichlet_maskGlobal.setValues();
   // stolen from output of nodata test
   PetscGrid ValueQ(20, 10);
   ValueQ.setConst(3.17 * pow(10, -8));

@@ -5,6 +5,11 @@
 
 #include "PetscVec.h"
 
+#include <iostream>
+
+#define GHOSTED true
+#define NONE_GHOSTED false
+
 /*
  * We interpret grids in row major
  * access values[i * cols + j]
@@ -29,19 +34,50 @@
  * v
  * (n, y, second dimension, rows, i)
  */
-
 class PetscGrid {
  public:
+  /*
+   * Use ReadHandle to only read values of the grid.
+   * if ghosted: GhostValues are being read aswell.
+   */
+  struct ReadHandle {
+    PetscGrid const *grid;
+    ReadHandle(PetscGrid const *grid) : grid(grid){};
+    PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
+      if (ghosted) {
+        return grid->valuesGhosted[i][j];
+      } else {
+        return grid->values[i][j];
+      }
+    };
+  };
+
+  /*
+   * Use WriteHandle to read and write values of the grid.
+   * To explicitly set values now use setValues().
+   * Otherwise the values are being set automatically when WriteHandle is out of scope.
+   * Using WriteHandle you can not write to ghost-cells.
+   */
+  struct WriteHandle {
+    PetscGrid *grid;
+    WriteHandle(PetscGrid *grid) : grid(grid){};
+
+    PetscScalar &operator()(int i, int j) { return grid->values[i][j]; };
+
+    // only use if you want to set values before WriteHandle
+    void setValues() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); };
+
+    ~WriteHandle() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); }
+  };
+
   // creates a Grid of numOfCols times numOfRows,
   // sets value of most outer cells to boundaryValue
   PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue = 0);
   ~PetscGrid();
 
-  // indices: from 0 to LocalGhostWidth
-  // you MUST call restoreLocal2dArr afterwards!
-  // returns a 2d Array of the processes share of data
-  // including ghostcells of neighbour processes
-  PetscScalar **getAsLocal2dArr();
+  ReadHandle const &getReadHandle() const { return readHandle; }
+
+  WriteHandle getWriteHandle() { return WriteHandle(this); }
 
   // indices: from 0 to LocalNumOfCols
   // you MUST call setAsGlobal2dArr or restoreGlobal2dArr afterwards!
@@ -53,7 +89,7 @@ class PetscGrid {
   // using getAsGlobal2dArr()
   void setAsGlobal2dArr(PetscScalar **values);
 
-  // setting local arrays is not possible because of
+  // setting local arrays is not &&e because of
   // possible race conditions when writing in ghost-cells.
   // restores the values from getAsLocal2dArr()
   void restoreLocal2dArr(PetscScalar **values);
@@ -100,6 +136,12 @@ class PetscGrid {
   Vec local;
   Vec global;
 
+  PetscScalar **values;
+  PetscScalar **valuesGhosted;
+
+  // is this the way to go? compiler complains without it
+  ReadHandle readHandle;
+
   const int totalNumOfCols;
   const int totalNumOfRows;
 
@@ -110,6 +152,13 @@ class PetscGrid {
   int localGhostNumOfRows;
 
   int cornerX, cornerY, cornerXGhost, cornerYGhost;
+
+  // indices: from 0 to LocalGhostWidth
+  // you MUST call restoreLocal2dArr afterwards!
+  // returns a 2d Array of the processes share of data
+  // including ghostcells of neighbour processes.
+  // normally this method is not needed, use Read/WriteHandles instead
+  PetscScalar **getAsLocal2dArr();
 
   // sets the outer boundaries (ghost-cells) of the grid
   void setGlobalBoundariesConst(PetscScalar value);

@@ -18,7 +18,7 @@ TEST(PetscAlgorithmsTest, dialationtest) {
   auto nf_mask = std::make_unique<PetscGrid>(GRID_SIZE_X, GRID_SIZE_Y);
   auto grad_mask = std::make_unique<PetscGrid>(GRID_SIZE_X, GRID_SIZE_Y);
 
-  auto nf2d = nf_mask->getAsGlobal2dArr();
+  auto nf2d = nf_mask->getWriteHandle();
 
   auto rows = nf_mask->getLocalNumOfRows();
   auto cols = nf_mask->getLocalNumOfCols();
@@ -26,38 +26,35 @@ TEST(PetscAlgorithmsTest, dialationtest) {
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
       if (i == j) {
-        nf2d[i][j] = true;
+        nf2d(i, j) = true;
       }
     }
   }
 
-  nf_mask->setAsGlobal2dArr(nf2d);
+  nf2d.setValues();
   grad_mask->setZero();
 
   binaryDialation(*nf_mask, *grad_mask);
 
-  auto nf_arr = nf_mask->getAsGlobal2dArr();
-  auto grad_arr = grad_mask->getAsGlobal2dArr();
+  auto &nf_arr = nf_mask->getReadHandle();
+  auto &grad_arr = grad_mask->getReadHandle();
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
       if (i == j) {
-        ASSERT_EQ(nf_arr[i][j], true);
-        ASSERT_EQ(grad_arr[i][j], true);
+        ASSERT_EQ(nf_arr(i, j), true);
+        ASSERT_EQ(grad_arr(i, j), true);
         if (i < rows - 1)
-          ASSERT_EQ(grad_arr[i + 1][j], true);
+          ASSERT_EQ(grad_arr(i + 1, j), true);
         if (i > 0)
-          ASSERT_EQ(grad_arr[i - 1][j], true);
+          ASSERT_EQ(grad_arr(i - 1, j), true);
         if (j < cols - 1)
-          ASSERT_EQ(grad_arr[i][j + 1], true);
+          ASSERT_EQ(grad_arr(i, j + 1), true);
         if (j > 0)
-          ASSERT_EQ(grad_arr[i][j - 1], true);
+          ASSERT_EQ(grad_arr(i, j - 1), true);
       }
     }
   }
-
-  nf_mask->restoreGlobal2dArr(nf_arr);
-  grad_mask->restoreGlobal2dArr(grad_arr);
 }
 
 TEST(PetscAlgorithmsTest, ghostCellsTest) {
@@ -66,7 +63,7 @@ TEST(PetscAlgorithmsTest, ghostCellsTest) {
   auto nf_mask = std::make_unique<PetscGrid>(GRID_SIZE_X, GRID_SIZE_Y);
   auto grad_mask = std::make_unique<PetscGrid>(GRID_SIZE_X, GRID_SIZE_Y);
 
-  auto nf2d = nf_mask->getAsGlobal2dArr();
+  auto nf2d = nf_mask->getWriteHandle();
 
   auto rows = nf_mask->getLocalNumOfRows();
   auto cols = nf_mask->getLocalNumOfCols();
@@ -74,17 +71,17 @@ TEST(PetscAlgorithmsTest, ghostCellsTest) {
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
       if (i == j) {
-        nf2d[i][j] = true;
+        nf2d(i, j) = true;
       }
     }
   }
 
-  nf_mask->setAsGlobal2dArr(nf2d);
+  nf2d.setValues();
   grad_mask->setZero();
 
   binaryDialation(*nf_mask, *grad_mask);
 
-  auto grad_arr = grad_mask->getAsLocal2dArr();
+  auto &grad_arr = grad_mask->getReadHandle();
 
   auto rowsGhost = grad_mask->getLocalGhostNumOfRows();
   auto colsGhost = grad_mask->getLocalGhostNumOfCols();
@@ -100,12 +97,10 @@ TEST(PetscAlgorithmsTest, ghostCellsTest) {
       if (yGhost == -1 && i == 0 || xGhost == -1 && j == 0 ||
           yGhost + rowsGhost - 1 == total_rows && i == rowsGhost - 1 ||
           xGhost + colsGhost - 1 == total_cols && j == colsGhost - 1) {
-        ASSERT_EQ(grad_arr[i][j], false);
+        ASSERT_EQ(grad_arr(i, j, GHOSTED), false);
       }
     }
   }
-
-  grad_mask->restoreLocal2dArr(grad_arr);
 }
 
 int main(int argc, char *argv[]) {
