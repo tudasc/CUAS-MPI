@@ -1,4 +1,4 @@
-#include "PetscMat.h"
+#include "PETScMat.h"
 
 #include "gtest/gtest.h"
 

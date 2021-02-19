@@ -1,12 +1,10 @@
 #include "setup.h"
 
-#include "PetscAlgorithms.h"
 #include "helper.h"
 #include "physicalConstants.h"
+#include "CUASKernels.h"
 
-#include "PetscGrid.h"
-
-#include <iostream>
+#include "PETScGrid.h"
 
 namespace CUAS {
 
@@ -86,7 +84,7 @@ void setup(CUASModel &model, CUASArgs const &args) {
     }
   }
 
-  CUAS::pressure2head(*model.dirichlet_values, *model.p_ice, *model.topg, 0.0);
+  pressure2head(*model.dirichlet_values, *model.p_ice, *model.topg, 0.0);
 
   auto global_sea_mask = model.sea_level_forcing_mask->getWriteHandle();
 
@@ -103,7 +101,7 @@ void setup(CUASModel &model, CUASArgs const &args) {
     }
   }
 
-  binaryDialation(*model.no_flow_mask, *model.grad_mask);
+  binaryDialation(*model.grad_mask, *model.no_flow_mask);
 
   // TODO: Time dependent forcing (Interpolierung)
   //

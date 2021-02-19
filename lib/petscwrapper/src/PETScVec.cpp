@@ -1,4 +1,4 @@
-#include "PetscVec.h"
+#include "PETScVec.h"
 
 PetscVec::PetscVec(int size) : size(size) {
   VecCreate(PETSC_COMM_WORLD, &vec);

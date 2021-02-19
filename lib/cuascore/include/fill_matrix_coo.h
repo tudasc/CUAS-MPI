@@ -1,9 +1,9 @@
 #ifndef CUAS_FILL_MATRIX_COO_H
 #define CUAS_FILL_MATRIX_COO_H
 
-#include "PetscGrid.h"
-#include "PetscMat.h"
-#include "PetscVec.h"
+#include "PETScGrid.h"
+#include "PETScMat.h"
+#include "PETScVec.h"
 
 namespace CUAS {
 

@@ -1,4 +1,4 @@
-#include "PetscGrid.h"
+#include "PETScGrid.h"
 
 PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
     : totalNumOfCols(numOfCols), totalNumOfRows(numOfRows), readHandle(this) {
@@ -94,7 +94,8 @@ void PetscGrid::setConst(PetscScalar value) {
 
 int PetscGrid::copy(PetscGrid const &input) {
   if (input.getLocalNumOfCols() != localNumOfCols || input.getLocalNumOfRows() != localNumOfRows) {
-    return -1;
+    // TODO error log output
+    return 1;
   }
 
   VecCopy(input.local, local);

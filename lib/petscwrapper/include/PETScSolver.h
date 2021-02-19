@@ -1,8 +1,8 @@
 #ifndef CUAS_PETSCSOLVER_H
 #define CUAS_PETSCSOLVER_H
 
-#include "PetscMat.h"
-#include "PetscVec.h"
+#include "PETScMat.h"
+#include "PETScVec.h"
 
 #include "petsc.h"
 

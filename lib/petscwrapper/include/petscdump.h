@@ -1,9 +1,9 @@
 #ifndef CUAS_PETSCDUMP_H
 #define CUAS_PETSCDUMP_H
 
-#include "PetscGrid.h"
-#include "PetscMat.h"
-#include "PetscVec.h"
+#include "PETScGrid.h"
+#include "PETScMat.h"
+#include "PETScVec.h"
 
 #include "petsc.h"
 

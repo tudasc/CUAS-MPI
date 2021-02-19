@@ -1,7 +1,7 @@
 #include "helper.h"
 #include "physicalConstants.h"
 
-#include "PetscGrid.h"
+#include "PETScGrid.h"
 
 #include "gtest/gtest.h"
 

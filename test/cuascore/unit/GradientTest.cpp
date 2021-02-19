@@ -1,6 +1,6 @@
 #include "specialgradient.h"
 
-#include "PetscGrid.h"
+#include "PETScGrid.h"
 
 #include "gtest/gtest.h"
 
@@ -26,7 +26,7 @@ TEST(GradientTest, result) {
   myglobarr.setValues();
 
   auto gradient1 = std::make_unique<PetscGrid>(20, 20);
-  CUAS::gradient2(*grid, *gradient1, 1.0);
+  CUAS::gradient2(*gradient1, *grid, 1.0);
   auto &grad_arr_1 = gradient1->getReadHandle();
   ASSERT_EQ(grad_arr_1(3, 3), 1);
   if (gradient1->getCornerX() == 0) {
@@ -54,7 +54,7 @@ TEST(GradientTest, ghostCells) {
   myglobarr.setValues();
 
   auto gradient1 = std::make_unique<PetscGrid>(20, 20);
-  CUAS::gradient2(*grid, *gradient1, 1.0);
+  CUAS::gradient2(*gradient1, *grid, 1.0);
 
   int localGhostNumOfRows = gradient1->getLocalGhostNumOfRows();
   int localGhostNumOfCols = gradient1->getLocalGhostNumOfCols();

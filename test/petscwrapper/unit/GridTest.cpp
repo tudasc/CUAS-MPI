@@ -1,5 +1,5 @@
-#include "PetscGrid.h"
-#include "PetscVec.h"
+#include "PETScGrid.h"
+#include "PETScVec.h"
 
 #include "gtest/gtest.h"
 
@@ -195,7 +195,7 @@ TEST(PetscMatTest, copyTest) {
   grid_3->setConst(15);
 
   if (int error = grid_1->copy(*grid_3.get())) {
-    EXPECT_EQ(error, -1);
+    EXPECT_EQ(error, 1);
   }
 }
 
@@ -244,13 +244,7 @@ TEST(PetscGridTest, setGlobalVecTest) {
 }
 
 TEST(PetscGridTest, handleTest) {
-  // test whether pointers are staying the same
   PetscGrid grid(217, 13);
-  double **gr1_2d = grid.getAsGlobal2dArr();
-  double **gr3_2d = grid.getAsGlobal2dArr();
-  for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
-    ASSERT_EQ(gr1_2d[i], gr3_2d[i]);
-  }
 
   // test handles with explicit setValues()
   auto w = grid.getWriteHandle();

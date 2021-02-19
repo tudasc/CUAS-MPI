@@ -1,10 +1,10 @@
 add_library(cuascore
   src/specialgradient.cpp
   src/CUASModel.cpp
-  src/parseCxxopts.cpp
+  src/CUASArgs.cpp
   src/fill_matrix_coo.cpp
   src/setup.cpp
-  src/solver.cpp
+  src/CUASSolver.cpp
 )
 
 target_include_directories(cuascore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

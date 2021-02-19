@@ -3,7 +3,7 @@
 
 #include "physicalConstants.h"
 
-#include "PetscGrid.h"
+#include "PETScGrid.h"
 
 namespace CUAS {
 
@@ -56,18 +56,18 @@ inline void cavityOpenB(PetscGrid &result, PetscScalar const beta, PetscScalar c
   }
 }
 
-inline void compute_melt(PetscGrid &result, PetscScalar const r, PetscScalar const g, PetscScalar const rho_w,
-                         PetscGrid const &T, PetscGrid const &K, PetscGrid const &gradh2, PetscScalar const rho_i,
-                         PetscScalar const L, PetscScalar const bt) {
+inline void computeMelt(PetscGrid &result, PetscScalar const r, PetscScalar const g, PetscScalar const rho_w,
+                        PetscGrid const &T, PetscGrid const &K, PetscGrid const &gradh2, PetscScalar const rho_i,
+                        PetscScalar const L, PetscScalar const bt) {
   auto resultGlobal = result.getWriteHandle();
   auto &KGlobal = K.getReadHandle();
   auto &TGlobal = T.getReadHandle();
   auto &gradh2Global = gradh2.getReadHandle();
-  PetscScalar r_g_rhow = r * g * rho_w;
-  PetscScalar rhoi_L = rho_i * L;
+  const PetscScalar r_g_rhow = r * g * rho_w;
+  const PetscScalar rhoi_L_inv = 1.0 / (rho_i * L);
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      resultGlobal(j, i) = r_g_rhow * TGlobal(j, i) * KGlobal(j, i) * gradh2Global(j, i) / rhoi_L;
+      resultGlobal(j, i) = r_g_rhow * TGlobal(j, i) * KGlobal(j, i) * gradh2Global(j, i) * rhoi_L_inv;
     }
   }
 }

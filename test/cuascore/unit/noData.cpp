@@ -1,10 +1,12 @@
-#include "CUASModel.h"
 #include "fillModel.h"
-#include "parseCxxopts.h"
+
+#include "CUASArgs.h"
+#include "CUASModel.h"
+#include "CUASSolver.h"
 #include "setup.h"
-#include "solver.h"
 
 #include "gtest/gtest.h"
+
 #include <memory>
 
 int mpiRank;
@@ -31,7 +33,7 @@ TEST(noDataTest, solverComparison) {
   auto uG = std::make_unique<PetscGrid>(model.Ncols, model.Nrows);    // unknown u at new time level
   auto u_nG = std::make_unique<PetscGrid>(model.Ncols, model.Nrows);  // u at the previous time level
 
-  solve(uG, u_nG, Nt, model, args, totaltime_secs, dt_secs);
+  solve(uG, u_nG, model, Nt, args, totaltime_secs, dt_secs);
 
   // from python:
 

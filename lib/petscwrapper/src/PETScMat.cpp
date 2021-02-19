@@ -1,4 +1,4 @@
-#include "PetscMat.h"
+#include "PETScMat.h"
 
 PetscMat::PetscMat(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
   MatCreate(PETSC_COMM_WORLD, &mat);

@@ -1,5 +1,6 @@
-#include "PetscAlgorithms.h"
-#include "PetscGrid.h"
+#include "CUASKernels.h"
+
+#include "PETScGrid.h"
 
 #include "gtest/gtest.h"
 
@@ -34,7 +35,7 @@ TEST(PetscAlgorithmsTest, dialationtest) {
   nf2d.setValues();
   grad_mask->setZero();
 
-  binaryDialation(*nf_mask, *grad_mask);
+  CUAS::binaryDialation(*grad_mask, *nf_mask);
 
   auto &nf_arr = nf_mask->getReadHandle();
   auto &grad_arr = grad_mask->getReadHandle();
@@ -79,7 +80,7 @@ TEST(PetscAlgorithmsTest, ghostCellsTest) {
   nf2d.setValues();
   grad_mask->setZero();
 
-  binaryDialation(*nf_mask, *grad_mask);
+  CUAS::binaryDialation(*grad_mask, *nf_mask);
 
   auto &grad_arr = grad_mask->getReadHandle();
 

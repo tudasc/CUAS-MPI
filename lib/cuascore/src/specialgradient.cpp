@@ -4,7 +4,7 @@
 
 namespace CUAS {
 
-void gradient2(PetscGrid const &h, PetscGrid &gradient, PetscScalar const dx) {
+void gradient2(PetscGrid &gradient, PetscGrid const &h, PetscScalar const dx) {
   gradient.setZero();
   auto &localh = h.getReadHandle();  // local
   auto grad = gradient.getWriteHandle();
@@ -21,7 +21,7 @@ void gradient2(PetscGrid const &h, PetscGrid &gradient, PetscScalar const dx) {
   }
 }
 
-void gradient2_central(PetscGrid const &h, PetscGrid &gradient, PetscScalar const dx) {
+void gradient2_central(PetscGrid &gradient, PetscGrid const &h, PetscScalar const dx) {
   gradient.setZero();
   auto &localh = h.getReadHandle();  // local
   auto grad = gradient.getWriteHandle();

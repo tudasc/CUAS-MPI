@@ -1,15 +1,15 @@
 #include "CUASModel.h"
-#include "PetscGrid.h"
 #include "fillModel.h"
 #include "fill_matrix_coo.h"
 #include "helper.h"
-#include "petscdump.h"
 
-#include <math.h>
+#include "PETScGrid.h"
+#include "petscdump.h"
 
 #include "gtest/gtest.h"
 
-#include <iostream>
+#include <math.h>
+
 int mpiRank;
 int mpiSize;
 

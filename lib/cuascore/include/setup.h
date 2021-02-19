@@ -1,8 +1,8 @@
 #ifndef CUAS_SETUP_H
 #define CUAS_SETUP_H
 
+#include "CUASArgs.h"
 #include "CUASModel.h"
-#include "parseCxxopts.h"
 
 namespace CUAS {
 
