@@ -1,7 +1,7 @@
-#include "PetscGrid.h"
+#include "PETScGrid.h"
 
 PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
-    : totalNumOfCols(numOfCols), totalNumOfRows(numOfRows) {
+    : totalNumOfCols(numOfCols), totalNumOfRows(numOfRows), readHandle(this) {
   DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
                PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, &dm);
 
@@ -14,10 +14,17 @@ PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
   DMDAGetCorners(dm, &cornerX, &cornerY, NULL, &localNumOfCols, &localNumOfRows, NULL);
   DMDAGetGhostCorners(dm, &cornerXGhost, &cornerYGhost, NULL, &localGhostNumOfCols, &localGhostNumOfRows, NULL);
 
+  // create values-Pointer to access using the handle
+  VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
+  VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &valuesGhosted);
+
+  // readHandle = ReadHandle(this);
+
   setGlobalBoundariesConst(boundaryValue);
 }
 
 void PetscGrid::setGlobalBoundariesConst(PetscScalar value) {
+  // we write to ghost-cells here
   auto local2d = getAsLocal2dArr();
   for (int i = 0; i < localGhostNumOfRows; ++i) {
     for (int j = 0; j < localGhostNumOfCols; ++j) {
@@ -45,16 +52,14 @@ void PetscGrid::setGlobalVecColMajor(PetscVec &globalVec) {
   PetscScalar *vecArr;
   VecGetArray(accessVector, &vecArr);
 
-  auto global2d = getAsGlobal2dArr();
+  WriteHandle global2d = getWriteHandle();
   for (int i = 0; i < localNumOfRows; ++i) {
     int indexI = getCornerY() + i;
     for (int j = 0; j < localNumOfCols; ++j) {
       int indexJ = getCornerX() + j;
-      // index is calculated so that column-major layout (like numpy.resize with order F) is achieved
-      global2d[i][j] = vecArr[totalNumOfRows * indexJ + indexI];
+      global2d(i, j) = vecArr[totalNumOfRows * indexJ + indexI];
     }
   }
-  setAsGlobal2dArr(global2d);
 }
 
 PetscScalar **PetscGrid::getAsLocal2dArr() {
@@ -89,7 +94,8 @@ void PetscGrid::setConst(PetscScalar value) {
 
 int PetscGrid::copy(PetscGrid const &input) {
   if (input.getLocalNumOfCols() != localNumOfCols || input.getLocalNumOfRows() != localNumOfRows) {
-    return -1;
+    // TODO error log output
+    return 1;
   }
 
   VecCopy(input.local, local);
@@ -115,6 +121,7 @@ int PetscGrid::copy(PetscGrid const &input) {
 // }
 
 PetscGrid::~PetscGrid() {
+  VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
   DMRestoreLocalVector(dm, &local);
   DMRestoreGlobalVector(dm, &global);
   DMDestroy(&dm);

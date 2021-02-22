@@ -1,6 +1,6 @@
-#include "PetscMat.h"
-#include "PetscSolver.h"
-#include "PetscVec.h"
+#include "PETScMat.h"
+#include "PETScSolver.h"
+#include "PETScVec.h"
 
 #include "gtest/gtest.h"
 

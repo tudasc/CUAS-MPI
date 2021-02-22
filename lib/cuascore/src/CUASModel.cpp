@@ -30,15 +30,13 @@ void CUASModel::init() {
   dx = cols[1] - cols[0];
 
   // p_ice = thk * RHO_ICE * GRAVITY (python)
-  auto thk2d = thk->getAsGlobal2dArr();
-  auto p_iceGlobal = p_ice->getAsGlobal2dArr();
+  auto &thk2d = thk->getReadHandle();
+  auto p_iceGlobal = p_ice->getWriteHandle();
   for (int j = 0; j < thk->getLocalNumOfRows(); ++j) {
     for (int i = 0; i < thk->getLocalNumOfCols(); ++i) {
-      p_iceGlobal[j][i] = thk2d[j][i] * RHO_ICE * GRAVITY;
+      p_iceGlobal(j, i) = thk2d(j, i) * RHO_ICE * GRAVITY;
     }
   }
-  p_ice->setAsGlobal2dArr(p_iceGlobal);
-  thk->restoreGlobal2dArr(thk2d);
 }
 
 }  // namespace CUAS

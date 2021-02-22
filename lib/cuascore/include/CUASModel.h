@@ -1,7 +1,7 @@
 #ifndef CUAS_MODEL_H
 #define CUAS_MODEL_H
 
-#include "PetscGrid.h"
+#include "PETScGrid.h"
 
 #include <memory>
 #include <vector>

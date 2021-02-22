@@ -1,5 +1,5 @@
-#include "PetscGrid.h"
-#include "PetscVec.h"
+#include "PETScGrid.h"
+#include "PETScVec.h"
 
 #include "gtest/gtest.h"
 
@@ -48,21 +48,20 @@ TEST(PetscGridTest, setandgetGlobal) {
   const int cols = GRID_COLS;
   const int rows = GRID_ROWS;
   auto grid = std::make_unique<PetscGrid>(cols, rows);
-  auto glob = grid->getAsGlobal2dArr();
+  auto glob = grid->getWriteHandle();
   for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
-      glob[i][j] = mpiRank;
+      glob(i, j) = mpiRank;
     }
   }
-  grid->setAsGlobal2dArr(glob);
+  glob.setValues();
 
-  auto glob2 = grid->getAsGlobal2dArr();
+  auto &glob2 = grid->getReadHandle();
   for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(glob2[i][j], mpiRank);
+      ASSERT_EQ(glob2(i, j), mpiRank);
     }
   }
-  grid->restoreGlobal2dArr(glob2);
 }
 
 TEST(PetscGridTest, constandzero) {
@@ -74,23 +73,20 @@ TEST(PetscGridTest, constandzero) {
 
   grid->setConst(5);
 
-  auto loc = grid->getAsLocal2dArr();
+  auto &loc = grid->getReadHandle();  // local
   for (int i = 0; i < grid->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalGhostNumOfCols(); ++j) {
-      ASSERT_EQ(loc[i][j], 5);
+      ASSERT_EQ(loc(i, j, GHOSTED), 5);
     }
   }
-  grid->restoreLocal2dArr(loc);
 
   grid->setZero();
 
-  auto loc2 = grid->getAsLocal2dArr();
   for (int i = 0; i < grid->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalGhostNumOfCols(); ++j) {
-      ASSERT_EQ(loc2[i][j], 0);
+      ASSERT_EQ(loc(i, j, GHOSTED), 0);
     }
   }
-  grid->restoreLocal2dArr(loc2);
 }
 
 TEST(PetscGridTest, checkCorners) {
@@ -140,31 +136,30 @@ TEST(PetscGridTest, boundaryTest) {
   auto grid = std::make_unique<PetscGrid>(cols, rows, 13.37);
   int counter = 0;
 
-  grid->setAsGlobal2dArr(grid->getAsGlobal2dArr());
+  // grid->setAsGlobal2dArr(grid->getAsGlobal2dArr());
 
-  auto loc = grid->getAsLocal2dArr();
+  auto &loc = grid->getReadHandle();  // local
   for (int i = 0; i < grid->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid->getLocalGhostNumOfCols(); ++j) {
       if (mpiRank == 0 && (i == 0 || j == 0)) {
-        ASSERT_EQ(loc[i][j], 13.37);
+        ASSERT_EQ(loc(i, j, GHOSTED), 13.37);
         counter++;
       }
       if (mpiRank == 1 && (i == 0 || j == grid->getLocalGhostNumOfCols() - 1)) {
-        ASSERT_EQ(loc[i][j], 13.37);
+        ASSERT_EQ(loc(i, j, GHOSTED), 13.37);
         counter++;
       }
       if (mpiRank == 2 && (i == grid->getLocalGhostNumOfRows() - 1 || j == 0)) {
-        ASSERT_EQ(loc[i][j], 13.37);
+        ASSERT_EQ(loc(i, j, GHOSTED), 13.37);
         counter++;
       }
       if (mpiRank == 3 && (i == grid->getLocalGhostNumOfRows() - 1 || j == grid->getLocalGhostNumOfCols() - 1)) {
-        ASSERT_EQ(loc[i][j], 13.37);
+        ASSERT_EQ(loc(i, j, GHOSTED), 13.37);
         counter++;
       }
     }
   }
   ASSERT_EQ(counter, 17);
-  grid->restoreLocal2dArr(loc);
 }
 
 TEST(PetscMatTest, copyTest) {
@@ -186,14 +181,12 @@ TEST(PetscMatTest, copyTest) {
 
   // test if all values have been written to the other grid
 
-  auto loc = grid_1->getAsLocal2dArr();
+  auto &loc = grid_1->getReadHandle();
   for (int i = 0; i < grid_1->getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid_1->getLocalGhostNumOfCols(); ++j) {
-      ASSERT_EQ(loc[i][j], 10);
+      ASSERT_EQ(loc(i, j, GHOSTED), 10);
     }
   }
-
-  grid_1->restoreLocal2dArr(loc);
 
   // test if an error is thrown when the grids have different sizes
 
@@ -202,7 +195,7 @@ TEST(PetscMatTest, copyTest) {
   grid_3->setConst(15);
 
   if (int error = grid_1->copy(*grid_3.get())) {
-    EXPECT_EQ(error, -1);
+    EXPECT_EQ(error, 1);
   }
 }
 
@@ -215,25 +208,23 @@ TEST(PetscGridTest, setGlobalVecTest) {
 
   grid.setConst(5);
 
-  auto loc = grid.getAsLocal2dArr();
+  auto &loc = grid.getReadHandle();  // local
   for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
     for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
-      ASSERT_EQ(loc[i][j], 5);
+      ASSERT_EQ(loc(i, j, GHOSTED), 5);
     }
   }
-  grid.restoreLocal2dArr(loc);
 
   PetscVec global(cols * rows);
   global.setConst(3);
   grid.setGlobalVecColMajor(global);
 
-  auto loc2 = grid.getAsGlobal2dArr();
+  // auto loc2 = grid.getAsGlobal2dArr();
   for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(loc2[i][j], 3);
+      ASSERT_EQ(loc(i, j), 3);
     }
   }
-  grid.restoreGlobal2dArr(loc2);
 
   for (int i = 0; i < cols * rows; ++i) {
     global.setValue(i, i);
@@ -243,15 +234,47 @@ TEST(PetscGridTest, setGlobalVecTest) {
   grid.setGlobalVecColMajor(global);
   // dump(grid);
 
-  auto loc3 = grid.getAsGlobal2dArr();
   for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
     int indexI = grid.getCornerY() + i;
     for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
       int indexJ = grid.getCornerX() + j;
-      ASSERT_EQ(loc3[i][j], rows * indexJ + indexI);
+      ASSERT_EQ(loc(i, j), rows * indexJ + indexI);
     }
   }
-  grid.restoreGlobal2dArr(loc3);
+}
+
+TEST(PetscGridTest, handleTest) {
+  PetscGrid grid(217, 13);
+
+  // test handles with explicit setValues()
+  auto w = grid.getWriteHandle();
+  for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+      w(i, j) = i * grid.getLocalNumOfRows() + j;
+    }
+  }
+  w.setValues();
+  auto &r = grid.getReadHandle();
+  for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+      ASSERT_EQ(r(i, j), i * grid.getLocalNumOfRows() + j);
+    }
+  }
+  // test handles with out of scope
+  {
+    auto w2 = grid.getWriteHandle();
+    for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+        w2(i, j) = (i * grid.getLocalNumOfRows() + j) * 5;
+      }
+    }
+  }
+
+  for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+      ASSERT_EQ(r(i, j), (i * grid.getLocalNumOfRows() + j) * 5);
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {

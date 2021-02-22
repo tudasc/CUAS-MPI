@@ -1,17 +1,17 @@
 #ifndef CUAS_PETSCDUMP_H
 #define CUAS_PETSCDUMP_H
 
-#include "PetscGrid.h"
-#include "PetscMat.h"
-#include "PetscVec.h"
+#include "PETScGrid.h"
+#include "PETScMat.h"
+#include "PETScVec.h"
 
 #include "petsc.h"
 
 #include <iostream>
 
-inline void dump(PetscGrid &grid, bool showGhostCells = true) {
+inline void dump(PetscGrid const &grid, bool showGhostCells = true) {
   if (showGhostCells) {
-    auto gridArr2d = grid.getAsLocal2dArr();
+    auto &gridArr2d = grid.getReadHandle();  // local
 
     int size, rank;
     MPI_Comm_size(PETSC_COMM_WORLD, &size);
@@ -22,16 +22,15 @@ inline void dump(PetscGrid &grid, bool showGhostCells = true) {
         std::cout << "process num: " << rank << std::endl;
         for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
           for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
-            std::cout << gridArr2d[i][j] << " ";
+            std::cout << gridArr2d(i, j, GHOSTED) << " ";
           }
           std::cout << std::endl;
         }
         std::cout << "------------" << std::endl;
       }
     }
-    grid.restoreLocal2dArr(gridArr2d);
   } else {
-    auto gridArr2d = grid.getAsGlobal2dArr();
+    auto &gridArr2d = grid.getReadHandle();
     int size, rank;
     MPI_Comm_size(PETSC_COMM_WORLD, &size);
     MPI_Comm_rank(PETSC_COMM_WORLD, &rank);
@@ -41,14 +40,13 @@ inline void dump(PetscGrid &grid, bool showGhostCells = true) {
         std::cout << "process num: " << rank << std::endl;
         for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
           for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
-            std::cout << gridArr2d[i][j];
+            std::cout << gridArr2d(i, j);
           }
           std::cout << std::endl;
         }
         std::cout << "------------" << std::endl;
       }
     }
-    grid.restoreGlobal2dArr(gridArr2d);
   }
 }
 

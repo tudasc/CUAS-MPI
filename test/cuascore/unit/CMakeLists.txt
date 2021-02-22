@@ -38,12 +38,12 @@ set_property(TARGET setup-test PROPERTY CXX_STANDARD 14)
 #target_link_libraries(example gtest_main)
 #add_test(NAME example_test COMMAND example)
 
-add_executable(test-binarydialation
-        BinaryDialationTest.cpp
+add_executable(test-CUASKernels
+        CUASKernelsTest.cpp
         )
-target_link_libraries(test-binarydialation cuascore)
-target_link_libraries(test-binarydialation gtest)
-set_property(TARGET test-binarydialation PROPERTY CXX_STANDARD 14)
+target_link_libraries(test-CUASKernels cuascore)
+target_link_libraries(test-CUASKernels gtest)
+set_property(TARGET test-CUASKernels PROPERTY CXX_STANDARD 14)
 
 add_executable(test-gradient
         GradientTest.cpp

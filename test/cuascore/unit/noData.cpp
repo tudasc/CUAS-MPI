@@ -1,10 +1,12 @@
-#include "CUASModel.h"
 #include "fillModel.h"
-#include "parseCxxopts.h"
+
+#include "CUASArgs.h"
+#include "CUASModel.h"
+#include "CUASSolver.h"
 #include "setup.h"
-#include "solver.h"
 
 #include "gtest/gtest.h"
+
 #include <memory>
 
 int mpiRank;
@@ -23,14 +25,15 @@ TEST(noDataTest, solverComparison) {
 
   setup(model, args);
 
-  int Nt = 300;
+  // int Nt = 7300;
+  int Nt = 7300;
   PetscScalar totaltime_secs = 1.0;
   PetscScalar dt_secs = 43200;
 
   auto uG = std::make_unique<PetscGrid>(model.Ncols, model.Nrows);    // unknown u at new time level
   auto u_nG = std::make_unique<PetscGrid>(model.Ncols, model.Nrows);  // u at the previous time level
 
-  solve(uG, u_nG, Nt, model, args, totaltime_secs, dt_secs);
+  solve(uG, u_nG, model, Nt, args, totaltime_secs, dt_secs);
 
   // from python:
 
@@ -106,43 +109,33 @@ TEST(noDataTest, solverComparison) {
       {1820, 1729, 1638, 1547, 1456., 1365, 1274, 1183, 1092, 1001., 910, 819, 728, 637, 546., 455, 364, 273, 182, 91}};
 
   PetscGrid uPy(20, 10);
-  double **uPy2d = uPy.getAsGlobal2dArr();
-
   PetscGrid u_nPy(20, 10);
-  double **u_nPy2d = u_nPy.getAsGlobal2dArr();
+  {
+    auto uPyH = uPy.getWriteHandle();
+    auto u_nPyH = u_nPy.getWriteHandle();
 
-  int cornerX = uPy.getCornerX();
-  int cornerY = uPy.getCornerY();
-  // if(mpiRank == 0){
-  for (int i = 0; i < uPy.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < uPy.getLocalNumOfCols(); ++j) {
-      uPy2d[i][j] = u[cornerY + i][cornerX + j];
-      u_nPy2d[i][j] = u_n[cornerY + i][cornerX + j];
+    int cornerX = uPy.getCornerX();
+    int cornerY = uPy.getCornerY();
+    for (int i = 0; i < uPy.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < uPy.getLocalNumOfCols(); ++j) {
+        uPyH(i, j) = u[cornerY + i][cornerX + j];
+        u_nPyH(i, j) = u_n[cornerY + i][cornerX + j];
+      }
     }
   }
-  // }
 
-  uPy.setAsGlobal2dArr(uPy2d);
-  u_nPy.setAsGlobal2dArr(u_nPy2d);
+  auto &uPyRH = uPy.getReadHandle();
+  auto &u_nPyRH = u_nPy.getReadHandle();
 
-  uPy2d = uPy.getAsGlobal2dArr();
-  u_nPy2d = u_nPy.getAsGlobal2dArr();
-
-  auto uGlob = uG->getAsGlobal2dArr();
+  // auto uGlob = uG->getAsGlobal2dArr();
+  auto &uGRH = uG->getReadHandle();
+  auto &u_nGRH = u_nG->getReadHandle();
   for (int i = 0; i < model.usurf->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.usurf->getLocalNumOfCols(); ++j) {
-      ASSERT_NEAR(uGlob[i][j], uPy2d[i][j], 0.6);
+      ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6);
+      ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6);
     }
   }
-  uG->restoreGlobal2dArr(uGlob);
-
-  auto u_nGlob = u_nG->getAsGlobal2dArr();
-  for (int i = 0; i < model.usurf->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < model.usurf->getLocalNumOfCols(); ++j) {
-      ASSERT_NEAR(u_nGlob[i][j], u_nPy2d[i][j], 0.6);
-    }
-  }
-  u_nG->restoreGlobal2dArr(uGlob);
 }
 
 TEST(noDataTest, compareModelToPython) {
@@ -229,85 +222,74 @@ TEST(noDataTest, compareModelToPython) {
   PetscGrid p_icePy(20, 10);
   PetscGrid bndPy(20, 10);
   PetscGrid QPy(20, 10);
-  double **usurfPy2d = usurfPy.getAsGlobal2dArr();
-  double **topgPy2d = topgPy.getAsGlobal2dArr();
-  double **p_icePy2d = p_icePy.getAsGlobal2dArr();
-  double **bndPy2d = bndPy.getAsGlobal2dArr();
-  double **QPy2d = QPy.getAsGlobal2dArr();
+  {
+    auto usurfPy2d = usurfPy.getWriteHandle();
+    auto topgPy2d = topgPy.getWriteHandle();
+    auto p_icePy2d = p_icePy.getWriteHandle();
+    auto bndPy2d = bndPy.getWriteHandle();
+    auto QPy2d = QPy.getWriteHandle();
 
-  int cornerX = usurfPy.getCornerX();
-  int cornerY = usurfPy.getCornerY();
-  // fill up py grids to compare with mpi
-  for (int i = 0; i < usurfPy.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < usurfPy.getLocalNumOfCols(); ++j) {
-      usurfPy2d[i][j] = usurf[cornerY + i][cornerX + j];
-      topgPy2d[i][j] = topg[cornerY + i][cornerX + j];
-      p_icePy2d[i][j] = p_ice[cornerY + i][cornerX + j];
-      bndPy2d[i][j] = bnd_mask[cornerY + i][cornerX + j];
-      QPy2d[i][j] = bmelt[cornerY + i][cornerX + j];
+    int cornerX = usurfPy.getCornerX();
+    int cornerY = usurfPy.getCornerY();
+    // fill up py grids to compare with mpi
+    for (int i = 0; i < usurfPy.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < usurfPy.getLocalNumOfCols(); ++j) {
+        usurfPy2d(i, j) = usurf[cornerY + i][cornerX + j];
+        topgPy2d(i, j) = topg[cornerY + i][cornerX + j];
+        p_icePy2d(i, j) = p_ice[cornerY + i][cornerX + j];
+        bndPy2d(i, j) = bnd_mask[cornerY + i][cornerX + j];
+        QPy2d(i, j) = bmelt[cornerY + i][cornerX + j];
+      }
     }
   }
 
-  usurfPy.setAsGlobal2dArr(usurfPy2d);
-  topgPy.setAsGlobal2dArr(topgPy2d);
-  p_icePy.setAsGlobal2dArr(p_icePy2d);
-  bndPy.setAsGlobal2dArr(bndPy2d);
-  QPy.setAsGlobal2dArr(QPy2d);
+  auto &usurfPy2d = usurfPy.getReadHandle();
+  auto &topgPy2d = topgPy.getReadHandle();
+  auto &p_icePy2d = p_icePy.getReadHandle();
+  auto &bndPy2d = bndPy.getReadHandle();
+  auto &QPy2d = QPy.getReadHandle();
 
-  usurfPy2d = usurfPy.getAsGlobal2dArr();
-  topgPy2d = topgPy.getAsGlobal2dArr();
-  p_icePy2d = p_icePy.getAsGlobal2dArr();
-  bndPy2d = bndPy.getAsGlobal2dArr();
-  QPy2d = QPy.getAsGlobal2dArr();
-
-  auto usurfGlob = model.usurf->getAsGlobal2dArr();
+  auto &usurfGlob = model.usurf->getReadHandle();
   for (int i = 0; i < model.usurf->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.usurf->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(usurfGlob[i][j], usurfPy2d[i][j]);
+      ASSERT_EQ(usurfGlob(i, j), usurfPy2d(i, j));
     }
   }
-  model.usurf->restoreGlobal2dArr(usurfGlob);
 
-  auto topgGlob = model.topg->getAsGlobal2dArr();
+  auto &topgGlob = model.topg->getReadHandle();
   for (int i = 0; i < model.topg->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.topg->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(topgGlob[i][j], topgPy2d[i][j]);
+      ASSERT_EQ(topgGlob(i, j), topgPy2d(i, j));
     }
   }
-  model.topg->restoreGlobal2dArr(topgGlob);
 
   // thk is the same as usurf
-  auto thkGlob = model.thk->getAsGlobal2dArr();
+  auto &thkGlob = model.thk->getReadHandle();
   for (int i = 0; i < model.thk->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.thk->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(thkGlob[i][j], usurfPy2d[i][j]);
     }
   }
-  model.thk->restoreGlobal2dArr(thkGlob);
 
-  auto p_iceGlob = model.p_ice->getAsGlobal2dArr();
+  auto &p_iceGlob = model.p_ice->getReadHandle();
   for (int i = 0; i < model.p_ice->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.p_ice->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(p_iceGlob[i][j], p_icePy2d[i][j]);
+      ASSERT_EQ(p_iceGlob(i, j), p_icePy2d(i, j));
     }
   }
-  model.p_ice->restoreGlobal2dArr(p_iceGlob);
 
-  auto bndGlob = model.bnd_mask->getAsGlobal2dArr();
+  auto &bndGlob = model.bnd_mask->getReadHandle();
   for (int i = 0; i < model.bnd_mask->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.bnd_mask->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(bndGlob[i][j], bndPy2d[i][j]);
+      ASSERT_EQ(bndGlob(i, j), bndPy2d(i, j));
     }
   }
-  model.bnd_mask->restoreGlobal2dArr(bndGlob);
 
-  auto QGlob = model.Q->getAsGlobal2dArr();
+  auto &QGlob = model.Q->getReadHandle();
   for (int i = 0; i < model.Q->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.Q->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(QGlob[i][j], QPy2d[i][j]);
+      ASSERT_EQ(QGlob(i, j), QPy2d(i, j));
     }
   }
-  model.Q->restoreGlobal2dArr(QGlob);
 }
 
 int main(int argc, char *argv[]) {

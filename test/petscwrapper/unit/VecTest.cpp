@@ -1,4 +1,4 @@
-#include "PetscVec.h"
+#include "PETScVec.h"
 
 #include "gtest/gtest.h"
 

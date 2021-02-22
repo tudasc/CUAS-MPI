@@ -16,8 +16,8 @@ void fillNoData(CUAS::CUASModel &model) {
     }
   }
 
-  auto usurfLocal2d = model.usurf->getAsGlobal2dArr();
-  auto thkGlobal2d = model.thk->getAsGlobal2dArr();
+  auto usurfLocal2d = model.usurf->getWriteHandle();
+  auto thkGlobal2d = model.thk->getWriteHandle();
   int numOfCols = model.usurf->getLocalNumOfCols();
   int numOfRows = model.usurf->getLocalNumOfRows();
   int cornerX = model.usurf->getCornerX();
@@ -26,19 +26,19 @@ void fillNoData(CUAS::CUASModel &model) {
   PetscScalar val = 2000.0;
   for (int j = 0; j < numOfRows; ++j) {
     for (int i = 0; i < numOfCols; ++i) {
-      usurfLocal2d[j][i] = val - (cornerX + i) * 100;
-      thkGlobal2d[j][i] = val - (cornerX + i) * 100;
+      usurfLocal2d(j, i) = val - (cornerX + i) * 100;
+      thkGlobal2d(j, i) = val - (cornerX + i) * 100;
     }
   }
-  model.usurf->setAsGlobal2dArr(usurfLocal2d);
-  model.thk->setAsGlobal2dArr(thkGlobal2d);
+  usurfLocal2d.setValues();
+  thkGlobal2d.setValues();
 
   model.topg->setZero();
 
   // bnd-mask: just last row -> DIRICHLET_Flag
   // first row + first&last col -> NOFLOW_Flag
   // inside: 0
-  auto bnd_maskLocal2d = model.bnd_mask->getAsGlobal2dArr();
+  auto bnd_maskLocal2d = model.bnd_mask->getWriteHandle();
   numOfCols = model.bnd_mask->getLocalNumOfCols();
   numOfRows = model.bnd_mask->getLocalNumOfRows();
   int totalNumOfCols = model.bnd_mask->getTotalNumOfCols();
@@ -49,19 +49,19 @@ void fillNoData(CUAS::CUASModel &model) {
   for (int j = 0; j < numOfRows; ++j) {
     for (int i = 0; i < numOfCols; ++i) {
       if (cornerY + j == 0) {
-        bnd_maskLocal2d[j][i] = NOFLOW_FLAG;
+        bnd_maskLocal2d(j, i) = NOFLOW_FLAG;
       } else if (cornerY + j == totalNumOfRows - 1) {
-        bnd_maskLocal2d[j][i] = NOFLOW_FLAG;
+        bnd_maskLocal2d(j, i) = NOFLOW_FLAG;
       } else if (cornerX + i == 0) {
-        bnd_maskLocal2d[j][i] = NOFLOW_FLAG;
+        bnd_maskLocal2d(j, i) = NOFLOW_FLAG;
       } else if (cornerX + i == totalNumOfCols - 1) {
-        bnd_maskLocal2d[j][i] = DIRICHLET_FLAG;
+        bnd_maskLocal2d(j, i) = DIRICHLET_FLAG;
       } else {
-        bnd_maskLocal2d[j][i] = 0;
+        bnd_maskLocal2d(j, i) = 0;
       }
     }
   }
-  model.bnd_mask->setAsGlobal2dArr(bnd_maskLocal2d);
+  bnd_maskLocal2d.setValues();
 
   auto &bmelt = *model.Q;
   bmelt.setConst(1);
