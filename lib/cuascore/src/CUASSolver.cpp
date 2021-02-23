@@ -8,8 +8,8 @@
 #include "specialgradient.h"
 
 #include "PETScMat.h"
-#include "PETScVec.h"
 #include "PETScSolver.h"
+#include "PETScVec.h"
 
 #include <math.h>
 #include <memory>

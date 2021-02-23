@@ -1,8 +1,8 @@
 #include "setup.h"
 
+#include "CUASKernels.h"
 #include "helper.h"
 #include "physicalConstants.h"
-#include "CUASKernels.h"
 
 #include "PETScGrid.h"
 

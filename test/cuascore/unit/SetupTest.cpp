@@ -1,7 +1,7 @@
 #include "fillModel.h"
 
-#include "setup.h"
 #include "CUASArgs.h"
+#include "setup.h"
 
 #include "PETScGrid.h"
 #include "petscdump.h"
