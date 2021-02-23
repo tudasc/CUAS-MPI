@@ -8,6 +8,6 @@ namespace CUAS {
 
 void setup(CUASModel &model, CUASArgs const &args);
 
-}
+}  // namespace CUAS
 
 #endif  // CUAS_SETUP_H

@@ -86,4 +86,5 @@ void fill_matrix_coo(PetscMat &A, PetscVec &b, int const Nx, int const Ny, Petsc
   A.assemble();
   b.assemble();
 }
+
 }  // namespace CUAS
