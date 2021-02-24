@@ -1,42 +1,16 @@
-add_executable(test-nodata
-        noData.cpp
+add_executable(test-noData
+        noDataTest.cpp
         )
-target_link_libraries(test-nodata cuascore)
-target_link_libraries(test-nodata gtest)
-set_property(TARGET test-nodata PROPERTY CXX_STANDARD 14)
+target_link_libraries(test-noData cuascore)
+target_link_libraries(test-noData gtest)
+set_property(TARGET test-noData PROPERTY CXX_STANDARD 14)
 
 add_executable(test-fillMatrix
-  fill_matrix_test.cpp
+        fillMatrixTest.cpp
 )
 target_link_libraries(test-fillMatrix cuascore)
 target_link_libraries(test-fillMatrix gtest)
 set_property(TARGET test-fillMatrix PROPERTY CXX_STANDARD 14)
-
-
-add_executable(test-helper
-  helperTest.cpp
-)
-target_link_libraries(test-helper cuascore)
-target_link_libraries(test-helper gtest)
-set_property(TARGET test-helper PROPERTY CXX_STANDARD 14)
-
-add_executable(test-cxxargs
-        cxxoptsTest.cpp
-)
-target_link_libraries(test-cxxargs cuascore)
-target_link_libraries(test-cxxargs gtest)
-set_property(TARGET test-cxxargs PROPERTY CXX_STANDARD 14)
-
-add_executable(setup-test
-  SetupTest.cpp
-)
-target_link_libraries(setup-test cuascore)
-set_property(TARGET setup-test PROPERTY CXX_STANDARD 14)
-
-# Now simply link against gtest or gtest_main as needed. Eg
-#add_executable(example example.cpp)
-#target_link_libraries(example gtest_main)
-#add_test(NAME example_test COMMAND example)
 
 add_executable(test-CUASKernels
         CUASKernelsTest.cpp
@@ -45,16 +19,30 @@ target_link_libraries(test-CUASKernels cuascore)
 target_link_libraries(test-CUASKernels gtest)
 set_property(TARGET test-CUASKernels PROPERTY CXX_STANDARD 14)
 
-add_executable(test-gradient
-        GradientTest.cpp
+add_executable(test-specialgradient
+        specialgradientTest.cpp
         )
-target_link_libraries(test-gradient cuascore)
-target_link_libraries(test-gradient gtest)
-set_property(TARGET test-gradient PROPERTY CXX_STANDARD 14)
+target_link_libraries(test-specialgradient cuascore)
+target_link_libraries(test-specialgradient gtest)
+set_property(TARGET test-specialgradient PROPERTY CXX_STANDARD 14)
+
+add_executable(test-fillNoData
+        fillNoDataTest.cpp
+        )
+target_link_libraries(test-fillNoData cuascore)
+target_link_libraries(test-fillNoData gtest)
+set_property(TARGET test-fillNoData PROPERTY CXX_STANDARD 14)
+
+add_executable(test-CUASArgs
+        CUASArgsTest.cpp
+        )
+target_link_libraries(test-CUASArgs cuascore)
+target_link_libraries(test-CUASArgs gtest_main)
+set_property(TARGET test-CUASArgs PROPERTY CXX_STANDARD 14)
 
 add_executable(test-timeparse
         timeparseTest.cpp
         )
 target_link_libraries(test-timeparse cuascore)
-target_link_libraries(test-timeparse gtest)
+target_link_libraries(test-timeparse gtest_main)
 set_property(TARGET test-timeparse PROPERTY CXX_STANDARD 14)

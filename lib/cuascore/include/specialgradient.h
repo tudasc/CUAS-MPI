@@ -5,12 +5,12 @@
 
 namespace CUAS {
 
-// PetscGrid h and PetscGrid gradient need to be created beforehand. The gradient-grid needs to be of the same size as
+// PETScGrid h and PETScGrid gradient need to be created beforehand. The gradient-grid needs to be of the same size as
 // the grid h. The same needs to be respected for the calculation of gradient2_central.
-void gradient2(PetscGrid &gradient, PetscGrid const &h, PetscScalar const dx);
+void gradient2(PETScGrid &gradient, PETScGrid const &input, PetscScalar const dx);
 
 // not used, not tested
-// void gradient2_central(PetscGrid &gradient, PetscGrid const &h, PetscScalar const dx);
+// void gradient2_central(PETScGrid &gradient, PETScGrid const &input, PetscScalar const dx);
 
 }  // namespace CUAS
 

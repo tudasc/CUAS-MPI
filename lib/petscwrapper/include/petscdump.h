@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-inline void dump(PetscGrid const &grid, bool showGhostCells = true) {
+inline void dump(PETScGrid const &grid, bool showGhostCells = true) {
   if (showGhostCells) {
     auto &gridArr2d = grid.getReadHandle();  // local
 
@@ -50,15 +50,15 @@ inline void dump(PetscGrid const &grid, bool showGhostCells = true) {
   }
 }
 
-inline void dump(PetscMat &mat, bool showGlobal = true) {
+inline void dump(PETScMat &mat, bool showGlobal = true) {
   // mat.assemble();
   if (showGlobal) {
-    MatView(mat.getPetscRaw(), PETSC_VIEWER_STDOUT_WORLD);
+    MatView(mat.getRaw(), PETSC_VIEWER_STDOUT_WORLD);
   } else {
-    MatView(mat.getPetscRaw(), PETSC_VIEWER_STDOUT_SELF);
+    MatView(mat.getRaw(), PETSC_VIEWER_STDOUT_SELF);
   }
 }
 
-inline void dump(PetscVec &vec) { VecView(vec.getPetscRaw(), PETSC_VIEWER_STDOUT_WORLD); }
+inline void dump(PETScVec &vec) { VecView(vec.getRaw(), PETSC_VIEWER_STDOUT_WORLD); }
 
 #endif

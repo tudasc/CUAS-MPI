@@ -7,9 +7,9 @@
 
 namespace CUAS {
 
-void fill_matrix_coo(PetscMat &A, PetscVec &b, int const Nx, int const Ny, PetscGrid const &S, PetscGrid const &T,
-                     PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PetscGrid const &u_n,
-                     PetscGrid const &Q, PetscGrid const &dirichlet_values, PetscGrid const &dirichlet_mask);
+void fill_matrix_coo(PETScMat &A, PETScVec &b, int const Nx, int const Ny, PETScGrid const &S, PETScGrid const &T,
+                     PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PETScGrid const &u_n,
+                     PETScGrid const &Q, PETScGrid const &dirichlet_values, PETScGrid const &dirichlet_mask);
 }  // namespace CUAS
 
 #endif

@@ -1,4 +1,4 @@
-#include "timparse.h"
+#include "timeparse.h"
 
 #include "gtest/gtest.h"
 
@@ -24,11 +24,4 @@ TEST(timeparseTest, parse1y2y1m) {
   std::string inputTime = "1 year 2 years 1 month";
   CUAS::timeSecs secs = CUAS::parseTime(inputTime);
   ASSERT_EQ(secs, 0);
-}
-
-int main(int argc, char *argv[]) {
-  int result = 0;
-  ::testing::InitGoogleTest(&argc, argv);
-  result = RUN_ALL_TESTS();
-  return result;
 }
