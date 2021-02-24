@@ -1,8 +1,7 @@
-#include "setup.h"
+#include "CUASSetup.h"
 
+#include "CUASConstants.h"
 #include "CUASKernels.h"
-#include "helper.h"
-#include "physicalConstants.h"
 
 #include "PETScGrid.h"
 
@@ -18,13 +17,13 @@ void setup(CUASModel &model, CUASArgs const &args) {
 
   model.S->setConst(Ss * bt * args.Ssmulti);
 
-  auto global_mask = model.no_flow_mask->getWriteHandle();
+  auto global_mask = model.noFlowMask->getWriteHandle();
   auto K_arr = model.K->getWriteHandle();
   auto T_arr = model.T->getWriteHandle();
-  auto &mask = model.bnd_mask->getReadHandle();
+  auto &mask = model.bndMask->getReadHandle();
 
-  auto rows = model.no_flow_mask->getLocalNumOfRows();
-  auto cols = model.no_flow_mask->getLocalNumOfCols();
+  auto rows = model.noFlowMask->getLocalNumOfRows();
+  auto cols = model.noFlowMask->getLocalNumOfCols();
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
@@ -55,10 +54,10 @@ void setup(CUASModel &model, CUASArgs const &args) {
     }
   }
 
-  auto global_dir_mask = model.dirichlet_mask->getWriteHandle();
+  auto global_dir_mask = model.dirichletMask->getWriteHandle();
 
-  rows = model.dirichlet_mask->getLocalNumOfRows();
-  cols = model.dirichlet_mask->getLocalNumOfCols();
+  rows = model.dirichletMask->getLocalNumOfRows();
+  cols = model.dirichletMask->getLocalNumOfCols();
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
@@ -84,12 +83,12 @@ void setup(CUASModel &model, CUASArgs const &args) {
     }
   }
 
-  pressure2head(*model.dirichlet_values, *model.p_ice, *model.topg, 0.0);
+  pressure2head(*model.dirichletValues, *model.pIce, *model.topg, 0.0);
 
-  auto global_sea_mask = model.sea_level_forcing_mask->getWriteHandle();
+  auto global_sea_mask = model.seaLevelForcingMask->getWriteHandle();
 
-  rows = model.sea_level_forcing_mask->getLocalNumOfRows();
-  cols = model.sea_level_forcing_mask->getLocalNumOfCols();
+  rows = model.seaLevelForcingMask->getLocalNumOfRows();
+  cols = model.seaLevelForcingMask->getLocalNumOfCols();
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
@@ -101,7 +100,7 @@ void setup(CUASModel &model, CUASArgs const &args) {
     }
   }
 
-  binaryDialation(*model.grad_mask, *model.no_flow_mask);
+  binaryDialation(*model.gradMask, *model.noFlowMask);
 
   // TODO: Time dependent forcing (Interpolierung)
   //

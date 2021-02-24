@@ -2,16 +2,123 @@
 #define CUAS_KERNELS_H
 
 #include "CUASArgs.h"
+#include "CUASConstants.h"
 #include "CUASModel.h"
-#include "helper.h"
-#include "physicalConstants.h"
 #include "specialgradient.h"
 
 #include "PETScGrid.h"
 
 namespace CUAS {
 
-inline void binaryDialation(PetscGrid &output, PetscGrid const &input) {
+/*
+ * Converts hydraulic head to water pressure
+ * bedElevation and seaLevel are relative to the mean sea level = 0.0
+ */
+inline void head2pressure(PETScGrid &result, PETScGrid const &head, PETScGrid const &bedElevation,
+                          PetscScalar const seaLevel = 0.0) {
+  if (!result.isCompatible(head) || !result.isCompatible(bedElevation)) {
+    exit(1);
+  }
+
+  auto result2d = result.getWriteHandle();
+  auto &head2d = head.getReadHandle();
+  auto &bedElevation2d = bedElevation.getReadHandle();
+
+  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
+      double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
+      result2d(j, i) = RHO_WATER * GRAVITY * (head2d(j, i) - effective_bed_elevation);
+    }
+  }
+}
+
+/*
+ * Convert water pressure to hydraulic head
+ * bed_elevation and sea_level are relative to the mean sea level = 0.0
+ * pressure is ice pressure
+ */
+inline void pressure2head(PETScGrid &result, PETScGrid const &pressure, PETScGrid const &bedElevation,
+                          PetscScalar const seaLevel = 0.0) {
+  if (!result.isCompatible(pressure) || !result.isCompatible(bedElevation)) {
+    exit(1);
+  }
+
+  auto result2d = result.getWriteHandle();
+  auto &pressure2d = pressure.getReadHandle();
+  auto &bedElevation2d = bedElevation.getReadHandle();
+
+  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
+      double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
+      result2d(j, i) = pressure2d(j, i) / (RHO_WATER * GRAVITY) + effective_bed_elevation;
+    }
+  }
+}
+
+/*
+ * Compute ice overburden pressure
+ */
+inline void overburdenPressure(PETScGrid &result, PETScGrid const &thk) {
+  if (!result.isCompatible(thk)) {
+    exit(1);
+  }
+
+  auto result2d = result.getWriteHandle();
+  auto &thk2d = thk.getReadHandle();
+  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
+      result2d(j, i) = thk2d(j, i) * RHO_ICE * GRAVITY;
+    }
+  }
+}
+
+/*
+ * From Werder2013 / summers2018:
+ * beta = (b r − b)/l r for b < b r , beta = 0 for b ≥ b r
+ */
+inline void cavityOpenB(PETScGrid &result, PetscScalar const beta, PetscScalar const v_b, PETScGrid const &K) {
+  if (!result.isCompatible(K)) {
+    exit(1);
+  }
+
+  auto resultGlobal = result.getWriteHandle();
+  auto &KGlobal = K.getReadHandle();
+  PetscScalar betaVb = beta * v_b;
+  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
+      resultGlobal(j, i) = betaVb * KGlobal(j, i);
+    }
+  }
+}
+
+/*
+ * like deFleurian2016
+ */
+inline void computeMelt(PETScGrid &result, PetscScalar const r, PetscScalar const g, PetscScalar const rho_w,
+                        PETScGrid const &T, PETScGrid const &K, PETScGrid const &gradh2, PetscScalar const rho_i,
+                        PetscScalar const L, PetscScalar const bt) {
+  if (!result.isCompatible(T) || !result.isCompatible(T) || !result.isCompatible(K) || !result.isCompatible(gradh2)) {
+    exit(1);
+  }
+
+  auto resultGlobal = result.getWriteHandle();
+  auto &KGlobal = K.getReadHandle();
+  auto &TGlobal = T.getReadHandle();
+  auto &gradh2Global = gradh2.getReadHandle();
+  const PetscScalar r_g_rhow = r * g * rho_w;
+  const PetscScalar rhoi_L_inv = 1.0 / (rho_i * L);
+  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
+      resultGlobal(j, i) = r_g_rhow * TGlobal(j, i) * KGlobal(j, i) * gradh2Global(j, i) * rhoi_L_inv;
+    }
+  }
+}
+
+inline void binaryDialation(PETScGrid &output, PETScGrid const &input) {
+  if (!output.isCompatible(input)) {
+    exit(1);
+  }
+
   auto &in = input.getReadHandle();
   auto out = output.getWriteHandle();
 
@@ -38,12 +145,15 @@ inline void binaryDialation(PetscGrid &output, PetscGrid const &input) {
     index_cols = 1;
     ++index_rows;
   }
-
-  return;
 }
 
-inline void enableUnconfined(PetscGrid &Teff, PetscGrid &TeffPowTexp, CUASModel &model, PetscGrid const &u_n,
+inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, CUASModel &model, PETScGrid const &u_n,
                              CUASArgs const &args, double const bt) {
+  if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(u_n) || !Teff.isCompatible(*model.T_n) ||
+      !Teff.isCompatible(*model.topg) || !Teff.isCompatible(*model.K) || !Teff.isCompatible(*model.Sp)) {
+    exit(1);
+  }
+
   auto &u_nGlobal = u_n.getReadHandle();
   auto &T_nGlobal = model.T_n->getReadHandle();
   auto &topgGlobal = model.topg->getReadHandle();
@@ -77,7 +187,11 @@ inline void enableUnconfined(PetscGrid &Teff, PetscGrid &TeffPowTexp, CUASModel 
   }
 }
 
-inline void calculateTeffPowTexp(PetscGrid &Teff, PetscGrid &TeffPowTexp, PetscGrid const &T, CUASArgs const &args) {
+inline void calculateTeffPowTexp(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid const &T, CUASArgs const &args) {
+  if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(T)) {
+    exit(1);
+  }
+
   // copy T to Teff
   auto &TGlobal = T.getReadHandle();
   auto TeffGlobal = Teff.getWriteHandle();
@@ -90,7 +204,11 @@ inline void calculateTeffPowTexp(PetscGrid &Teff, PetscGrid &TeffPowTexp, PetscG
   }
 }
 
-inline void calculateSeValues(PetscGrid &Se, PetscGrid const &Sp, PetscGrid const &S) {  // extra scope for handles
+inline void calculateSeValues(PETScGrid &Se, PETScGrid const &Sp, PETScGrid const &S) {  // extra scope for handles
+  if (!Se.isCompatible(Sp) || !Se.isCompatible(S)) {
+    exit(1);
+  }
+
   auto SeGlobal = Se.getWriteHandle();
   auto &SpGlobalRead = Sp.getReadHandle();
   auto &SGlobal = S.getReadHandle();
@@ -101,13 +219,17 @@ inline void calculateSeValues(PetscGrid &Se, PetscGrid const &Sp, PetscGrid cons
   }
 }
 
-inline void doChannels(PetscGrid &melt, PetscGrid &creep, PetscGrid const &u_n, CUASModel const &model,
+inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, CUASModel const &model,
                        CUASArgs const &args, PetscScalar const bt) {
-  PetscGrid maggrad2(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
+  if (!melt.isCompatible(creep) || !melt.isCompatible(u_n)) {
+    exit(1);
+  }
+
+  PETScGrid maggrad2(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
   gradient2(maggrad2, u_n, model.dx);
 
   auto maggrad2Global = maggrad2.getWriteHandle();
-  auto &grad_maskGlobal = model.grad_mask->getReadHandle();
+  auto &grad_maskGlobal = model.gradMask->getReadHandle();
   for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < u_n.getLocalNumOfCols(); ++i) {
       if (maggrad2Global(j, i) == grad_maskGlobal(j, i)) {
@@ -118,7 +240,7 @@ inline void doChannels(PetscGrid &melt, PetscGrid &creep, PetscGrid const &u_n, 
 
   auto creepGlobal = creep.getWriteHandle();
   auto &TGlobal = model.T->getReadHandle();
-  auto &p_iceGlobal = model.p_ice->getReadHandle();
+  auto &p_iceGlobal = model.pIce->getReadHandle();
   auto &u_nGlobal = u_n.getReadHandle();
   auto &topgGlobal = model.topg->getReadHandle();
   PetscScalar multValue = 2 * args.flowConstant;
@@ -133,7 +255,7 @@ inline void doChannels(PetscGrid &melt, PetscGrid &creep, PetscGrid const &u_n, 
   }
 
   if (args.Texp != 1) {
-    PetscGrid T_nExp(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
+    PETScGrid T_nExp(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
     auto T_nExpGlobal = T_nExp.getWriteHandle();
     auto &T_nGlobal = model.T_n->getReadHandle();
     for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
@@ -149,9 +271,10 @@ inline void doChannels(PetscGrid &melt, PetscGrid &creep, PetscGrid const &u_n, 
   // TODO: if not args.noSmoothMelt:
 }
 
-inline void noChannels(PetscGrid &melt, PetscGrid &creep) {
+inline void noChannels(PETScGrid &melt, PETScGrid &creep) {
   melt.setZero();
   creep.setZero();
+
   // this is probably faster than setting zero
   /*auto meltGlobal = melt.getWriteHandle();
   auto creepGlobal = creep.getWriteHandle();

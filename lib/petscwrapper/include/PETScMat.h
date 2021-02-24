@@ -24,27 +24,35 @@
  * (rows, j, m)
  */
 
-class PetscMat {
+class PETScMat {
+ public:
+  // constructor
+  explicit PETScMat(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
+    MatCreate(PETSC_COMM_WORLD, &mat);
+    MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, numOfRows, numOfCols);
+    MatSetFromOptions(mat);
+    MatSetUp(mat);
+  }
+  ~PETScMat() { MatDestroy(&mat); }
+
+  // getter
+  Mat getRaw() { return mat; }
+  int getCols() const { return cols; }
+  int getRows() const { return rows; }
+  // setter
+  void setValue(int row, int col, PetscScalar val) { MatSetValue(mat, row, col, val, INSERT_VALUES); }
+  // utils
+  void assemble() {
+    MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY);
+  }
+
  private:
   Mat mat;
   const int cols;
   const int rows;
 
- public:
-  // constructor
-  PetscMat(int numOfRows, int numOfCols);
-  // getter
-  Mat getPetscRaw() { return mat; }
-  int getCols() const { return cols; }
-  int getRows() const { return rows; }
-  // setter
-  void setValue(int row, int col, PetscScalar val);
-  // utils
-  void assemble();
-
-  ~PetscMat();
-
-  friend class PetscSolver;
+  friend class PETScSolver;
 };
 
 #endif

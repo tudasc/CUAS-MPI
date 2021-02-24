@@ -9,8 +9,8 @@
 
 namespace CUAS {
 
-inline void saveSolution(int timeStep, CUASArgs const &args, int rank, PetscGrid const &u, PetscGrid const &u_n,
-                         CUASModel &model, PetscGrid &melt, PetscScalar cavity_opening) {
+inline void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u, PETScGrid const &u_n,
+                         CUASModel &model, PETScGrid &melt, PetscScalar cavity_opening) {
   if (args.verbose && rank == 0) {
     // TODO: implement time_display_units from helper to get time_scaling
     // std::cout << "time(" << i << "/" << Nt << ") = " << time_current/time_scaling << " (" << time_units << ")"

@@ -1,6 +1,4 @@
 add_library(petscwrapper
-  src/PETScVec.cpp
-  src/PETScMat.cpp
   src/PETScGrid.cpp
 )
 

@@ -2,8 +2,6 @@
 
 #include "CUASKernels.h"
 #include "fill_matrix_coo.h"
-#include "helper.h"
-#include "physicalConstants.h"
 #include "savetimestep.h"
 #include "specialgradient.h"
 
@@ -11,40 +9,40 @@
 #include "PETScSolver.h"
 #include "PETScVec.h"
 
-#include <math.h>
+#include <cmath>
 #include <memory>
 
-// TODO should not be necessary in a solver
+// TODO should not be necessary in a solver use spdlog instead
 #include <iostream>
 
 namespace CUAS {
 
-void solve(std::unique_ptr<PetscGrid> &u, std::unique_ptr<PetscGrid> &u_n, CUASModel &model, int const Nt,
+void solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid> &u_n, CUASModel &model, int const Nt,
            CUASArgs const &args, PetscScalar const totaltime_secs, PetscScalar const dt_secs) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   //
   // SOLVER PREPARATION
   //
-  PetscVec sol(model.Nrows * model.Ncols);
+  PETScVec sol(model.Nrows * model.Ncols);
 
   PetscScalar It[Nt + 1];
   for (int i = 0; i < Nt + 1; ++i) {
     It[i] = i;
   }
 
-  // auto u = std::make_unique<PetscGrid>(model.Ncols, model.Nrows);    // unknown u at new time level
-  // auto u_n = std::make_unique<PetscGrid>(model.Ncols, model.Nrows);  // u at the previous time level
+  // auto u = std::make_unique<PETScGrid>(model.Ncols, model.Nrows);    // unknown u at new time level
+  // auto u_n = std::make_unique<PETScGrid>(model.Ncols, model.Nrows);  // u at the previous time level
 
   // why is this not an arg?
   const int theta = 1;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
 
-  PetscVec b(model.Nrows * model.Ncols);
+  PETScVec b(model.Nrows * model.Ncols);
 
   if (args.initialHead == "zero") {
     u_n->setZero();
   } else if (args.initialHead == "Nzero") {
-    pressure2head(*u_n, *model.p_ice, *model.topg, 0.0);
+    pressure2head(*u_n, *model.pIce, *model.topg, 0.0);
   } else if (args.initialHead == "topg") {
     u_n->copy(*model.topg);
   } else {
@@ -62,7 +60,7 @@ void solve(std::unique_ptr<PetscGrid> &u, std::unique_ptr<PetscGrid> &u_n, CUASM
 
   // save timedependent values
   PetscScalar Ntsaved;
-  int Itlength = sizeof(It) / sizeof(It[0]);
+  auto Itlength = sizeof(It) / sizeof(It[0]);
   if (Itlength % args.saveEvery > 0) {
     Ntsaved = ceil(Itlength / args.saveEvery);
   }
@@ -74,9 +72,9 @@ void solve(std::unique_ptr<PetscGrid> &u, std::unique_ptr<PetscGrid> &u_n, CUASM
 
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
   // melt, creep and Q are supposed to be part of the solution class.
-  PetscGrid melt(model.Ncols, model.Nrows);
-  PetscGrid creep(model.Ncols, model.Nrows);
-  PetscGrid Q(model.Ncols, model.Nrows);
+  PETScGrid melt(model.Ncols, model.Nrows);
+  PETScGrid creep(model.Ncols, model.Nrows);
+  PETScGrid Q(model.Ncols, model.Nrows);
 
   melt.setZero();
   creep.setZero();
@@ -90,18 +88,17 @@ void solve(std::unique_ptr<PetscGrid> &u, std::unique_ptr<PetscGrid> &u_n, CUASM
 
   // start
   // creating grids outside of loop to save time
-  PetscGrid Se(model.Sp->getTotalNumOfCols(), model.Sp->getTotalNumOfRows());
+  PETScGrid Se(model.Sp->getTotalNumOfCols(), model.Sp->getTotalNumOfRows());
   int size = model.Ncols * model.Nrows;
-  PetscMat A(size, size);
+  PETScMat A(size, size);
   PetscScalar cavity_opening = 0;
-  PetscGrid Teff(model.T->getTotalNumOfCols(), model.T->getTotalNumOfRows());
-  PetscGrid TeffPowTexp(model.T->getTotalNumOfCols(), model.T->getTotalNumOfRows());
+  PETScGrid Teff(model.T->getTotalNumOfCols(), model.T->getTotalNumOfRows());
+  PETScGrid TeffPowTexp(model.T->getTotalNumOfCols(), model.T->getTotalNumOfRows());
 
-  PetscSolver solver;
   for (int timeStep = 1; timeStep < Nt + 1; ++timeStep) {
     time_current += dt_secs;
     // TODO get_current_Q (part of time dependent forcing)
-    PetscGrid &current_Q = *model.Q;  // get_current_Q(time_current);
+    PETScGrid &current_Q = *model.Q;  // get_current_Q(time_current);
 
     // if (args.seaLevelForcing) {
     // TODO
@@ -120,9 +117,9 @@ void solve(std::unique_ptr<PetscGrid> &u, std::unique_ptr<PetscGrid> &u_n, CUASM
     calculateSeValues(Se, *model.Sp, *model.S);
 
     fill_matrix_coo(A, b, model.Nrows, model.Ncols, Se, TeffPowTexp, model.dx, dt_secs, theta, *u_n, current_Q,
-                    *model.dirichlet_values, *model.dirichlet_mask);
+                    *model.dirichletValues, *model.dirichletMask);
     // solve the equation A*sol = b
-    solver.solve(A, b, sol);
+    PETScSolver::solve(A, b, sol);
 
     u->setGlobalVecColMajor(sol);
 

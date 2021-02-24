@@ -33,26 +33,26 @@
  * (n, y, second dimension, rows, i)
  */
 
-class PetscGrid {
+class PETScGrid {
  public:
   /*
    * Use ReadHandle to only read values of the grid.
    * if ghosted: GhostValues are being read aswell.
    */
   struct ReadHandle {
-    PetscGrid const *grid;
-    ReadHandle(PetscGrid const *grid) : grid(grid){};
+    PETScGrid const *grid;
+    explicit ReadHandle(PETScGrid const *grid) : grid(grid){};
     PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
       if (ghosted) {
         if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
           // TODO error log
-          exit(-1);
+          exit(1);
         }
         return grid->valuesGhosted[i][j];
       } else {
         if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
           // TODO error log
-          exit(-1);
+          exit(1);
         }
         return grid->values[i][j];
       }
@@ -66,13 +66,13 @@ class PetscGrid {
    * Using WriteHandle you can not write to ghost-cells.
    */
   struct WriteHandle {
-    PetscGrid *grid;
-    WriteHandle(PetscGrid *grid) : grid(grid){};
+    PETScGrid *grid;
+    explicit WriteHandle(PETScGrid *grid) : grid(grid){};
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
         // TODO error log
-        exit(-1);
+        exit(1);
       }
       return grid->values[i][j];
     };
@@ -84,17 +84,43 @@ class PetscGrid {
     ~WriteHandle() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); }
   };
 
+  struct WriteHandleGhost {
+    PETScGrid *grid;
+    explicit WriteHandleGhost(PETScGrid *grid) : grid(grid){};
+
+    PetscScalar &operator()(int i, int j) {
+      if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
+        // TODO error log
+        exit(1);
+      }
+      return grid->valuesGhosted[i][j];
+    };
+
+    // only use if you want to set values before destruction of WriteHandle
+    // Please keep in mind that this might cause double communication
+    void setValues() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); };
+
+    ~WriteHandleGhost() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); }
+  };
+
   // creates a Grid of numOfCols times numOfRows,
   // sets value of most outer cells to boundaryValue
-  PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue = 0);
-  ~PetscGrid();
+  explicit PETScGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue = 0);
+  ~PETScGrid();
 
   ReadHandle const &getReadHandle() const { return readHandle; }
 
   WriteHandle getWriteHandle() { return WriteHandle(this); }
 
+  WriteHandleGhost getWriteHandleGhost() { return WriteHandleGhost(this); }
+
+  // sets the outer boundaries (ghost-cells) of the grid
+  void setGlobalBoundariesConst(PetscScalar value);
+
   // sets the grids values from globalVec using the column major layout
-  void setGlobalVecColMajor(PetscVec &globalVec);
+  void setGlobalVecColMajor(PETScVec &globalVec, bool ghosted = NONE_GHOSTED);
+  // sets the grids values from globalVec using the column major layout
+  void setGlobalVecRowMajor(PETScVec &globalVec, bool ghosted = NONE_GHOSTED);
 
   // sets each entry of grid to value
   void setConst(PetscScalar value);
@@ -103,7 +129,17 @@ class PetscGrid {
   void setZero() { setConst(0); }
 
   // copys the content of one grid to another
-  int copy(PetscGrid const &input);
+  int copy(PETScGrid const &input);
+
+  bool isCompatible(PETScGrid const &grid) {
+    if (totalNumOfCols == grid.totalNumOfCols && totalNumOfRows == grid.totalNumOfRows &&
+        localNumOfCols == grid.localNumOfCols && localNumOfRows == grid.localNumOfRows &&
+        localGhostNumOfCols == grid.localGhostNumOfCols && localGhostNumOfRows == grid.localGhostNumOfRows &&
+        totalGhostNumOfCols == grid.totalGhostNumOfCols && totalGhostNumOfRows == grid.totalGhostNumOfRows)
+      return true;
+    else
+      return false;
+  }
 
   // int countNonZero() const;
 
@@ -113,18 +149,45 @@ class PetscGrid {
   // Vec getGlobalVec() { return global; }
 
   int getLocalNumOfCols() const { return localNumOfCols; }
-  int getLocalGhostNumOfCols() const { return localGhostNumOfCols; }
   int getLocalNumOfRows() const { return localNumOfRows; }
+  int getLocalGhostNumOfCols() const { return localGhostNumOfCols; }
   int getLocalGhostNumOfRows() const { return localGhostNumOfRows; }
   int getTotalNumOfRows() const { return totalNumOfRows; }
   int getTotalNumOfCols() const { return totalNumOfCols; }
+  int getTotalGhostNumOfRows() const { return totalGhostNumOfRows; }
+  int getTotalGhostNumOfCols() const { return totalGhostNumOfCols; }
 
   int getCornerX() const { return cornerX; }
   int getCornerXGhost() const { return cornerXGhost; }
   int getCornerY() const { return cornerY; }
   int getCornerYGhost() const { return cornerYGhost; }
 
+  // DM getDM() { return dm; }
  private:
+  DM dm;
+
+  Vec local;
+  Vec global;
+
+  PetscScalar **values;
+  PetscScalar **valuesGhosted;
+
+  ReadHandle readHandle;
+
+  const int totalNumOfCols;
+  const int totalNumOfRows;
+
+  const int totalGhostNumOfCols;
+  const int totalGhostNumOfRows;
+
+  int localNumOfCols;
+  int localNumOfRows;
+
+  int localGhostNumOfCols;
+  int localGhostNumOfRows;
+
+  int cornerX, cornerY, cornerXGhost, cornerYGhost;
+
   // indices: from 0 to LocalGhostWidth
   // you MUST call restoreLocal2dArr afterwards!
   // returns a 2d Array of the processes share of data
@@ -149,32 +212,6 @@ class PetscGrid {
   // use only if you do not want to change values.
   // restores the values from getAsGlobal2dArr()
   void restoreGlobal2dArr(PetscScalar **values);
-
-  // DM getDM() { return dm; }
- private:
-  DM dm;
-
-  Vec local;
-  Vec global;
-
-  PetscScalar **values;
-  PetscScalar **valuesGhosted;
-
-  ReadHandle readHandle;
-
-  const int totalNumOfCols;
-  const int totalNumOfRows;
-
-  int localNumOfCols;
-  int localNumOfRows;
-
-  int localGhostNumOfCols;
-  int localGhostNumOfRows;
-
-  int cornerX, cornerY, cornerXGhost, cornerYGhost;
-
-  // sets the outer boundaries (ghost-cells) of the grid
-  void setGlobalBoundariesConst(PetscScalar value);
 };
 
 #endif

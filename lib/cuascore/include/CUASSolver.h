@@ -8,7 +8,7 @@
 
 namespace CUAS {
 
-void solve(std::unique_ptr<PetscGrid> &u, std::unique_ptr<PetscGrid> &u_n, CUASModel &model, int const Nt,
+void solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid> &u_n, CUASModel &model, int const Nt,
            CUASArgs const &args, PetscScalar const totaltime_secs, PetscScalar const dt_secs);
 }  // namespace CUAS
 

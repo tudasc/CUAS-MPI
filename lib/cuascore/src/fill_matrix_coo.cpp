@@ -1,6 +1,6 @@
 #include "fill_matrix_coo.h"
 
-#include "physicalConstants.h"
+#include "CUASConstants.h"
 
 namespace CUAS {
 
@@ -8,9 +8,9 @@ inline PetscScalar hmean(PetscScalar x1, PetscScalar x2) { return 2.0 * x1 * x2 
 
 inline int m(int i, int j, int Nx) { return j * Nx + i; }
 
-void fill_matrix_coo(PetscMat &A, PetscVec &b, int const Nx, int const Ny, PetscGrid const &S, PetscGrid const &T,
-                     PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PetscGrid const &u_n,
-                     PetscGrid const &Q, PetscGrid const &dirichlet_values, PetscGrid const &dirichlet_mask) {
+void fill_matrix_coo(PETScMat &A, PETScVec &b, int const Nx, int const Ny, PETScGrid const &S, PETScGrid const &T,
+                     PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PETScGrid const &u_n,
+                     PETScGrid const &Q, PETScGrid const &dirichlet_values, PETScGrid const &dirichlet_mask) {
   // we take localnumOfCols, so that we can iterate over the normal boundaries
   auto numOfCols = S.getLocalNumOfCols();
   auto numOfRows = S.getLocalNumOfRows();
@@ -29,9 +29,9 @@ void fill_matrix_coo(PetscMat &A, PetscVec &b, int const Nx, int const Ny, Petsc
   PetscScalar A_N, A_S, A_W, A_E, A_P;
   // not sure if needed
   b.setZero();
-  int p = 0;
-  int currJ = 0;
-  int currI = 0;
+  int p;
+  int currJ;
+  int currI;
   int GhostI;
   int GhostJ;
   for (int j = 0; j < numOfCols; ++j) {

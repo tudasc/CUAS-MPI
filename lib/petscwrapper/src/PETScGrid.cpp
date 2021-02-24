@@ -1,9 +1,13 @@
 #include "PETScGrid.h"
 
-PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
-    : totalNumOfCols(numOfCols), totalNumOfRows(numOfRows), readHandle(this) {
-  DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
-               PETSC_DECIDE, PETSC_DECIDE, 1, 1, NULL, NULL, &dm);
+PETScGrid::PETScGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
+    : totalNumOfCols(numOfCols - 2),
+      totalNumOfRows(numOfRows - 2),
+      totalGhostNumOfCols(numOfCols),
+      totalGhostNumOfRows(numOfRows),
+      readHandle(this) {
+  DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, totalNumOfCols,
+               totalNumOfRows, PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
 
   DMSetFromOptions(dm);
   DMSetUp(dm);
@@ -11,26 +15,27 @@ PetscGrid::PetscGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
   DMCreateGlobalVector(dm, &global);
   DMCreateLocalVector(dm, &local);
 
-  DMDAGetCorners(dm, &cornerX, &cornerY, NULL, &localNumOfCols, &localNumOfRows, NULL);
-  DMDAGetGhostCorners(dm, &cornerXGhost, &cornerYGhost, NULL, &localGhostNumOfCols, &localGhostNumOfRows, NULL);
+  DMDAGetCorners(dm, &cornerX, &cornerY, nullptr, &localNumOfCols, &localNumOfRows, nullptr);
+  DMDAGetGhostCorners(dm, &cornerXGhost, &cornerYGhost, nullptr, &localGhostNumOfCols, &localGhostNumOfRows, nullptr);
 
   // create values-Pointer to access using the handle
   VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
   VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &valuesGhosted);
 
-  // readHandle = ReadHandle(this);
-
   setGlobalBoundariesConst(boundaryValue);
 }
 
-void PetscGrid::setGlobalBoundariesConst(PetscScalar value) {
+void PETScGrid::setGlobalBoundariesConst(PetscScalar value) {
+  // TODO use WriteHandleGhost
   // we write to ghost-cells here
-  auto local2d = getAsLocal2dArr();
+  PetscScalar **local2d;
+  VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &local2d);
+
   for (int i = 0; i < localGhostNumOfRows; ++i) {
     for (int j = 0; j < localGhostNumOfCols; ++j) {
       if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows - 1 == totalNumOfRows && i == localGhostNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols - 1 == totalNumOfCols && j == localGhostNumOfCols - 1) {
+          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
+          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
         local2d[i][j] = value;
       }
     }
@@ -39,61 +44,158 @@ void PetscGrid::setGlobalBoundariesConst(PetscScalar value) {
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
 }
 
-void PetscGrid::setGlobalVecColMajor(PetscVec &globalVec) {
+void PETScGrid::setGlobalVecColMajor(PETScVec &globalVec, bool ghosted) {
   // the following lines are copying the globalVec Vector to each processor.
   // could probably be optimized to get the specific needed values.
-  VecScatter vs;
-  Vec accessVector;
-  VecScatterCreateToAll(globalVec.getPetscRaw(), &vs, &accessVector);
-  VecScatterBegin(vs, globalVec.getPetscRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
-  VecScatterEnd(vs, globalVec.getPetscRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
-  VecScatterDestroy(&vs);
 
-  PetscScalar *vecArr;
-  VecGetArray(accessVector, &vecArr);
-
-  WriteHandle global2d = getWriteHandle();
-  for (int i = 0; i < localNumOfRows; ++i) {
-    int indexI = getCornerY() + i;
-    for (int j = 0; j < localNumOfCols; ++j) {
-      int indexJ = getCornerX() + j;
-      global2d(i, j) = vecArr[totalNumOfRows * indexJ + indexI];
+  if (ghosted) {
+    if (globalVec.getSize() != totalGhostNumOfCols * totalGhostNumOfRows) {
+      exit(1);
     }
+
+    VecScatter vs;
+    Vec accessVector;
+    VecScatterCreateToAll(globalVec.getRaw(), &vs, &accessVector);
+    VecScatterBegin(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+    VecScatterEnd(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+
+    const PetscScalar *vecArr;
+    VecGetArrayRead(accessVector, &vecArr);
+
+    auto global2d = getWriteHandleGhost();
+    for (int i = 0; i < localGhostNumOfRows; ++i) {
+      int indexI = getCornerY() + i;
+      for (int j = 0; j < localGhostNumOfCols; ++j) {
+        int indexJ = getCornerX() + j;
+        global2d(i, j) = vecArr[totalGhostNumOfRows * indexJ + indexI];
+      }
+    }
+
+    VecRestoreArrayRead(accessVector, &vecArr);
+    VecDestroy(&accessVector);
+    VecScatterDestroy(&vs);
+
+  } else {
+    if (globalVec.getSize() != totalNumOfCols * totalNumOfRows) {
+      exit(1);
+    }
+
+    VecScatter vs;
+    Vec accessVector;
+    VecScatterCreateToAll(globalVec.getRaw(), &vs, &accessVector);
+    VecScatterBegin(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+    VecScatterEnd(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+
+    const PetscScalar *vecArr;
+    VecGetArrayRead(accessVector, &vecArr);
+
+    auto global2d = getWriteHandle();
+    for (int i = 0; i < localNumOfRows; ++i) {
+      int indexI = getCornerY() + i;
+      for (int j = 0; j < localNumOfCols; ++j) {
+        int indexJ = getCornerX() + j;
+        global2d(i, j) = vecArr[totalNumOfRows * indexJ + indexI];
+      }
+    }
+
+    VecRestoreArrayRead(accessVector, &vecArr);
+    VecDestroy(&accessVector);
+    VecScatterDestroy(&vs);
   }
 }
 
-PetscScalar **PetscGrid::getAsLocal2dArr() {
+void PETScGrid::setGlobalVecRowMajor(PETScVec &globalVec, bool ghosted) {
+  // the following lines are copying the globalVec Vector to each processor.
+  // could probably be optimized to get the specific needed values.
+
+  if (ghosted) {
+    if (globalVec.getSize() != totalGhostNumOfCols * totalGhostNumOfRows) {
+      exit(1);
+    }
+
+    VecScatter vs;
+    Vec accessVector;
+    VecScatterCreateToAll(globalVec.getRaw(), &vs, &accessVector);
+    VecScatterBegin(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+    VecScatterEnd(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+
+    const PetscScalar *vecArr;
+    VecGetArrayRead(accessVector, &vecArr);
+
+    auto global2d = getWriteHandleGhost();
+    for (int i = 0; i < localGhostNumOfRows; ++i) {
+      int indexI = getCornerY() + i;
+      for (int j = 0; j < localGhostNumOfCols; ++j) {
+        int indexJ = getCornerX() + j;
+        global2d(i, j) = vecArr[totalGhostNumOfCols * indexI + indexJ];
+      }
+    }
+
+    VecRestoreArrayRead(accessVector, &vecArr);
+    VecDestroy(&accessVector);
+    VecScatterDestroy(&vs);
+
+  } else {
+    if (globalVec.getSize() != totalNumOfCols * totalNumOfRows) {
+      exit(1);
+    }
+
+    VecScatter vs;
+    Vec accessVector;
+    VecScatterCreateToAll(globalVec.getRaw(), &vs, &accessVector);
+    VecScatterBegin(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+    VecScatterEnd(vs, globalVec.getRaw(), accessVector, INSERT_VALUES, SCATTER_FORWARD);
+
+    const PetscScalar *vecArr;
+    VecGetArrayRead(accessVector, &vecArr);
+
+    auto global2d = getWriteHandle();
+    for (int i = 0; i < localNumOfRows; ++i) {
+      int indexI = getCornerY() + i;
+      for (int j = 0; j < localNumOfCols; ++j) {
+        int indexJ = getCornerX() + j;
+        global2d(i, j) = vecArr[totalNumOfCols * indexI + indexJ];
+      }
+    }
+
+    VecRestoreArrayRead(accessVector, &vecArr);
+    VecDestroy(&accessVector);
+    VecScatterDestroy(&vs);
+  }
+}
+
+PetscScalar **PETScGrid::getAsLocal2dArr() {
   PetscScalar **values;
   VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &values);
   return values;
 }
 
-void PetscGrid::restoreLocal2dArr(PetscScalar **values) {
+void PETScGrid::restoreLocal2dArr(PetscScalar **values) {
   VecRestoreArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &values);
 }
 
-PetscScalar **PetscGrid::getAsGlobal2dArr() {
+PetscScalar **PETScGrid::getAsGlobal2dArr() {
   PetscScalar **values;
   VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
   return values;
 }
 
-void PetscGrid::restoreGlobal2dArr(PetscScalar **values) {
+void PETScGrid::restoreGlobal2dArr(PetscScalar **values) {
   VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
 }
 
-void PetscGrid::setAsGlobal2dArr(PetscScalar **globalValues) {
+void PETScGrid::setAsGlobal2dArr(PetscScalar **globalValues) {
   VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &globalValues);
   DMGlobalToLocal(dm, global, INSERT_VALUES, local);
 }
 
-void PetscGrid::setConst(PetscScalar value) {
+void PETScGrid::setConst(PetscScalar value) {
   VecSet(local, value);
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
 }
 
-int PetscGrid::copy(PetscGrid const &input) {
-  if (input.getLocalNumOfCols() != localNumOfCols || input.getLocalNumOfRows() != localNumOfRows) {
+int PETScGrid::copy(PETScGrid const &input) {
+  if (!isCompatible(input)) {
     // TODO error log output
     return 1;
   }
@@ -104,7 +206,7 @@ int PetscGrid::copy(PetscGrid const &input) {
   return 0;
 }
 
-// int PetscGrid::countNonZero() const {
+// int PETScGrid::countNonZero() const {
 //   PetscScalar **gridArr2d;
 //   VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &gridArr2d);
 //   int count = 0;
@@ -120,7 +222,7 @@ int PetscGrid::copy(PetscGrid const &input) {
 //   return count;
 // }
 
-PetscGrid::~PetscGrid() {
+PETScGrid::~PETScGrid() {
   VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
   DMRestoreLocalVector(dm, &local);
   DMRestoreGlobalVector(dm, &global);

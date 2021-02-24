@@ -2,10 +2,7 @@
 
 #include "gtest/gtest.h"
 
-int mpiRank;
-int mpiSize;
-
-TEST(cxxOptsTest, allOpts) {
+TEST(CUASArgs, allOpts) {
   int argc = 17;
   char arg0[] = "test";
   char arg05[] = "--verbose";
@@ -47,15 +44,4 @@ TEST(cxxOptsTest, allOpts) {
   ASSERT_EQ(args.restart, "'restartFile.nc'");
   ASSERT_EQ(args.noSmoothMelt, true);
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
-}
-
-int main(int argc, char *argv[]) {
-  int result = 0;
-  ::testing::InitGoogleTest(&argc, argv);
-  PetscInitialize(&argc, &argv, nullptr, nullptr);
-  MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
-  MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
-  result = RUN_ALL_TESTS();
-  PetscFinalize();
-  return result;
 }

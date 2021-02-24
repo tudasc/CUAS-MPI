@@ -15,26 +15,26 @@ class CUASModel {
 
   // x = cols, y = rows
   int const Ncols, Nrows;
+  PetscScalar dx, dy;
   std::vector<PetscScalar> cols, rows;
-  PetscScalar dx;
-  std::unique_ptr<PetscGrid> usurf;
-  std::unique_ptr<PetscGrid> topg;
-  std::unique_ptr<PetscGrid> thk;
-  std::unique_ptr<PetscGrid> bnd_mask;
-  std::unique_ptr<PetscGrid> Q;
-  std::unique_ptr<PetscGrid> p_ice;
+  std::unique_ptr<PETScGrid> usurf;
+  std::unique_ptr<PETScGrid> topg;
+  std::unique_ptr<PETScGrid> thk;
+  std::unique_ptr<PETScGrid> bndMask;
+  std::unique_ptr<PETScGrid> Q;
+  std::unique_ptr<PETScGrid> pIce;
 
   // grids for setup
-  std::unique_ptr<PetscGrid> S;
-  std::unique_ptr<PetscGrid> Sp;
-  std::unique_ptr<PetscGrid> K;
-  std::unique_ptr<PetscGrid> T;
-  std::unique_ptr<PetscGrid> T_n;
-  std::unique_ptr<PetscGrid> no_flow_mask;
-  std::unique_ptr<PetscGrid> grad_mask;
-  std::unique_ptr<PetscGrid> sea_level_forcing_mask;
-  std::unique_ptr<PetscGrid> dirichlet_mask;
-  std::unique_ptr<PetscGrid> dirichlet_values;
+  std::unique_ptr<PETScGrid> S = nullptr;
+  std::unique_ptr<PETScGrid> Sp = nullptr;
+  std::unique_ptr<PETScGrid> K = nullptr;
+  std::unique_ptr<PETScGrid> T = nullptr;
+  std::unique_ptr<PETScGrid> T_n = nullptr;
+  std::unique_ptr<PETScGrid> noFlowMask = nullptr;
+  std::unique_ptr<PETScGrid> gradMask = nullptr;
+  std::unique_ptr<PETScGrid> seaLevelForcingMask = nullptr;
+  std::unique_ptr<PETScGrid> dirichletMask = nullptr;
+  std::unique_ptr<PETScGrid> dirichletValues = nullptr;
 
   // type not sure; if NULL: assume constant forcing
   void *time_forcing = nullptr;

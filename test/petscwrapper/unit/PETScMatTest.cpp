@@ -11,43 +11,43 @@ int mpiSize;
 #define MAT_COLS 20
 #define MAT_ROWS 25
 
-TEST(PetscMatTest, size) {
+TEST(PETScMatTest, size) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PetscMat>(rows, cols);
+  auto mat = std::make_unique<PETScMat>(rows, cols);
   ASSERT_EQ(mat->getCols(), cols);
   ASSERT_EQ(mat->getRows(), rows);
 
   int petscCols;
   int petscRows;
-  MatGetSize(mat->getPetscRaw(), &petscRows, &petscCols);
+  MatGetSize(mat->getRaw(), &petscRows, &petscCols);
   ASSERT_EQ(petscCols, cols);
   ASSERT_EQ(petscRows, rows);
 }
 
 // mpiSize needs to be a divisor of cols and rows
-TEST(PetscMatTest, localsize) {
+TEST(PETScMatTest, localsize) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
   // ASSERT_EQ(size % mpiSize, 0);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PetscMat>(rows, cols);
+  auto mat = std::make_unique<PETScMat>(rows, cols);
   int petsclocalcols;
   int petsclocalrows;
-  MatGetLocalSize(mat->getPetscRaw(), &petsclocalrows, &petsclocalcols);
+  MatGetLocalSize(mat->getRaw(), &petsclocalrows, &petsclocalcols);
   ASSERT_EQ(petsclocalrows, rows / mpiSize);
   ASSERT_EQ(petsclocalcols, cols / mpiSize);
 }
 
-TEST(PetscMatTest, getColsRows) {
+TEST(PETScMatTest, getColsRows) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PetscMat>(rows, cols);
+  auto mat = std::make_unique<PETScMat>(rows, cols);
 
   int colsFromMat = mat->getCols();
   ASSERT_EQ(cols, colsFromMat);
@@ -56,12 +56,12 @@ TEST(PetscMatTest, getColsRows) {
   ASSERT_EQ(rows, rowsFromMat);
 }
 
-TEST(PetscMatTest, setvalue) {
+TEST(PETScMatTest, setvalue) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PetscMat>(rows, cols);
+  auto mat = std::make_unique<PETScMat>(rows, cols);
   mat->assemble();
 
   if (mpiRank == 0) {
@@ -91,41 +91,38 @@ TEST(PetscMatTest, setvalue) {
     PetscScalar v;
     int p1[] = {18};
     int p2[] = {19};
-    MatGetValues(mat->getPetscRaw(), 1, p1, 1, p2, &v);
+    MatGetValues(mat->getRaw(), 1, p1, 1, p2, &v);
     ASSERT_EQ(v, 2.7);
   }
   if (mpiRank == 1) {
     PetscScalar v;
     int p1[] = {9};
     int p2[] = {2};
-    MatGetValues(mat->getPetscRaw(), 1, p1, 1, p2, &v);
+    MatGetValues(mat->getRaw(), 1, p1, 1, p2, &v);
     ASSERT_EQ(v, 1.337);
   }
   if (mpiRank == 4) {
     PetscScalar v;
     int p1[] = {24};
     int p2[] = {19};
-    MatGetValues(mat->getPetscRaw(), 1, p1, 1, p2, &v);
+    MatGetValues(mat->getRaw(), 1, p1, 1, p2, &v);
     ASSERT_EQ(v, 13.37);
   }
   if (mpiRank == 0) {
     PetscScalar v;
     int p1[] = {1};
     int p2[] = {2};
-    MatGetValues(mat->getPetscRaw(), 1, p1, 1, p2, &v);
+    MatGetValues(mat->getRaw(), 1, p1, 1, p2, &v);
     ASSERT_EQ(v, 133.7);
   }
 }
 
 int main(int argc, char *argv[]) {
-  int result = 0;
-
   ::testing::InitGoogleTest(&argc, argv);
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
-  result = RUN_ALL_TESTS();
+  int result = RUN_ALL_TESTS();
   PetscFinalize();
-
   return result;
 }
