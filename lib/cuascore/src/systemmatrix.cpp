@@ -1,4 +1,4 @@
-#include "fill_matrix_coo.h"
+#include "systemmatrix.h"
 
 #include "CUASConstants.h"
 
@@ -8,9 +8,9 @@ inline PetscScalar hmean(PetscScalar x1, PetscScalar x2) { return 2.0 * x1 * x2 
 
 inline int m(int i, int j, int Nx) { return j * Nx + i; }
 
-void fill_matrix_coo(PETScMat &A, PETScVec &b, int const Nx, int const Ny, PETScGrid const &S, PETScGrid const &T,
-                     PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PETScGrid const &u_n,
-                     PETScGrid const &Q, PETScGrid const &dirichlet_values, PETScGrid const &dirichlet_mask) {
+void systemmatrix(PETScMat &A, PETScVec &b, int const Nx, int const Ny, PETScGrid const &S, PETScGrid const &T,
+                  PetscScalar const dx, PetscScalar const dt, PetscScalar const theta, PETScGrid const &u_n,
+                  PETScGrid const &Q, PETScGrid const &dirichlet_values, PETScGrid const &dirichlet_mask) {
   // we take localnumOfCols, so that we can iterate over the normal boundaries
   auto numOfCols = S.getLocalNumOfCols();
   auto numOfRows = S.getLocalNumOfRows();

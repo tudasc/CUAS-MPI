@@ -1,7 +1,7 @@
 #include "CUASSolver.h"
 
 #include "CUASKernels.h"
-#include "fill_matrix_coo.h"
+#include "systemmatrix.h"
 #include "savetimestep.h"
 #include "specialgradient.h"
 
@@ -116,8 +116,8 @@ void solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid> &u_n, CUASM
 
     calculateSeValues(Se, *model.Sp, *model.S);
 
-    fill_matrix_coo(A, b, model.Nrows, model.Ncols, Se, TeffPowTexp, model.dx, dt_secs, theta, *u_n, current_Q,
-                    *model.dirichletValues, *model.dirichletMask);
+    systemmatrix(A, b, model.Nrows, model.Ncols, Se, TeffPowTexp, model.dx, dt_secs, theta, *u_n, current_Q,
+                 *model.dirichletValues, *model.dirichletMask);
     // solve the equation A*sol = b
     PETScSolver::solve(A, b, sol);
 

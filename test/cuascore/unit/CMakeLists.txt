@@ -5,12 +5,12 @@ target_link_libraries(test-noData cuascore)
 target_link_libraries(test-noData gtest)
 set_property(TARGET test-noData PROPERTY CXX_STANDARD 14)
 
-add_executable(test-fillMatrix
-        fillMatrixTest.cpp
+add_executable(test-systemmatrix
+        systemmatrixTest.cpp
 )
-target_link_libraries(test-fillMatrix cuascore)
-target_link_libraries(test-fillMatrix gtest)
-set_property(TARGET test-fillMatrix PROPERTY CXX_STANDARD 14)
+target_link_libraries(test-systemmatrix cuascore)
+target_link_libraries(test-systemmatrix gtest)
+set_property(TARGET test-systemmatrix PROPERTY CXX_STANDARD 14)
 
 add_executable(test-CUASKernels
         CUASKernelsTest.cpp
