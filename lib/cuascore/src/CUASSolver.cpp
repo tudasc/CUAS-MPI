@@ -1,9 +1,9 @@
 #include "CUASSolver.h"
 
 #include "CUASKernels.h"
-#include "systemmatrix.h"
 #include "savetimestep.h"
 #include "specialgradient.h"
+#include "systemmatrix.h"
 
 #include "PETScMat.h"
 #include "PETScSolver.h"

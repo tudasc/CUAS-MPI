@@ -72,8 +72,8 @@ test-cuascore:
     - ./test-timeparse
     - mpirun -n 9 --timeout 10 ./test-CUASKernels
     - mpirun -n 6 --timeout 10 ./test-specialgradient
-    - mpirun -n 6 --timeout 60 ./test-fillNoData
     - mpirun -n 1 --timeout 10 ./test-systemmatrix
+    - mpirun -n 6 --timeout 60 ./test-fillNoData
     - mpirun -n 9 --timeout 60 ./test-noData
 
 test-cuas:

@@ -20,11 +20,11 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   }
 
   {
-    auto usurf2d = model.usurf->getWriteHandleGhost();
-    auto thk2d = model.thk->getWriteHandleGhost();
+    auto usurf2d = model.usurf->getWriteHandle();
+    auto thk2d = model.thk->getWriteHandle();
     auto const cornerX = model.usurf->getCornerX();
-    for (int j = 0; j < model.usurf->getLocalGhostNumOfRows(); ++j) {
-      for (int i = 0; i < model.usurf->getLocalGhostNumOfCols(); ++i) {
+    for (int j = 0; j < model.usurf->getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < model.usurf->getLocalNumOfCols(); ++i) {
         usurf2d(j, i) = 2000.0 - (cornerX + i) * 100;
         thk2d(j, i) = 2000.0 - (cornerX + i) * 100;
       }
@@ -38,20 +38,28 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   // inside: 0
   // first set total boundary to NOFLOW_FLAG
   model.bndMask->setGlobalBoundariesConst(NOFLOW_FLAG);
+  model.bndMask->setInnerBoundariesConst(NOFLOW_FLAG);
   // second set last col, do not override corners
   if (model.bndMask->getCornerXGhost() + model.bndMask->getLocalGhostNumOfCols() ==
       model.bndMask->getTotalGhostNumOfCols() - 1) {
     auto bndMask2d = model.bndMask->getWriteHandleGhost();
     for (int i = 0; i < model.bndMask->getLocalGhostNumOfRows(); ++i) {
       bndMask2d(i, model.bndMask->getLocalGhostNumOfCols() - 1) = DIRICHLET_FLAG;
+      bndMask2d(i, model.bndMask->getLocalGhostNumOfCols() - 2) = DIRICHLET_FLAG;
     }
     // reset corner
     if (model.bndMask->getCornerY() == 0) {
+      bndMask2d(0, 6) = NOFLOW_FLAG;
       bndMask2d(0, 7) = NOFLOW_FLAG;
+      bndMask2d(1, 6) = NOFLOW_FLAG;
+      bndMask2d(1, 7) = NOFLOW_FLAG;
     }
     if (model.bndMask->getCornerYGhost() + model.bndMask->getLocalGhostNumOfRows() ==
         model.bndMask->getTotalGhostNumOfRows() - 1) {
+      bndMask2d(5, 6) = NOFLOW_FLAG;
       bndMask2d(5, 7) = NOFLOW_FLAG;
+      bndMask2d(6, 6) = NOFLOW_FLAG;
+      bndMask2d(6, 7) = NOFLOW_FLAG;
     }
   }
 

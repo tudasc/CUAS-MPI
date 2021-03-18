@@ -18,10 +18,10 @@ TEST(PETScGridTest, size) {
   const int cols = GRID_COLS;
   const int rows = GRID_ROWS;
   auto grid = std::make_unique<PETScGrid>(cols, rows);
-  ASSERT_EQ(grid->getTotalNumOfCols(), cols - 2);
-  ASSERT_EQ(grid->getTotalNumOfRows(), rows - 2);
-  ASSERT_EQ(grid->getTotalGhostNumOfCols(), cols);
-  ASSERT_EQ(grid->getTotalGhostNumOfRows(), rows);
+  ASSERT_EQ(grid->getTotalNumOfCols(), cols);
+  ASSERT_EQ(grid->getTotalNumOfRows(), rows);
+  ASSERT_EQ(grid->getTotalGhostNumOfCols(), cols + 2);
+  ASSERT_EQ(grid->getTotalGhostNumOfRows(), rows + 2);
 }
 
 // mpiSize needs to be a divisor of cols and rows
@@ -35,10 +35,10 @@ TEST(PETScGridTest, localsize) {
 
   // we have 4 blocks of 7*5 elements
   // this leads to 15*10 elements + 2 cols and 2 rows of ghost cells
-  ASSERT_EQ(grid->getLocalNumOfRows(), (rows - 2) / 2);
-  ASSERT_EQ(grid->getLocalNumOfCols(), (cols - 2) / 2);
-  ASSERT_EQ(grid->getLocalGhostNumOfRows(), (rows - 2) / 2 + 2);
-  ASSERT_EQ(grid->getLocalGhostNumOfCols(), (cols - 2) / 2 + 2);
+  ASSERT_EQ(grid->getLocalNumOfRows(), rows / 2);
+  ASSERT_EQ(grid->getLocalNumOfCols(), cols / 2);
+  ASSERT_EQ(grid->getLocalGhostNumOfRows(), rows / 2 + 2);
+  ASSERT_EQ(grid->getLocalGhostNumOfCols(), cols / 2 + 2);
 }
 
 TEST(PETScGridTest, setandgetGlobal) {
@@ -109,22 +109,22 @@ TEST(PETScGridTest, checkCorners) {
     ASSERT_EQ(y, 0);
   }
   if (mpiRank == 1) {
-    ASSERT_EQ(xGhost, 4);
+    ASSERT_EQ(xGhost, 5);
     ASSERT_EQ(yGhost, -1);
-    ASSERT_EQ(x, 5);
+    ASSERT_EQ(x, 6);
     ASSERT_EQ(y, 0);
   }
   if (mpiRank == 2) {
     ASSERT_EQ(xGhost, -1);
-    ASSERT_EQ(yGhost, 6);
+    ASSERT_EQ(yGhost, 7);
     ASSERT_EQ(x, 0);
-    ASSERT_EQ(y, 7);
+    ASSERT_EQ(y, 8);
   }
   if (mpiRank == 3) {
-    ASSERT_EQ(xGhost, 4);
-    ASSERT_EQ(yGhost, 6);
-    ASSERT_EQ(x, 5);
-    ASSERT_EQ(y, 7);
+    ASSERT_EQ(xGhost, 5);
+    ASSERT_EQ(yGhost, 7);
+    ASSERT_EQ(x, 6);
+    ASSERT_EQ(y, 8);
   }
 }
 
@@ -159,7 +159,7 @@ TEST(PETScGridTest, boundaryTest) {
       }
     }
   }
-  ASSERT_EQ(counter, 15);
+  ASSERT_EQ(counter, 17);
 }
 
 TEST(PETScGridTest, copyTest) {
@@ -245,7 +245,7 @@ TEST(PETScGridTest, setGlobalVecColMajor) {
   grid.setZero();
 
   {
-    PETScVec inputNoneGhosted((cols - 2) * (rows - 2));
+    PETScVec inputNoneGhosted(cols * rows);
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputNoneGhosted.getSize(); ++i) {
@@ -265,17 +265,17 @@ TEST(PETScGridTest, setGlobalVecColMajor) {
       ASSERT_EQ(handle(0, 3, GHOSTED), 0);
       ASSERT_EQ(handle(1, 0, GHOSTED), 0);
       ASSERT_EQ(handle(1, 1, GHOSTED), 0);
-      ASSERT_EQ(handle(1, 2, GHOSTED), 2);
-      ASSERT_EQ(handle(1, 3, GHOSTED), 4);
+      ASSERT_EQ(handle(1, 2, GHOSTED), 4);
+      ASSERT_EQ(handle(1, 3, GHOSTED), 8);
       ASSERT_EQ(handle(2, 0, GHOSTED), 0);
       ASSERT_EQ(handle(2, 1, GHOSTED), 1);
-      ASSERT_EQ(handle(2, 2, GHOSTED), 3);
-      ASSERT_EQ(handle(2, 3, GHOSTED), 5);
+      ASSERT_EQ(handle(2, 2, GHOSTED), 5);
+      ASSERT_EQ(handle(2, 3, GHOSTED), 9);
     }
   }
 
   {
-    PETScVec inputGhosted(cols * rows);
+    PETScVec inputGhosted((cols + 2) * (rows + 2));
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputGhosted.getSize(); ++i) {
@@ -290,17 +290,17 @@ TEST(PETScGridTest, setGlobalVecColMajor) {
     auto &handle = grid.getReadHandle();
     if (mpiRank == 0) {
       ASSERT_EQ(handle(0, 0, GHOSTED), 0);
-      ASSERT_EQ(handle(0, 1, GHOSTED), 4);
-      ASSERT_EQ(handle(0, 2, GHOSTED), 8);
-      ASSERT_EQ(handle(0, 3, GHOSTED), 12);
+      ASSERT_EQ(handle(0, 1, GHOSTED), 6);
+      ASSERT_EQ(handle(0, 2, GHOSTED), 12);
+      ASSERT_EQ(handle(0, 3, GHOSTED), 18);
       ASSERT_EQ(handle(1, 0, GHOSTED), 1);
-      ASSERT_EQ(handle(1, 1, GHOSTED), 5);
-      ASSERT_EQ(handle(1, 2, GHOSTED), 9);
-      ASSERT_EQ(handle(1, 3, GHOSTED), 13);
+      ASSERT_EQ(handle(1, 1, GHOSTED), 7);
+      ASSERT_EQ(handle(1, 2, GHOSTED), 13);
+      ASSERT_EQ(handle(1, 3, GHOSTED), 19);
       ASSERT_EQ(handle(2, 0, GHOSTED), 2);
-      ASSERT_EQ(handle(2, 1, GHOSTED), 6);
-      ASSERT_EQ(handle(2, 2, GHOSTED), 10);
-      ASSERT_EQ(handle(2, 3, GHOSTED), 14);
+      ASSERT_EQ(handle(2, 1, GHOSTED), 8);
+      ASSERT_EQ(handle(2, 2, GHOSTED), 14);
+      ASSERT_EQ(handle(2, 3, GHOSTED), 20);
     }
   }
 }
@@ -315,7 +315,7 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
   grid.setZero();
 
   {
-    PETScVec inputNoneGhosted((cols - 2) * (rows - 2));
+    PETScVec inputNoneGhosted(cols * rows);
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputNoneGhosted.getSize(); ++i) {
@@ -338,14 +338,14 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
       ASSERT_EQ(handle(1, 2, GHOSTED), 1);
       ASSERT_EQ(handle(1, 3, GHOSTED), 2);
       ASSERT_EQ(handle(2, 0, GHOSTED), 0);
-      ASSERT_EQ(handle(2, 1, GHOSTED), 4);
-      ASSERT_EQ(handle(2, 2, GHOSTED), 5);
-      ASSERT_EQ(handle(2, 3, GHOSTED), 6);
+      ASSERT_EQ(handle(2, 1, GHOSTED), 6);
+      ASSERT_EQ(handle(2, 2, GHOSTED), 7);
+      ASSERT_EQ(handle(2, 3, GHOSTED), 8);
     }
   }
 
   {
-    PETScVec inputGhosted(cols * rows);
+    PETScVec inputGhosted((cols + 2) * (rows + 2));
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputGhosted.getSize(); ++i) {
@@ -363,14 +363,14 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
       ASSERT_EQ(handle(0, 1, GHOSTED), 1);
       ASSERT_EQ(handle(0, 2, GHOSTED), 2);
       ASSERT_EQ(handle(0, 3, GHOSTED), 3);
-      ASSERT_EQ(handle(1, 0, GHOSTED), 6);
-      ASSERT_EQ(handle(1, 1, GHOSTED), 7);
-      ASSERT_EQ(handle(1, 2, GHOSTED), 8);
-      ASSERT_EQ(handle(1, 3, GHOSTED), 9);
-      ASSERT_EQ(handle(2, 0, GHOSTED), 12);
-      ASSERT_EQ(handle(2, 1, GHOSTED), 13);
-      ASSERT_EQ(handle(2, 2, GHOSTED), 14);
-      ASSERT_EQ(handle(2, 3, GHOSTED), 15);
+      ASSERT_EQ(handle(1, 0, GHOSTED), 8);
+      ASSERT_EQ(handle(1, 1, GHOSTED), 9);
+      ASSERT_EQ(handle(1, 2, GHOSTED), 10);
+      ASSERT_EQ(handle(1, 3, GHOSTED), 11);
+      ASSERT_EQ(handle(2, 0, GHOSTED), 16);
+      ASSERT_EQ(handle(2, 1, GHOSTED), 17);
+      ASSERT_EQ(handle(2, 2, GHOSTED), 18);
+      ASSERT_EQ(handle(2, 3, GHOSTED), 19);
     }
   }
 }
