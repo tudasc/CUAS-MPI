@@ -14,18 +14,6 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   Q = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   pIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
-  // grids for setup
-  S = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  Sp = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  K = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  T = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  T_n = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  noFlowMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  seaLevelForcingMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  dirichletMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 }
 
 // call init before using Model but after thk has been set

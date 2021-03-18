@@ -24,18 +24,6 @@ class CUASModel {
   std::unique_ptr<PETScGrid> Q;
   std::unique_ptr<PETScGrid> pIce;
 
-  // grids for setup
-  std::unique_ptr<PETScGrid> S = nullptr;
-  std::unique_ptr<PETScGrid> Sp = nullptr;
-  std::unique_ptr<PETScGrid> K = nullptr;
-  std::unique_ptr<PETScGrid> T = nullptr;
-  std::unique_ptr<PETScGrid> T_n = nullptr;
-  std::unique_ptr<PETScGrid> noFlowMask = nullptr;
-  std::unique_ptr<PETScGrid> gradMask = nullptr;
-  std::unique_ptr<PETScGrid> seaLevelForcingMask = nullptr;
-  std::unique_ptr<PETScGrid> dirichletMask = nullptr;
-  std::unique_ptr<PETScGrid> dirichletValues = nullptr;
-
   // type not sure; if NULL: assume constant forcing
   void *time_forcing = nullptr;
 

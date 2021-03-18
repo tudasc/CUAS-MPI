@@ -2,7 +2,6 @@
 
 #include "CUASArgs.h"
 #include "CUASModel.h"
-#include "CUASSetup.h"
 #include "CUASSolver.h"
 
 #include "gtest/gtest.h"
