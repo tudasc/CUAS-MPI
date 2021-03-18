@@ -9,7 +9,7 @@
 
 namespace CUAS {
 
-inline void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u, PETScGrid const &u_n,
+/*inline void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u, PETScGrid const &u_n,
                          CUASModel &model, PETScGrid &melt, PetscScalar cavity_opening) {
   if (args.verbose && rank == 0) {
     // TODO: implement time_display_units from helper to get time_scaling
@@ -46,7 +46,7 @@ inline void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid
   // should be out of scope here anyways
   meltGlobal.setValues();
   // solution.saveTimestep();
-}
+}*/
 
 }  // namespace CUAS
 

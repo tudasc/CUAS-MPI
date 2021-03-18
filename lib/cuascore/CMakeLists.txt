@@ -3,7 +3,6 @@ add_library(cuascore
   src/CUASModel.cpp
   src/CUASArgs.cpp
   src/systemmatrix.cpp
-  src/CUASSetup.cpp
   src/CUASSolver.cpp
 )
 

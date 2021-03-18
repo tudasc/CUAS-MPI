@@ -1,9 +1,7 @@
 #ifndef CUAS_KERNELS_H
 #define CUAS_KERNELS_H
 
-#include "CUASArgs.h"
 #include "CUASConstants.h"
-#include "CUASModel.h"
 #include "specialgradient.h"
 
 #include "PETScGrid.h"
@@ -94,21 +92,21 @@ inline void cavityOpenB(PETScGrid &result, PetscScalar const beta, PetscScalar c
 /*
  * like deFleurian2016
  */
-inline void computeMelt(PETScGrid &result, PetscScalar const r, PetscScalar const g, PetscScalar const rho_w,
+inline void computeMelt(PETScGrid &melt, PetscScalar const r, PetscScalar const g, PetscScalar const rho_w,
                         PETScGrid const &T, PETScGrid const &K, PETScGrid const &gradh2, PetscScalar const rho_i,
                         PetscScalar const L, PetscScalar const bt) {
-  if (!result.isCompatible(T) || !result.isCompatible(T) || !result.isCompatible(K) || !result.isCompatible(gradh2)) {
+  if (!melt.isCompatible(T) || !melt.isCompatible(T) || !melt.isCompatible(K) || !melt.isCompatible(gradh2)) {
     exit(1);
   }
 
-  auto resultGlobal = result.getWriteHandle();
+  auto resultGlobal = melt.getWriteHandle();
   auto &KGlobal = K.getReadHandle();
   auto &TGlobal = T.getReadHandle();
   auto &gradh2Global = gradh2.getReadHandle();
   const PetscScalar r_g_rhow = r * g * rho_w;
   const PetscScalar rhoi_L_inv = 1.0 / (rho_i * L);
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
+  for (int j = 0; j < melt.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < melt.getLocalNumOfCols(); ++i) {
       resultGlobal(j, i) = r_g_rhow * TGlobal(j, i) * KGlobal(j, i) * gradh2Global(j, i) * rhoi_L_inv;
     }
   }
@@ -147,20 +145,21 @@ inline void binaryDialation(PETScGrid &output, PETScGrid const &input) {
   }
 }
 
-inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, CUASModel &model, PETScGrid const &u_n,
-                             CUASArgs const &args, double const bt) {
-  if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(u_n) || !Teff.isCompatible(*model.T_n) ||
-      !Teff.isCompatible(*model.topg) || !Teff.isCompatible(*model.K) || !Teff.isCompatible(*model.Sp)) {
+inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid &Sp, PETScGrid const &T_n,
+                             PETScGrid const &K, PETScGrid const &topg, PETScGrid const &u_n, PetscScalar const Texp,
+                             PetscScalar const unconfSmooth, PetscScalar const bt) {
+  if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(u_n) || !Teff.isCompatible(T_n) ||
+      !Teff.isCompatible(topg) || !Teff.isCompatible(K) || !Teff.isCompatible(Sp)) {
     exit(1);
   }
 
   auto &u_nGlobal = u_n.getReadHandle();
-  auto &T_nGlobal = model.T_n->getReadHandle();
-  auto &topgGlobal = model.topg->getReadHandle();
-  auto &KGlobal = model.K->getReadHandle();
+  auto &T_nGlobal = T_n.getReadHandle();
+  auto &topgGlobal = topg.getReadHandle();
+  auto &KGlobal = K.getReadHandle();
   auto TeffGlobal = Teff.getWriteHandle();
   auto TeffPowTexpGlobal = TeffPowTexp.getWriteHandle();
-  auto SpGlobalWrite = model.Sp->getWriteHandle();
+  auto SpGlobalWrite = Sp.getWriteHandle();
 
   for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < u_n.getLocalNumOfCols(); ++i) {
@@ -176,9 +175,9 @@ inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, CUASModel 
         // }
         TeffGlobal(j, i) = T_nGlobal(j, i);
       }
-      TeffPowTexpGlobal(j, i) = pow(TeffGlobal(j, i), args.Texp);
+      TeffPowTexpGlobal(j, i) = pow(TeffGlobal(j, i), Texp);
 
-      if (psi < (bt - args.unconfSmooth)) {
+      if (psi < (bt - unconfSmooth)) {
         SpGlobalWrite(j, i) = 0.4;
       } else {
         SpGlobalWrite(j, i) = 0;
@@ -187,7 +186,7 @@ inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, CUASModel 
   }
 }
 
-inline void calculateTeffPowTexp(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid const &T, CUASArgs const &args) {
+inline void calculateTeffPowTexp(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid const &T, PetscScalar const Texp) {
   if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(T)) {
     exit(1);
   }
@@ -199,7 +198,7 @@ inline void calculateTeffPowTexp(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScG
   for (int j = 0; j < Teff.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < Teff.getLocalNumOfCols(); ++i) {
       TeffGlobal(j, i) = TGlobal(j, i);
-      TeffPowTexpGlobal(j, i) = pow(TeffGlobal(j, i), args.Texp);
+      TeffPowTexpGlobal(j, i) = pow(TeffGlobal(j, i), Texp);
     }
   }
 }
@@ -219,17 +218,19 @@ inline void calculateSeValues(PETScGrid &Se, PETScGrid const &Sp, PETScGrid cons
   }
 }
 
-inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, CUASModel const &model,
-                       CUASArgs const &args, PetscScalar const bt) {
+inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, PETScGrid const &gradMask,
+                       PETScGrid const &T, PETScGrid const &T_n, PETScGrid const &pIce, PETScGrid const &topg,
+                       PETScGrid const &K, PetscScalar const flowConstant, PetscScalar const Texp,
+                       PetscScalar const roughnessFactor, PetscScalar const bt, PetscScalar const dx) {
   if (!melt.isCompatible(creep) || !melt.isCompatible(u_n)) {
     exit(1);
   }
 
   PETScGrid maggrad2(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
-  gradient2(maggrad2, u_n, model.dx);
+  gradient2(maggrad2, u_n, dx);
 
   auto maggrad2Global = maggrad2.getWriteHandle();
-  auto &grad_maskGlobal = model.gradMask->getReadHandle();
+  auto &grad_maskGlobal = gradMask.getReadHandle();
   for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < u_n.getLocalNumOfCols(); ++i) {
       if (maggrad2Global(j, i) == grad_maskGlobal(j, i)) {
@@ -239,11 +240,11 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
   }
 
   auto creepGlobal = creep.getWriteHandle();
-  auto &TGlobal = model.T->getReadHandle();
-  auto &p_iceGlobal = model.pIce->getReadHandle();
+  auto &TGlobal = T.getReadHandle();
+  auto &p_iceGlobal = pIce.getReadHandle();
   auto &u_nGlobal = u_n.getReadHandle();
-  auto &topgGlobal = model.topg->getReadHandle();
-  PetscScalar multValue = 2 * args.flowConstant;
+  auto &topgGlobal = topg.getReadHandle();
+  PetscScalar multValue = 2 * flowConstant;
   PetscScalar onethird = 1.0 / 3.0;
   PetscScalar rhowater_gravity = RHO_WATER * GRAVITY;
   for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
@@ -254,19 +255,18 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
     }
   }
 
-  if (args.Texp != 1) {
+  if (Texp != 1) {
     PETScGrid T_nExp(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
     auto T_nExpGlobal = T_nExp.getWriteHandle();
-    auto &T_nGlobal = model.T_n->getReadHandle();
+    auto &T_nGlobal = T_n.getReadHandle();
     for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < u_n.getLocalNumOfCols(); ++i) {
-        T_nExpGlobal(j, i) = pow(T_nGlobal(j, i), args.Texp);
+        T_nExpGlobal(j, i) = pow(T_nGlobal(j, i), Texp);
       }
     }
-    computeMelt(melt, args.roughnessFactor, GRAVITY, RHO_WATER, T_nExp, *model.K, maggrad2, RHO_ICE, LATENT_HEAT, bt);
+    computeMelt(melt, roughnessFactor, GRAVITY, RHO_WATER, T_nExp, K, maggrad2, RHO_ICE, LATENT_HEAT, bt);
   } else {
-    computeMelt(melt, args.roughnessFactor, GRAVITY, RHO_WATER, *model.T_n, *model.K, maggrad2, RHO_ICE, LATENT_HEAT,
-                bt);
+    computeMelt(melt, roughnessFactor, GRAVITY, RHO_WATER, T_n, K, maggrad2, RHO_ICE, LATENT_HEAT, bt);
   }
   // TODO: if not args.noSmoothMelt:
 }
