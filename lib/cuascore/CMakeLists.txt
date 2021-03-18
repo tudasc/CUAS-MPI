@@ -2,8 +2,8 @@ add_library(cuascore
   src/specialgradient.cpp
   src/CUASModel.cpp
   src/CUASArgs.cpp
-  src/fill_matrix_coo.cpp
-        src/CUASSetup.cpp
+  src/systemmatrix.cpp
+  src/CUASSetup.cpp
   src/CUASSolver.cpp
 )
 
