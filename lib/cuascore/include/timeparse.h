@@ -65,6 +65,45 @@ inline timeSecs parseTime(std::string const &timeString) {
   return secs;
 };
 
+std::string parseTime(timeSecs const secs) {
+  // secs < 0 is invalid input
+  if (secs < 0) {
+    std::cout << "Invalid Input" << std::endl;
+    return "";
+  }
+  // hour is the smallest timeUnit
+  if (secs < 60 * 60) {
+    return "0 hours";
+  }
+  std::map<std::string, int> timeUnits = {{"year", 60 * 60 * 24 * 365},
+                                          {"month", 60 * 60 * 24 * 30},
+                                          {"week", 60 * 60 * 24 * 7},
+                                          {"day", 60 * 60 * 24},
+                                          {"hour", 60 * 60}};
+  // this vector is used to impose an order on the map.
+  std::vector<std::string> timeUnitStrings = {"year", "month", "week", "day", "hour"};
+  std::string timeString = "";
+  timeSecs secsToBeDistributed = secs;
+  std::string currentTimeUnit;
+  for (std::string const &i : timeUnitStrings) {
+    int timeValue = (int)(secsToBeDistributed / timeUnits[i]);
+    if (timeValue == 0) {
+      continue;
+    } else {
+      // append timeValue to timeString
+      timeString += std::to_string(timeValue) + " " + i + (timeValue > 1 ? "s" : "") + " ";
+    }
+    // subtract the secs used for the current timeUnit from the seconds which are still left
+    secsToBeDistributed -= (timeValue * timeUnits[i]);
+    if (secsToBeDistributed <= 0) {
+      break;
+    }
+  }
+  // remove the last " " from the string
+  timeString.pop_back();
+  return timeString;
+}
+
 }  // namespace CUAS
 
 #endif
