@@ -1,10 +1,10 @@
 #include "PETScGrid.h"
 
 PETScGrid::PETScGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
-    : totalNumOfCols(numOfCols - 2),
-      totalNumOfRows(numOfRows - 2),
-      totalGhostNumOfCols(numOfCols),
-      totalGhostNumOfRows(numOfRows),
+    : totalNumOfCols(numOfCols),
+      totalNumOfRows(numOfRows),
+      totalGhostNumOfCols(numOfCols + 2),
+      totalGhostNumOfRows(numOfRows + 2),
       readHandle(this) {
   DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, totalNumOfCols,
                totalNumOfRows, PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
@@ -42,6 +42,24 @@ void PETScGrid::setGlobalBoundariesConst(PetscScalar value) {
   }
   VecRestoreArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &local2d);
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
+}
+
+void PETScGrid::setInnerBoundariesConst(PetscScalar value) {
+  // TODO use WriteHandle
+  PetscScalar **global2d;
+  VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &global2d);
+
+  for (int i = 0; i < localNumOfRows; ++i) {
+    for (int j = 0; j < localNumOfCols; ++j) {
+      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
+          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
+          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
+        global2d[i][j] = value;
+      }
+    }
+  }
+  VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &global2d);
+  DMGlobalToLocal(dm, global, INSERT_VALUES, local);
 }
 
 void PETScGrid::setGlobalVecColMajor(PETScVec &globalVec, bool ghosted) {

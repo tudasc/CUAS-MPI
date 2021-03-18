@@ -17,12 +17,12 @@ TEST(fillMatrixTest, randomValues) {
   int theta = 3;
   PETScMat MatA(NY * NX, NY * NX);
   PETScVec VecB(NY * NX);
-  PETScGrid SeGrid(NX + 2, NY + 2);
-  PETScGrid TeffPowGrid(NX + 2, NY + 2);
-  PETScGrid u_nGrid(NX + 2, NY + 2);
-  PETScGrid QGrid(NX + 2, NY + 2);
-  PETScGrid dirichValGrid(NX + 2, NY + 2);
-  PETScGrid dirichMaskGrid(NX + 2, NY + 2);
+  PETScGrid SeGrid(NX, NY);
+  PETScGrid TeffPowGrid(NX, NY);
+  PETScGrid u_nGrid(NX, NY);
+  PETScGrid QGrid(NX, NY);
+  PETScGrid dirichValGrid(NX, NY);
+  PETScGrid dirichMaskGrid(NX, NY);
   {
     auto SeWrite = SeGrid.getWriteHandle();
     auto TeffPowWrite = TeffPowGrid.getWriteHandle();

@@ -116,6 +116,7 @@ class PETScGrid {
 
   // sets the outer boundaries (ghost-cells) of the grid
   void setGlobalBoundariesConst(PetscScalar value);
+  void setInnerBoundariesConst(PetscScalar value);
 
   // sets the grids values from globalVec using the column major layout
   void setGlobalVecColMajor(PETScVec &globalVec, bool ghosted = NONE_GHOSTED);

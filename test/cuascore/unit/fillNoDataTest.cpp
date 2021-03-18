@@ -38,31 +38,43 @@ TEST(fillNoDataTest, fillNoData) {
   ASSERT_TRUE(model->usurf->isCompatible(*model->Q));
   ASSERT_TRUE(model->usurf->isCompatible(*model->pIce));
 
-  ASSERT_EQ(model->usurf->getLocalNumOfRows(), 4);
-  ASSERT_EQ(model->usurf->getLocalNumOfCols(), 6);
-  ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 6);
-  ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 8);
-  ASSERT_EQ(model->usurf->getTotalNumOfRows(), 8);
-  ASSERT_EQ(model->usurf->getTotalNumOfCols(), 18);
-  ASSERT_EQ(model->usurf->getTotalGhostNumOfRows(), 10);
-  ASSERT_EQ(model->usurf->getTotalGhostNumOfCols(), 20);
+  ASSERT_EQ(model->usurf->getTotalNumOfRows(), 10);
+  ASSERT_EQ(model->usurf->getTotalNumOfCols(), 20);
+  ASSERT_EQ(model->usurf->getTotalGhostNumOfRows(), 12);
+  ASSERT_EQ(model->usurf->getTotalGhostNumOfCols(), 22);
+  if (mpiRank == 0) {
+    ASSERT_EQ(model->usurf->getLocalNumOfRows(), 5);
+    ASSERT_EQ(model->usurf->getLocalNumOfCols(), 7);
+    ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 7);
+    ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 9);
+  } else if (mpiRank == 1) {
+    ASSERT_EQ(model->usurf->getLocalNumOfRows(), 5);
+    ASSERT_EQ(model->usurf->getLocalNumOfCols(), 7);
+    ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 7);
+    ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 9);
+  } else if (mpiRank == 5) {
+    ASSERT_EQ(model->usurf->getLocalNumOfRows(), 5);
+    ASSERT_EQ(model->usurf->getLocalNumOfCols(), 6);
+    ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 7);
+    ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 8);
+  }
 
   {
     auto &usurfHandle = model->usurf->getReadHandle();
     if (mpiRank == 0) {
-      ASSERT_EQ(usurfHandle(0, 0, GHOSTED), 2000);
-      ASSERT_EQ(usurfHandle(0, 1, GHOSTED), 1900);
-      ASSERT_EQ(usurfHandle(0, 2, GHOSTED), 1800);
-      ASSERT_EQ(usurfHandle(1, 0, GHOSTED), 2000);
-      ASSERT_EQ(usurfHandle(1, 1, GHOSTED), 1900);
-      ASSERT_EQ(usurfHandle(1, 2, GHOSTED), 1800);
-      ASSERT_EQ(usurfHandle(2, 0, GHOSTED), 2000);
-      ASSERT_EQ(usurfHandle(2, 1, GHOSTED), 1900);
-      ASSERT_EQ(usurfHandle(2, 2, GHOSTED), 1800);
+      ASSERT_EQ(usurfHandle(0, 0, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(0, 1, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(0, 2, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(1, 0, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(1, 1, GHOSTED), 2000);
+      ASSERT_EQ(usurfHandle(1, 2, GHOSTED), 1900);
+      ASSERT_EQ(usurfHandle(2, 0, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(2, 1, GHOSTED), 2000);
+      ASSERT_EQ(usurfHandle(2, 2, GHOSTED), 1900);
     } else if (mpiRank == 1) {
-      ASSERT_EQ(usurfHandle(0, 0, GHOSTED), 1400);
-      ASSERT_EQ(usurfHandle(0, 1, GHOSTED), 1300);
-      ASSERT_EQ(usurfHandle(0, 2, GHOSTED), 1200);
+      ASSERT_EQ(usurfHandle(0, 0, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(0, 1, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(0, 2, GHOSTED), 0);
       ASSERT_EQ(usurfHandle(1, 0, GHOSTED), 1400);
       ASSERT_EQ(usurfHandle(1, 1, GHOSTED), 1300);
       ASSERT_EQ(usurfHandle(1, 2, GHOSTED), 1200);
@@ -70,15 +82,15 @@ TEST(fillNoDataTest, fillNoData) {
       ASSERT_EQ(usurfHandle(2, 1, GHOSTED), 1300);
       ASSERT_EQ(usurfHandle(2, 2, GHOSTED), 1200);
     } else if (mpiRank == 5) {
-      ASSERT_EQ(usurfHandle(3, 5, GHOSTED), 300);
-      ASSERT_EQ(usurfHandle(3, 6, GHOSTED), 200);
-      ASSERT_EQ(usurfHandle(3, 7, GHOSTED), 100);
-      ASSERT_EQ(usurfHandle(4, 5, GHOSTED), 300);
-      ASSERT_EQ(usurfHandle(4, 6, GHOSTED), 200);
-      ASSERT_EQ(usurfHandle(4, 7, GHOSTED), 100);
-      ASSERT_EQ(usurfHandle(5, 5, GHOSTED), 300);
-      ASSERT_EQ(usurfHandle(5, 6, GHOSTED), 200);
-      ASSERT_EQ(usurfHandle(5, 7, GHOSTED), 100);
+      ASSERT_EQ(usurfHandle(3, 5, GHOSTED), 200);
+      ASSERT_EQ(usurfHandle(3, 6, GHOSTED), 100);
+      ASSERT_EQ(usurfHandle(3, 7, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(4, 5, GHOSTED), 200);
+      ASSERT_EQ(usurfHandle(4, 6, GHOSTED), 100);
+      ASSERT_EQ(usurfHandle(4, 7, GHOSTED), 0);
+      ASSERT_EQ(usurfHandle(5, 5, GHOSTED), 200);
+      ASSERT_EQ(usurfHandle(5, 6, GHOSTED), 100);
+      ASSERT_EQ(usurfHandle(5, 7, GHOSTED), 0);
     }
   }
 
@@ -120,19 +132,19 @@ TEST(fillNoDataTest, fillNoData) {
   {
     auto &thkHandle = model->thk->getReadHandle();
     if (mpiRank == 0) {
-      ASSERT_EQ(thkHandle(0, 0, GHOSTED), 2000);
-      ASSERT_EQ(thkHandle(0, 1, GHOSTED), 1900);
-      ASSERT_EQ(thkHandle(0, 2, GHOSTED), 1800);
-      ASSERT_EQ(thkHandle(1, 0, GHOSTED), 2000);
-      ASSERT_EQ(thkHandle(1, 1, GHOSTED), 1900);
-      ASSERT_EQ(thkHandle(1, 2, GHOSTED), 1800);
-      ASSERT_EQ(thkHandle(2, 0, GHOSTED), 2000);
-      ASSERT_EQ(thkHandle(2, 1, GHOSTED), 1900);
-      ASSERT_EQ(thkHandle(2, 2, GHOSTED), 1800);
+      ASSERT_EQ(thkHandle(0, 0, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(0, 1, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(0, 2, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(1, 0, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(1, 1, GHOSTED), 2000);
+      ASSERT_EQ(thkHandle(1, 2, GHOSTED), 1900);
+      ASSERT_EQ(thkHandle(2, 0, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(2, 1, GHOSTED), 2000);
+      ASSERT_EQ(thkHandle(2, 2, GHOSTED), 1900);
     } else if (mpiRank == 1) {
-      ASSERT_EQ(thkHandle(0, 0, GHOSTED), 1400);
-      ASSERT_EQ(thkHandle(0, 1, GHOSTED), 1300);
-      ASSERT_EQ(thkHandle(0, 2, GHOSTED), 1200);
+      ASSERT_EQ(thkHandle(0, 0, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(0, 1, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(0, 2, GHOSTED), 0);
       ASSERT_EQ(thkHandle(1, 0, GHOSTED), 1400);
       ASSERT_EQ(thkHandle(1, 1, GHOSTED), 1300);
       ASSERT_EQ(thkHandle(1, 2, GHOSTED), 1200);
@@ -140,50 +152,37 @@ TEST(fillNoDataTest, fillNoData) {
       ASSERT_EQ(thkHandle(2, 1, GHOSTED), 1300);
       ASSERT_EQ(thkHandle(2, 2, GHOSTED), 1200);
     } else if (mpiRank == 5) {
-      ASSERT_EQ(thkHandle(3, 5, GHOSTED), 300);
-      ASSERT_EQ(thkHandle(3, 6, GHOSTED), 200);
-      ASSERT_EQ(thkHandle(3, 7, GHOSTED), 100);
-      ASSERT_EQ(thkHandle(4, 5, GHOSTED), 300);
-      ASSERT_EQ(thkHandle(4, 6, GHOSTED), 200);
-      ASSERT_EQ(thkHandle(4, 7, GHOSTED), 100);
-      ASSERT_EQ(thkHandle(5, 5, GHOSTED), 300);
-      ASSERT_EQ(thkHandle(5, 6, GHOSTED), 200);
-      ASSERT_EQ(thkHandle(5, 7, GHOSTED), 100);
+      ASSERT_EQ(thkHandle(3, 5, GHOSTED), 200);
+      ASSERT_EQ(thkHandle(3, 6, GHOSTED), 100);
+      ASSERT_EQ(thkHandle(3, 7, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(4, 5, GHOSTED), 200);
+      ASSERT_EQ(thkHandle(4, 6, GHOSTED), 100);
+      ASSERT_EQ(thkHandle(4, 7, GHOSTED), 0);
+      ASSERT_EQ(thkHandle(5, 5, GHOSTED), 200);
+      ASSERT_EQ(thkHandle(5, 6, GHOSTED), 100);
+      ASSERT_EQ(thkHandle(5, 7, GHOSTED), 0);
     }
   }
 
   {
     auto &bndMaskHandle = model->bndMask->getReadHandle();
     if (mpiRank == 0) {
-      ASSERT_EQ(bndMaskHandle(0, 0, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(0, 1, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(0, 2, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(1, 0, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(1, 1, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(1, 2, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(2, 0, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(2, 1, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(2, 2, GHOSTED), 0);
+      ASSERT_EQ(bndMaskHandle(0, 0), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(0, 1), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(0, 2), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(1, 0), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(1, 1), 0);
+      ASSERT_EQ(bndMaskHandle(1, 2), 0);
+      ASSERT_EQ(bndMaskHandle(2, 0), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(2, 1), 0);
+      ASSERT_EQ(bndMaskHandle(2, 2), 0);
     } else if (mpiRank == 2) {
-      ASSERT_EQ(bndMaskHandle(0, 5, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(0, 6, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(0, 7, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(1, 5, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(1, 6, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(1, 7, GHOSTED), DIRICHLET_FLAG);
-      ASSERT_EQ(bndMaskHandle(2, 5, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(2, 6, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(2, 7, GHOSTED), DIRICHLET_FLAG);
+      ASSERT_EQ(bndMaskHandle(0, 5), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(1, 5), DIRICHLET_FLAG);
+      ASSERT_EQ(bndMaskHandle(2, 5), DIRICHLET_FLAG);
     } else if (mpiRank == 5) {
-      ASSERT_EQ(bndMaskHandle(3, 5, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(3, 6, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(3, 7, GHOSTED), DIRICHLET_FLAG);
-      ASSERT_EQ(bndMaskHandle(4, 5, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(4, 6, GHOSTED), 0);
-      ASSERT_EQ(bndMaskHandle(4, 7, GHOSTED), DIRICHLET_FLAG);
-      ASSERT_EQ(bndMaskHandle(5, 5, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(5, 6, GHOSTED), NOFLOW_FLAG);
-      ASSERT_EQ(bndMaskHandle(5, 7, GHOSTED), NOFLOW_FLAG);
+      ASSERT_EQ(bndMaskHandle(3, 5), DIRICHLET_FLAG);
+      ASSERT_EQ(bndMaskHandle(4, 5), NOFLOW_FLAG);
     }
   }
 
@@ -226,19 +225,19 @@ TEST(fillNoDataTest, fillNoData) {
   {
     auto &pIceHandle = model->pIce->getReadHandle();
     if (mpiRank == 0) {
-      ASSERT_EQ(pIceHandle(0, 0, GHOSTED), 2000 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(0, 1, GHOSTED), 1900 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(0, 2, GHOSTED), 1800 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(1, 0, GHOSTED), 2000 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(1, 1, GHOSTED), 1900 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(1, 2, GHOSTED), 1800 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(2, 0, GHOSTED), 2000 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(2, 1, GHOSTED), 1900 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(2, 2, GHOSTED), 1800 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(0, 0, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(0, 1, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(0, 2, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(1, 0, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(1, 1, GHOSTED), 2000 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(1, 2, GHOSTED), 1900 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(2, 0, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(2, 1, GHOSTED), 2000 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(2, 2, GHOSTED), 1900 * RHO_ICE * GRAVITY);
     } else if (mpiRank == 1) {
-      ASSERT_EQ(pIceHandle(0, 0, GHOSTED), 1400 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(0, 1, GHOSTED), 1300 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(0, 2, GHOSTED), 1200 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(0, 0, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(0, 1, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(0, 2, GHOSTED), 0 * RHO_ICE * GRAVITY);
       ASSERT_EQ(pIceHandle(1, 0, GHOSTED), 1400 * RHO_ICE * GRAVITY);
       ASSERT_EQ(pIceHandle(1, 1, GHOSTED), 1300 * RHO_ICE * GRAVITY);
       ASSERT_EQ(pIceHandle(1, 2, GHOSTED), 1200 * RHO_ICE * GRAVITY);
@@ -246,15 +245,15 @@ TEST(fillNoDataTest, fillNoData) {
       ASSERT_EQ(pIceHandle(2, 1, GHOSTED), 1300 * RHO_ICE * GRAVITY);
       ASSERT_EQ(pIceHandle(2, 2, GHOSTED), 1200 * RHO_ICE * GRAVITY);
     } else if (mpiRank == 5) {
-      ASSERT_EQ(pIceHandle(3, 5, GHOSTED), 300 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(3, 6, GHOSTED), 200 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(3, 7, GHOSTED), 100 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(4, 5, GHOSTED), 300 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(4, 6, GHOSTED), 200 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(4, 7, GHOSTED), 100 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(5, 5, GHOSTED), 300 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(5, 6, GHOSTED), 200 * RHO_ICE * GRAVITY);
-      ASSERT_EQ(pIceHandle(5, 7, GHOSTED), 100 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(3, 5, GHOSTED), 200 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(3, 6, GHOSTED), 100 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(3, 7, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(4, 5, GHOSTED), 200 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(4, 6, GHOSTED), 100 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(4, 7, GHOSTED), 0 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(5, 5, GHOSTED), 200 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(5, 6, GHOSTED), 100 * RHO_ICE * GRAVITY);
+      ASSERT_EQ(pIceHandle(5, 7, GHOSTED), 0 * RHO_ICE * GRAVITY);
     }
   }
 }
