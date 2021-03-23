@@ -1,6 +1,8 @@
 #ifndef CUAS_MODEL_H
 #define CUAS_MODEL_H
 
+#include "Forcing/Forcing.h"
+
 #include "PETScGrid.h"
 
 #include <memory>
@@ -21,11 +23,8 @@ class CUASModel {
   std::unique_ptr<PETScGrid> topg;
   std::unique_ptr<PETScGrid> thk;
   std::unique_ptr<PETScGrid> bndMask;
-  std::unique_ptr<PETScGrid> Q;
+  std::unique_ptr<Forcing> Q;
   std::unique_ptr<PETScGrid> pIce;
-
-  // type not sure; if NULL: assume constant forcing
-  void *time_forcing = nullptr;
 
   void init();
 };

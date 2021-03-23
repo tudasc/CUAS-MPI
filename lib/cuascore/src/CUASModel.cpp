@@ -12,7 +12,7 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   topg = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   thk = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  Q = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  Q = nullptr;
   pIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 }
 

@@ -24,7 +24,7 @@ void systemmatrix(PETScMat &A, PETScVec &b, int const Nx, int const Ny, PETScGri
   auto &S_2d = S.getReadHandle();
   auto &T_2d = T.getReadHandle();     // local
   auto &u_n2d = u_n.getReadHandle();  // local
-  auto &Q_2d = Q.getReadHandle();
+  auto &Q_2d = Q.getReadHandle();     // local
   PetscScalar S_P, d_N, d_S, d_W, d_E, d_P;
   PetscScalar A_N, A_S, A_W, A_E, A_P;
   // not sure if needed

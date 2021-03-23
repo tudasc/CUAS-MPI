@@ -3,6 +3,7 @@
 
 #include "CUASConstants.h"
 #include "CUASModel.h"
+#include "Forcing/ConstantForcing.h"
 
 #define NODATA_COLS 20
 #define NODATA_ROWS 10
@@ -64,8 +65,9 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   }
 
   // TODO bmelt vs Q
-  auto &bmelt = *model.Q;
+  PETScGrid bmelt(NODATA_COLS, NODATA_ROWS);
   bmelt.setConst(1);
+  model.Q = std::make_unique<CUAS::ConstantForcing>(bmelt, 1);
 
   return pmodel;
 }

@@ -35,7 +35,7 @@ TEST(fillNoDataTest, fillNoData) {
   ASSERT_TRUE(model->usurf->isCompatible(*model->topg));
   ASSERT_TRUE(model->usurf->isCompatible(*model->thk));
   ASSERT_TRUE(model->usurf->isCompatible(*model->bndMask));
-  ASSERT_TRUE(model->usurf->isCompatible(*model->Q));
+  ASSERT_TRUE(model->usurf->isCompatible(model->Q->getCurrentQ()));
   ASSERT_TRUE(model->usurf->isCompatible(*model->pIce));
 
   ASSERT_EQ(model->usurf->getTotalNumOfRows(), 10);
@@ -186,39 +186,32 @@ TEST(fillNoDataTest, fillNoData) {
     }
   }
 
-  // TODO difference between Q and bmelt
   {
-    auto &QHandle = model->Q->getReadHandle();
+    auto &Q = model->Q->getCurrentQ();
+    auto &QHandle = Q.getReadHandle();
     if (mpiRank == 0) {
-      ASSERT_EQ(QHandle(0, 0, GHOSTED), 1);
-      ASSERT_EQ(QHandle(0, 1, GHOSTED), 1);
-      ASSERT_EQ(QHandle(0, 2, GHOSTED), 1);
-      ASSERT_EQ(QHandle(1, 0, GHOSTED), 1);
-      ASSERT_EQ(QHandle(1, 1, GHOSTED), 1);
-      ASSERT_EQ(QHandle(1, 2, GHOSTED), 1);
-      ASSERT_EQ(QHandle(2, 0, GHOSTED), 1);
-      ASSERT_EQ(QHandle(2, 1, GHOSTED), 1);
-      ASSERT_EQ(QHandle(2, 2, GHOSTED), 1);
+      ASSERT_EQ(QHandle(0, 0), 1.0 / SPY);
+      ASSERT_EQ(QHandle(0, 1), 1.0 / SPY);
+      ASSERT_EQ(QHandle(0, 2), 1.0 / SPY);
+      ASSERT_EQ(QHandle(1, 0), 1.0 / SPY);
+      ASSERT_EQ(QHandle(1, 1), 1.0 / SPY);
+      ASSERT_EQ(QHandle(1, 2), 1.0 / SPY);
+      ASSERT_EQ(QHandle(2, 0), 1.0 / SPY);
+      ASSERT_EQ(QHandle(2, 1), 1.0 / SPY);
+      ASSERT_EQ(QHandle(2, 2), 1.0 / SPY);
     } else if (mpiRank == 1) {
-      ASSERT_EQ(QHandle(0, 0, GHOSTED), 1);
-      ASSERT_EQ(QHandle(0, 1, GHOSTED), 1);
-      ASSERT_EQ(QHandle(0, 2, GHOSTED), 1);
-      ASSERT_EQ(QHandle(1, 0, GHOSTED), 1);
-      ASSERT_EQ(QHandle(1, 1, GHOSTED), 1);
-      ASSERT_EQ(QHandle(1, 2, GHOSTED), 1);
-      ASSERT_EQ(QHandle(2, 0, GHOSTED), 1);
-      ASSERT_EQ(QHandle(2, 1, GHOSTED), 1);
-      ASSERT_EQ(QHandle(2, 2, GHOSTED), 1);
+      ASSERT_EQ(QHandle(0, 0), 1.0 / SPY);
+      ASSERT_EQ(QHandle(0, 1), 1.0 / SPY);
+      ASSERT_EQ(QHandle(0, 2), 1.0 / SPY);
+      ASSERT_EQ(QHandle(1, 0), 1.0 / SPY);
+      ASSERT_EQ(QHandle(1, 1), 1.0 / SPY);
+      ASSERT_EQ(QHandle(1, 2), 1.0 / SPY);
+      ASSERT_EQ(QHandle(2, 0), 1.0 / SPY);
+      ASSERT_EQ(QHandle(2, 1), 1.0 / SPY);
+      ASSERT_EQ(QHandle(2, 2), 1.0 / SPY);
     } else if (mpiRank == 5) {
-      ASSERT_EQ(QHandle(3, 5, GHOSTED), 1);
-      ASSERT_EQ(QHandle(3, 6, GHOSTED), 1);
-      ASSERT_EQ(QHandle(3, 7, GHOSTED), 1);
-      ASSERT_EQ(QHandle(4, 5, GHOSTED), 1);
-      ASSERT_EQ(QHandle(4, 6, GHOSTED), 1);
-      ASSERT_EQ(QHandle(4, 7, GHOSTED), 1);
-      ASSERT_EQ(QHandle(5, 5, GHOSTED), 1);
-      ASSERT_EQ(QHandle(5, 6, GHOSTED), 1);
-      ASSERT_EQ(QHandle(5, 7, GHOSTED), 1);
+      ASSERT_EQ(QHandle(3, 5), 1.0 / SPY);
+      ASSERT_EQ(QHandle(4, 5), 1.0 / SPY);
     }
   }
 
