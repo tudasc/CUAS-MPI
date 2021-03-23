@@ -22,6 +22,10 @@ int mpiSize;
   char *argv[1] = {arg0};
   CUAS::parseArgs(argc, argv, args);
 
+  CUAS::CUASModel model(20, 10);
+  fillNoData(model, args);
+  model.init();
+
   setup(model, args);
 
   // int Nt = 7300;
@@ -139,6 +143,11 @@ int mpiSize;
 
 TEST(noDataTest, compareModelToPython) {
   // ASSERT_EQ(mpiSize, MPI_SIZE);
+  CUAS::CUASArgs args;
+  int argc = 1;
+  char arg0[] = "test";
+  char *argv[1] = {arg0};
+  CUAS::parseArgs(argc, argv, args);
 
   auto pmodel = fillNoData();
   auto &model = *pmodel;
@@ -283,10 +292,11 @@ TEST(noDataTest, compareModelToPython) {
     }
   }
 
-  auto &QGlob = model.Q->getReadHandle();
-  for (int i = 0; i < model.Q->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < model.Q->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(QGlob(i, j), QPy2d(i, j));
+  // take zero here for constant forcing
+  auto QGlob = model.Q->getCurrentQ(0);
+  for (int i = 0; i < model.bnd_mask->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < model.bnd_mask->getLocalNumOfCols(); ++j) {
+      ASSERT_EQ(QGlob(i, j), QPy2d(i, j) / SPY * args.supplyMultiplier);
     }
   }
 }*/

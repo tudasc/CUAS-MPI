@@ -1,5 +1,6 @@
 #include "systemmatrixTest.h"
 
+#include "Forcing/ConstantForcing.h"
 #include "systemmatrix.h"
 
 #include "gtest/gtest.h"
@@ -42,8 +43,10 @@ TEST(fillMatrixTest, randomValues) {
       }
     }
   }
-  CUAS::systemmatrix(MatA, VecB, NY, NX, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, QGrid, dirichValGrid,
-                     dirichMaskGrid);
+  // using SPY here because the dumped Q was from currentQ after applying forcing
+  auto forcing = std::make_unique<CUAS::ConstantForcing>(QGrid, SPY);
+  CUAS::systemmatrix(MatA, VecB, NY, NX, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrentQ(),
+                     dirichValGrid, dirichMaskGrid);
 
   std::vector<double> APetscNonZero;
 

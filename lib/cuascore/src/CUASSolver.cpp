@@ -54,17 +54,6 @@ void CUASSolver::setup() {
 
   T_n->copy(*T);
 
-  auto Q_arr = model->Q->getWriteHandle();
-
-  rows = model->Q->getLocalNumOfRows();
-  cols = model->Q->getLocalNumOfCols();
-
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      Q_arr(i, j) = (Q_arr(i, j)) / SPY * args->supplyMultiplier;
-    }
-  }
-
   auto global_dir_mask = dirichletMask->getWriteHandle();
 
   rows = dirichletMask->getLocalNumOfRows();
@@ -181,7 +170,7 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
   creep.setZero();
   Q.setZero();
 
-  int time_current = 0;
+  PetscScalar currTime = 0.0;
   clock_t t;
   if (rank == 0) {
     t = clock();
@@ -197,9 +186,10 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
   PETScGrid TeffPowTexp(T->getTotalNumOfCols(), T->getTotalNumOfRows());
 
   for (int timeStep = 1; timeStep < Nt + 1; ++timeStep) {
-    time_current += dt_secs;
-    // TODO get_current_Q (part of time dependent forcing)
-    PETScGrid &current_Q = *model->Q;  // get_current_Q(time_current);
+    currTime += dt_secs;
+
+    // time dependent forcing
+    auto &currentQ = model->Q->getCurrentQ(currTime);
 
     // if (args->seaLevelForcing) {
     // TODO
@@ -217,7 +207,7 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
 
     calculateSeValues(Se, *Sp, *S);
 
-    systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt_secs, theta, *u_n, current_Q,
+    systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt_secs, theta, *u_n, currentQ,
                  *dirichletValues, *dirichletMask);
     // solve the equation A*sol = b
     PETScSolver::solve(A, b, sol);

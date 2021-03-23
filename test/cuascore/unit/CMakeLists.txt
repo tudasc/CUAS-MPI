@@ -46,3 +46,10 @@ add_executable(test-timeparse
 target_link_libraries(test-timeparse cuascore)
 target_link_libraries(test-timeparse gtest_main)
 set_property(TARGET test-timeparse PROPERTY CXX_STANDARD 14)
+
+add_executable(test-forcing
+        forcingTest.cpp
+        )
+target_link_libraries(test-forcing cuascore)
+target_link_libraries(test-forcing gtest)
+set_property(TARGET test-forcing PROPERTY CXX_STANDARD 14)
