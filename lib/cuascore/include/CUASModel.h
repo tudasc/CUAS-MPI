@@ -12,7 +12,9 @@ namespace CUAS {
 
 class CUASModel {
  public:
-  CUASModel(int numOfCols, int numOfRows);
+  explicit CUASModel(int numOfCols, int numOfRows);
+  CUASModel(CUASModel &) = delete;
+  CUASModel(CUASModel &&) = delete;
   //~CUASModel();
 
   // x = cols, y = rows

@@ -106,6 +106,8 @@ class PETScGrid {
   // creates a Grid of numOfCols times numOfRows,
   // sets value of most outer cells to boundaryValue
   explicit PETScGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue = 0);
+  PETScGrid(PETScGrid &) = delete;
+  PETScGrid(PETScGrid &&) = delete;
   ~PETScGrid();
 
   ReadHandle const &getReadHandle() const { return readHandle; }
@@ -132,7 +134,7 @@ class PETScGrid {
   // copys the content of one grid to another
   int copy(PETScGrid const &input);
 
-  bool isCompatible(PETScGrid const &grid) {
+  bool isCompatible(PETScGrid const &grid) const {
     if (totalNumOfCols == grid.totalNumOfCols && totalNumOfRows == grid.totalNumOfRows &&
         localNumOfCols == grid.localNumOfCols && localNumOfRows == grid.localNumOfRows &&
         localGhostNumOfCols == grid.localGhostNumOfCols && localGhostNumOfRows == grid.localGhostNumOfRows &&

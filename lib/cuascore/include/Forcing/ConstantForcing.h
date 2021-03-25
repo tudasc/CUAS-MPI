@@ -8,8 +8,9 @@ namespace CUAS {
 
 class ConstantForcing : public Forcing {
  public:
-  ConstantForcing(PETScGrid const &m_forcing, PetscScalar const supplyMultiplier)
+  explicit ConstantForcing(PETScGrid const &m_forcing, PetscScalar const supplyMultiplier)
       : forcing(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows()) {
+    // TODO this copy is not necessary we can read the data of m_forcing in the loop
     forcing.copy(m_forcing);
 
     auto fWrite = forcing.getWriteHandle();
@@ -19,6 +20,8 @@ class ConstantForcing : public Forcing {
       }
     }
   };
+  ConstantForcing(ConstantForcing &) = delete;
+  ConstantForcing(ConstantForcing &&) = delete;
 
   virtual PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override { return forcing; }
 
