@@ -33,6 +33,8 @@ class PETScMat {
     MatSetFromOptions(mat);
     MatSetUp(mat);
   }
+  PETScMat(PETScMat &) = delete;
+  PETScMat(PETScMat &&) = delete;
   ~PETScMat() { MatDestroy(&mat); }
 
   // getter

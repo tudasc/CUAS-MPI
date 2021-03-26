@@ -12,8 +12,8 @@ namespace CUAS {
 
 class TimeForcing : public Forcing {
  public:
-  TimeForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, PetscScalar const supplyMultiplier,
-              std::vector<int> const &time_forcing, bool const loopForcing)
+  explicit TimeForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, PetscScalar const supplyMultiplier,
+                       std::vector<int> const &time_forcing, bool const loopForcing)
       : time_forcing(time_forcing), loopForcing(loopForcing) {
     if (time_forcing.size() != forcing.size() || time_forcing.size() < 2) {
       // TODO log error
@@ -23,6 +23,8 @@ class TimeForcing : public Forcing {
     std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
     setup(supplyMultiplier);
   }
+  TimeForcing(TimeForcing &) = delete;
+  TimeForcing(TimeForcing &&) = delete;
 
   virtual PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override {
     if (currTime < 0) {

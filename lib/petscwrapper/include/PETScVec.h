@@ -10,6 +10,8 @@ class PETScVec {
     VecSetSizes(vec, PETSC_DECIDE, size);
     VecSetFromOptions(vec);
   }
+  PETScVec(PETScVec &) = delete;
+  PETScVec(PETScVec &&) = delete;
   ~PETScVec() { VecDestroy(&vec); }
 
   void setValue(int position, PetscScalar value) { VecSetValue(vec, position, value, INSERT_VALUES); }

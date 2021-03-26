@@ -10,7 +10,7 @@ namespace CUAS {
 
 class CUASSolver {
  public:
-  CUASSolver(CUASModel *model, CUASArgs const *const args) : model(model), args(args) {
+  explicit CUASSolver(CUASModel *model, CUASArgs const *const args) : model(model), args(args) {
     int numOfCols = model->Ncols;
     int numOfRows = model->Nrows;
 
@@ -25,6 +25,8 @@ class CUASSolver {
     dirichletMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   }
+  CUASSolver(CUASSolver &) = delete;
+  CUASSolver(CUASSolver &&) = delete;
 
   void solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid> &u_n, int const Nt,
              PetscScalar const totaltime_secs, PetscScalar const dt_secs);
