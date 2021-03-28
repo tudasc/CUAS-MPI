@@ -286,6 +286,34 @@ inline void noChannels(PETScGrid &melt, PETScGrid &creep) {
   }*/
 }
 
+inline void convolveStar11411(PETScGrid &melt, PETScGrid &result) {
+  if (!melt.isCompatible(result)) {
+    exit(1);
+  }
+
+  // the stencil is: stencil = np.array([[0, 1, 0],
+  //                                    [1, 4, 1],
+  //                                    [0, 1, 0]]) / 8
+
+  auto melt2d = melt.getReadHandle();
+  auto result2d = result.getWriteHandle();
+  int ghostIndexCols = 1;
+  int ghostIndexRows = 1;
+
+  for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
+      result2d(i, j) =
+          (4.0 * melt2d(ghostIndexRows, ghostIndexCols, true) + melt2d(ghostIndexRows, ghostIndexCols - 1, true) +
+           melt2d(ghostIndexRows, ghostIndexCols + 1, true) + melt2d(ghostIndexRows - 1, ghostIndexCols, true) +
+           melt2d(ghostIndexRows + 1, ghostIndexCols, true)) /
+          8.0;
+      ++ghostIndexCols;
+    }
+    ghostIndexCols = 1;
+    ++ghostIndexRows;
+  }
+}
+
 }  // namespace CUAS
 
 #endif

@@ -10,8 +10,8 @@ int mpiRank;
 int mpiSize;
 
 #define MPI_SIZE 9
-#define GRID_SIZE_X 20
-#define GRID_SIZE_Y 15
+#define GRID_SIZE_X 18
+#define GRID_SIZE_Y 8
 
 TEST(CUASKernelsTest, head2pressure) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
@@ -293,6 +293,113 @@ TEST(CUASKernelsTest, doChannels) {}
 
 // TODO: verify
 TEST(CUASKernelsTest, noChannels) {}
+
+TEST(CUASKernelsTest, convolve) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  PETScGrid melt(GRID_SIZE_X, GRID_SIZE_Y);
+  {
+    auto melt2d = melt.getWriteHandle();
+
+    PetscScalar *meltArr[GRID_SIZE_Y];
+    PetscScalar meltArrBeginningEnd[GRID_SIZE_X] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    PetscScalar meltArrMiddle[GRID_SIZE_X] = {0,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449,
+                                              0.0000005345568862275449};
+
+    meltArr[0] = meltArrBeginningEnd;
+
+    for (int i = 1; i <= (GRID_SIZE_Y - 2); ++i) {
+      meltArr[i] = meltArrMiddle;
+    }
+    meltArr[GRID_SIZE_Y - 1] = meltArrBeginningEnd;
+
+    for (int i = 0; i < melt.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < melt.getLocalNumOfCols(); ++j) {
+        melt2d(i, j) = meltArr[melt.getCornerY() + i][melt.getCornerX() + j];
+      }
+    }
+  }
+
+  PETScGrid result(GRID_SIZE_X, GRID_SIZE_Y);
+
+  CUAS::convolveStar11411(melt, result);
+
+  // compare results
+  PetscScalar *resultArr[GRID_SIZE_Y];
+  PetscScalar resultFirstRow[GRID_SIZE_X] = {
+      0,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+      0.00000006681961077844312,
+  };
+
+  PetscScalar resultSecondRow[GRID_SIZE_X] = {
+      0.00000006681961077844312, 0.0000004009176646706587, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004677372754491018, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004677372754491018, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004677372754491018, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004009176646706587,
+  };
+
+  PetscScalar resultMiddleRow[GRID_SIZE_X] = {
+      0.00000006681961077844312,      0.0000004677372754491018,       0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.00000046773727544910184,
+  };
+
+  resultArr[0] = resultFirstRow;
+  resultArr[1] = resultSecondRow;
+
+  for (int i = 2; i <= GRID_SIZE_Y - 3; ++i) {
+    resultArr[i] = resultMiddleRow;
+  }
+
+  resultArr[GRID_SIZE_Y - 2] = resultSecondRow;
+  resultArr[GRID_SIZE_Y - 1] = resultFirstRow;
+
+  {
+    auto res2d = result.getReadHandle();
+
+    for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
+        EXPECT_DOUBLE_EQ(res2d(i, j), resultArr[result.getCornerY() + i][result.getCornerX() + j]);
+      }
+    }
+  }
+}
 
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
