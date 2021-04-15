@@ -216,7 +216,7 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
 
     if (args->dochannels) {
       doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, args->flowConstant, args->Texp,
-                 args->roughnessFactor, args->layerThickness, model->dx);
+                 args->roughnessFactor, args->noSmoothMelt, args->layerThickness, model->dx);
     } else {
       cavity_opening = 0;
       noChannels(melt, creep);
