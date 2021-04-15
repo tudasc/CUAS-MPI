@@ -18,14 +18,14 @@ inline void head2pressure(PETScGrid &result, PETScGrid const &head, PETScGrid co
     exit(1);
   }
 
-  auto result2d = result.getWriteHandle();
+  auto result2d = result.getWriteHandleGhost();
   auto &head2d = head.getReadHandle();
   auto &bedElevation2d = bedElevation.getReadHandle();
 
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
-      result2d(j, i) = RHO_WATER * GRAVITY * (head2d(j, i) - effective_bed_elevation);
+  for (int j = 0; j < result.getLocalGhostNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalGhostNumOfCols(); ++i) {
+      double effective_bed_elevation = bedElevation2d(j, i, true) - seaLevel;
+      result2d(j, i) = RHO_WATER * GRAVITY * (head2d(j, i, true) - effective_bed_elevation);
     }
   }
 }
@@ -41,14 +41,16 @@ inline void pressure2head(PETScGrid &result, PETScGrid const &pressure, PETScGri
     exit(1);
   }
 
-  auto result2d = result.getWriteHandle();
+  auto result2d = result.getWriteHandleGhost();
   auto &pressure2d = pressure.getReadHandle();
   auto &bedElevation2d = bedElevation.getReadHandle();
 
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
-      result2d(j, i) = pressure2d(j, i) / (RHO_WATER * GRAVITY) + effective_bed_elevation;
+  constexpr double rgMultiplicator = 1.0 / (RHO_WATER * GRAVITY);
+
+  for (int j = 0; j < result.getLocalGhostNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalGhostNumOfCols(); ++i) {
+      double effective_bed_elevation = bedElevation2d(j, i, true) - seaLevel;
+      result2d(j, i) = pressure2d(j, i, true) * rgMultiplicator + effective_bed_elevation;
     }
   }
 }
@@ -61,11 +63,11 @@ inline void overburdenPressure(PETScGrid &result, PETScGrid const &thk) {
     exit(1);
   }
 
-  auto result2d = result.getWriteHandle();
+  auto result2d = result.getWriteHandleGhost();
   auto &thk2d = thk.getReadHandle();
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      result2d(j, i) = thk2d(j, i) * RHO_ICE * GRAVITY;
+  for (int j = 0; j < result.getLocalGhostNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalGhostNumOfCols(); ++i) {
+      result2d(j, i) = thk2d(j, i, true) * RHO_ICE * GRAVITY;
     }
   }
 }
@@ -79,12 +81,12 @@ inline void cavityOpenB(PETScGrid &result, PetscScalar const beta, PetscScalar c
     exit(1);
   }
 
-  auto resultGlobal = result.getWriteHandle();
+  auto resultGlobal = result.getWriteHandleGhost();
   auto &KGlobal = K.getReadHandle();
   PetscScalar betaVb = beta * v_b;
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      resultGlobal(j, i) = betaVb * KGlobal(j, i);
+  for (int j = 0; j < result.getLocalGhostNumOfRows(); ++j) {
+    for (int i = 0; i < result.getLocalGhostNumOfCols(); ++i) {
+      resultGlobal(j, i) = betaVb * KGlobal(j, i, true);
     }
   }
 }
@@ -170,9 +172,6 @@ inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid 
       if (psi < bt) {
         TeffGlobal(j, i) = KGlobal(j, i) * psi;
       } else {
-        // if (timeStep == 1) {
-        //   std::cout << "t_nglobal : " << T_nGlobal(j, i) << std::endl;
-        // }
         TeffGlobal(j, i) = T_nGlobal(j, i);
       }
       TeffPowTexpGlobal(j, i) = pow(TeffGlobal(j, i), Texp);
@@ -218,22 +217,50 @@ inline void calculateSeValues(PETScGrid &Se, PETScGrid const &Sp, PETScGrid cons
   }
 }
 
+inline void convolveStar11411(PETScGrid &melt, PETScGrid &result) {
+  if (!melt.isCompatible(result)) {
+    exit(1);
+  }
+
+  // the stencil is: stencil = np.array([[0, 1, 0],
+  //                                    [1, 4, 1],
+  //                                    [0, 1, 0]]) / 8
+
+  auto melt2d = melt.getReadHandle();
+  auto result2d = result.getWriteHandle();
+  int ghostIndexCols = 1;
+  int ghostIndexRows = 1;
+
+  for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
+      result2d(i, j) =
+          (4.0 * melt2d(ghostIndexRows, ghostIndexCols, true) + melt2d(ghostIndexRows, ghostIndexCols - 1, true) +
+           melt2d(ghostIndexRows, ghostIndexCols + 1, true) + melt2d(ghostIndexRows - 1, ghostIndexCols, true) +
+           melt2d(ghostIndexRows + 1, ghostIndexCols, true)) /
+          8.0;
+      ++ghostIndexCols;
+    }
+    ghostIndexCols = 1;
+    ++ghostIndexRows;
+  }
+}
+
 inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, PETScGrid const &gradMask,
                        PETScGrid const &T, PETScGrid const &T_n, PETScGrid const &pIce, PETScGrid const &topg,
                        PETScGrid const &K, PetscScalar const flowConstant, PetscScalar const Texp,
-                       PetscScalar const roughnessFactor, PetscScalar const bt, PetscScalar const dx) {
+                       PetscScalar const roughnessFactor, bool noSmoothMelt, PetscScalar const bt, PetscScalar const dx) {
   if (!melt.isCompatible(creep) || !melt.isCompatible(u_n)) {
     exit(1);
   }
 
   PETScGrid maggrad2(u_n.getTotalNumOfCols(), u_n.getTotalNumOfRows());
   gradient2(maggrad2, u_n, dx);
-
   auto maggrad2Global = maggrad2.getWriteHandle();
   auto &grad_maskGlobal = gradMask.getReadHandle();
   for (int j = 0; j < u_n.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < u_n.getLocalNumOfCols(); ++i) {
-      if (maggrad2Global(j, i) == grad_maskGlobal(j, i)) {
+      // if (maggrad2Global(j, i) == grad_maskGlobal(j, i)) {
+      if (grad_maskGlobal(j, i) == 1) {
         maggrad2Global(j, i) = 0;
       }
     }
@@ -268,7 +295,12 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
   } else {
     computeMelt(melt, roughnessFactor, GRAVITY, RHO_WATER, T_n, K, maggrad2, RHO_ICE, LATENT_HEAT, bt);
   }
-  // TODO: if not args.noSmoothMelt:
+
+  if(!noSmoothMelt){
+    PETScGrid result(melt.getTotalNumOfCols(), melt.getTotalNumOfRows());
+    convolveStar11411(melt, result);
+    melt.copy(result);
+  }
 }
 
 inline void noChannels(PETScGrid &melt, PETScGrid &creep) {
@@ -284,34 +316,6 @@ inline void noChannels(PETScGrid &melt, PETScGrid &creep) {
       creepGlobal(j, i) = 0;
     }
   }*/
-}
-
-inline void convolveStar11411(PETScGrid &melt, PETScGrid &result) {
-  if (!melt.isCompatible(result)) {
-    exit(1);
-  }
-
-  // the stencil is: stencil = np.array([[0, 1, 0],
-  //                                    [1, 4, 1],
-  //                                    [0, 1, 0]]) / 8
-
-  auto melt2d = melt.getReadHandle();
-  auto result2d = result.getWriteHandle();
-  int ghostIndexCols = 1;
-  int ghostIndexRows = 1;
-
-  for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
-      result2d(i, j) =
-          (4.0 * melt2d(ghostIndexRows, ghostIndexCols, true) + melt2d(ghostIndexRows, ghostIndexCols - 1, true) +
-           melt2d(ghostIndexRows, ghostIndexCols + 1, true) + melt2d(ghostIndexRows - 1, ghostIndexCols, true) +
-           melt2d(ghostIndexRows + 1, ghostIndexCols, true)) /
-          8.0;
-      ++ghostIndexCols;
-    }
-    ghostIndexCols = 1;
-    ++ghostIndexRows;
-  }
 }
 
 }  // namespace CUAS

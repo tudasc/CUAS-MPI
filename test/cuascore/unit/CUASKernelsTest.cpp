@@ -184,115 +184,610 @@ TEST(CUASKernelsTest, cavityOpenB) {
   }
 }
 
-// TODO: verify
-TEST(CUASKernelsTest, computeMelt) {}
-
-// TODO: verify
-TEST(CUASKernelsTest, binaryDialation) {
+TEST(CUASKernelsTest, computeMelt) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  auto nf_mask = std::make_unique<PETScGrid>(GRID_SIZE_X, GRID_SIZE_Y);
-  auto grad_mask = std::make_unique<PETScGrid>(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid result(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid T(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid gradh2(GRID_SIZE_X, GRID_SIZE_Y);
 
-  // setup
-  {
-    grad_mask->setZero();
-    auto nf2d = nf_mask->getWriteHandle();
-    for (int i = 0; i < nf_mask->getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < nf_mask->getLocalNumOfCols(); ++j) {
-        if (i == j) {
-          nf2d(i, j) = true;
-        }
-      }
-    }
+  PetscScalar r = 1.0;
+  PetscScalar bt = 0.1;
+
+  // init T values
+  auto T2d = T.getWriteHandle();
+  PetscScalar *Tarr[GRID_SIZE_Y];
+  PetscScalar TarrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Tarr[i] = TarrValues;
   }
 
-  CUAS::binaryDialation(*grad_mask, *nf_mask);
+  for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
+      T2d(i, j) = Tarr[T.getCornerY() + i][T.getCornerX() + j];
+    }
+  }
+  T2d.setValues();
 
-  // check
-  {
-    auto &nf_arr = nf_mask->getReadHandle();
-    auto &grad_arr = grad_mask->getReadHandle();
-    for (int i = 0; i < nf_mask->getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < nf_mask->getLocalNumOfCols(); ++j) {
-        if (i == j) {
-          ASSERT_EQ(nf_arr(i, j), true);
-          ASSERT_EQ(grad_arr(i, j), true);
-          if (i < nf_mask->getLocalNumOfRows() - 1)
-            ASSERT_EQ(grad_arr(i + 1, j), true);
-          if (i > 0)
-            ASSERT_EQ(grad_arr(i - 1, j), true);
-          if (j < nf_mask->getLocalNumOfCols() - 1)
-            ASSERT_EQ(grad_arr(i, j + 1), true);
-          if (j > 0)
-            ASSERT_EQ(grad_arr(i, j - 1), true);
-        }
-      }
+  // init K values
+  auto K2d = K.getWriteHandle();
+
+  PetscScalar *Karr[GRID_SIZE_Y];
+  PetscScalar KarrValues[GRID_SIZE_X] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Karr[i] = KarrValues;
+  }
+
+  for (int i = 0; i < K.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < K.getLocalNumOfCols(); ++j) {
+      K2d(i, j) = Karr[T.getCornerY() + i][T.getCornerX() + j];
+    }
+  }
+  K2d.setValues();
+
+  // init gradh2
+  auto grad2d = gradh2.getWriteHandle();
+
+  PetscScalar *gradArr[GRID_SIZE_Y];
+  PetscScalar gradArrBeginningEnd[GRID_SIZE_X] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  PetscScalar gradArrMiddle[GRID_SIZE_X] = {0,        0.008281, 0.008281, 0.008281, 0.008281, 0.008281,
+                                            0.008281, 0.008281, 0.008281, 0.008281, 0.008281, 0.008281,
+                                            0.008281, 0.008281, 0.008281, 0.008281, 0.008281, 0.008281};
+
+  gradArr[0] = gradArrBeginningEnd;
+
+  for (int i = 1; i <= 6; ++i) {
+    gradArr[i] = gradArrMiddle;
+  }
+  gradArr[7] = gradArrBeginningEnd;
+
+  for (int i = 0; i < gradh2.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < gradh2.getLocalNumOfCols(); ++j) {
+      grad2d(i, j) = gradArr[gradh2.getCornerY() + i][gradh2.getCornerX() + j];
+    }
+  }
+  grad2d.setValues();
+
+  CUAS::computeMelt(result, r, GRAVITY, RHO_WATER, T, K, gradh2, RHO_ICE, LATENT_HEAT, bt);
+
+  auto res2d = result.getReadHandle();
+
+  PetscScalar *resArr[GRID_SIZE_Y];
+  PetscScalar resArrBeginningEnd[GRID_SIZE_X] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  PetscScalar resArrMiddle[GRID_SIZE_X] = {0,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449,
+                                           0.0000005345568862275449};
+
+  resArr[0] = resArrBeginningEnd;
+
+  for (int i = 1; i <= 6; ++i) {
+    resArr[i] = resArrMiddle;
+  }
+  resArr[7] = resArrBeginningEnd;
+
+  for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(res2d(i, j), resArr[result.getCornerY() + i][result.getCornerX() + j]);
     }
   }
 }
 
-// TODO: What does this test check? Do we need it?
-TEST(CUASKernelsTest, ghostCellsTest) {
+TEST(CUASKernelsTest, binaryDialation) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  auto nf_mask = std::make_unique<PETScGrid>(GRID_SIZE_X, GRID_SIZE_Y);
-  auto grad_mask = std::make_unique<PETScGrid>(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid noFlowMask(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid gradMask(GRID_SIZE_X, GRID_SIZE_Y);
 
-  auto nf2d = nf_mask->getWriteHandle();
+  bool *nfMask[GRID_SIZE_Y + 2];
+  bool nfBeginningEnd[GRID_SIZE_X + 2];
+  for (int i = 0; i < GRID_SIZE_X + 2; ++i) {
+    nfBeginningEnd[i] = true;
+  }
+  bool nfMiddle[GRID_SIZE_X + 2];
+  nfMiddle[0] = true;
+  for (int i = 1; i < GRID_SIZE_X + 2; ++i) {
+    nfMiddle[i] = false;
+  }
 
-  auto rows = nf_mask->getLocalNumOfRows();
-  auto cols = nf_mask->getLocalNumOfCols();
+  nfMask[0] = nfBeginningEnd;
 
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      if (i == j) {
-        nf2d(i, j) = true;
-      }
+  for (int i = 1; i < (GRID_SIZE_Y + 1); ++i) {
+    nfMask[i] = nfMiddle;
+  }
+
+  nfMask[GRID_SIZE_Y + 1] = nfBeginningEnd;
+
+  auto nf2d = noFlowMask.getWriteHandleGhost();
+  for (int i = 0; i < noFlowMask.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < noFlowMask.getLocalGhostNumOfCols(); ++j) {
+      nf2d(i, j) = nfMask[noFlowMask.getCornerY() + i][noFlowMask.getCornerX() + j];
     }
   }
 
   nf2d.setValues();
-  grad_mask->setZero();
 
-  CUAS::binaryDialation(*grad_mask, *nf_mask);
+  CUAS::binaryDialation(gradMask, noFlowMask);
 
-  auto &grad_arr = grad_mask->getReadHandle();
+  bool *gMask[GRID_SIZE_Y];
+  bool gBeginningEnd[GRID_SIZE_X];
+  for (int i = 0; i < GRID_SIZE_X; ++i) {
+    gBeginningEnd[i] = true;
+  }
+  bool gMiddle[GRID_SIZE_X];
+  gMiddle[0] = true;
+  for (int i = 1; i < GRID_SIZE_X; ++i) {
+    gMiddle[i] = false;
+  }
 
-  auto rowsGhost = grad_mask->getLocalGhostNumOfRows();
-  auto colsGhost = grad_mask->getLocalGhostNumOfCols();
+  gMask[0] = gBeginningEnd;
 
-  auto xGhost = grad_mask->getCornerXGhost();
-  auto yGhost = grad_mask->getCornerYGhost();
+  for (int i = 1; i < GRID_SIZE_Y - 1; ++i) {
+    gMask[i] = gMiddle;
+  }
 
-  auto total_rows = grad_mask->getTotalNumOfRows();
-  auto total_cols = grad_mask->getTotalNumOfCols();
+  gMask[GRID_SIZE_Y - 1] = gBeginningEnd;
 
-  for (int i = 0; i < rowsGhost; ++i) {
-    for (int j = 0; j < colsGhost; ++j) {
-      if (yGhost == -1 && i == 0 || xGhost == -1 && j == 0 ||
-          yGhost + rowsGhost - 1 == total_rows && i == rowsGhost - 1 ||
-          xGhost + colsGhost - 1 == total_cols && j == colsGhost - 1) {
-        ASSERT_EQ(grad_arr(i, j, GHOSTED), false);
-      }
+  auto grad2d = gradMask.getReadHandle();
+  for (int i = 0; i < gradMask.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < gradMask.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(grad2d(i, j), gMask[gradMask.getCornerY() + i][gradMask.getCornerX() + j]);
     }
   }
 }
 
-// TODO: verify
-TEST(CUASKernelsTest, enableUnconfined) {}
+TEST(CUASKernelsTest, enableUnconfined) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
 
-// TODO: verify
-TEST(CUASKernelsTest, calculateTeffPowTexp) {}
+  PETScGrid Teff(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid TeffPowTexp(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid T_n(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid Sp(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid u_n(GRID_SIZE_X, GRID_SIZE_Y);
+  PetscScalar bt = 0.1;
+  PetscScalar unconfSmooth = 0.0;
+  PetscScalar Texp = 1;
 
-// TODO: verify
-TEST(CUASKernelsTest, calculateSeValues) {}
+  // init Teff
+  auto Teff2d = Teff.getWriteHandle();
+  PetscScalar *TeffArr[GRID_SIZE_Y];
+  PetscScalar TeffArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                            0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
 
-// TODO: verify
-TEST(CUASKernelsTest, doChannels) {}
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    TeffArr[i] = TeffArrValues;
+  }
+  for (int i = 0; i < Teff.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < Teff.getLocalNumOfCols(); ++j) {
+      Teff2d(i, j) = TeffArr[Teff.getCornerY() + i][Teff.getCornerX() + j];
+    }
+  }
+  Teff2d.setValues();
 
-// TODO: verify
-TEST(CUASKernelsTest, noChannels) {}
+  // init T_n
+  auto T_n2d = T_n.getWriteHandle();
+
+  PetscScalar *T_nArr[GRID_SIZE_Y];
+  PetscScalar T_nArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                           0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    T_nArr[i] = T_nArrValues;
+  }
+
+  for (int i = 0; i < T_n.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < T_n.getLocalNumOfCols(); ++j) {
+      T_n2d(i, j) = T_nArr[T_n.getCornerY() + i][T_n.getCornerX() + j];
+    }
+  }
+  T_n2d.setValues();
+
+  // topg is zero
+
+  // init K
+  auto K2d = K.getWriteHandle();
+
+  PetscScalar *Karr[GRID_SIZE_Y];
+  PetscScalar KarrValues[GRID_SIZE_X] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Karr[i] = KarrValues;
+  }
+
+  for (int i = 0; i < K.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < K.getLocalNumOfCols(); ++j) {
+      K2d(i, j) = Karr[K.getCornerY() + i][K.getCornerX() + j];
+    }
+  }
+  K2d.setValues();
+
+  // Sp is zero
+
+  // init u_n
+  auto u_n2d = u_n.getWriteHandleGhost();
+  PetscScalar *u_nArr[GRID_SIZE_Y + 2];
+  PetscScalar u_nArrValues[GRID_SIZE_X + 2] = {1820, 1729, 1638, 1547, 1456, 1365, 1274, 1183, 1092, 1001,
+                                               910,  819,  728,  637,  546,  455,  364,  273,  182,  91};
+  for (int i = 0; i < (GRID_SIZE_Y + 2); ++i) {
+    u_nArr[i] = u_nArrValues;
+  }
+
+  for (int i = 0; i < u_n.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < u_n.getLocalGhostNumOfCols(); ++j) {
+      u_n2d(i, j) = u_nArr[u_n.getCornerY() + i][u_n.getCornerX() + j];
+    }
+  }
+  u_n2d.setValues();
+
+  CUAS::enableUnconfined(Teff, TeffPowTexp, Sp, T_n, K, topg, u_n, Texp, unconfSmooth, bt);
+
+  // check results
+  auto resTeff2d = Teff.getReadHandle();
+  PetscScalar *resTeffArr[GRID_SIZE_Y];
+  PetscScalar resTeffArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                               0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    resTeffArr[i] = resTeffArrValues;
+  }
+
+  for (int i = 0; i < Teff.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < Teff.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(resTeff2d(i, j), resTeffArr[Teff.getCornerY() + i][Teff.getCornerX() + j]);
+    }
+  }
+}
+
+TEST(CUASKernelsTest, calculateTeffPowTexp) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  PETScGrid Teff(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid TeffPowTexp(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid TeffPowTexpRes(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid T(GRID_SIZE_X, GRID_SIZE_Y);
+  // In NoData Texp is 1 but for testing puposes 3 has been chosen
+  PetscScalar Texp = 3;
+
+  // init T
+  auto T2d = T.getWriteHandle();
+  PetscScalar *Tarr[GRID_SIZE_Y];
+  PetscScalar TarrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Tarr[i] = TarrValues;
+  }
+
+  for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
+      T2d(i, j) = Tarr[T.getCornerY() + i][T.getCornerX() + j];
+    }
+  }
+  T2d.setValues();
+
+  CUAS::calculateTeffPowTexp(Teff, TeffPowTexp, T, Texp);
+
+  // init TeffPowTexpRes
+  PetscScalar *TeffPowTexpResArr[GRID_SIZE_Y];
+  PetscScalar TeffPowTexpResArrValues[GRID_SIZE_X] = {0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008,
+                                                      0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    TeffPowTexpResArr[i] = TeffPowTexpResArrValues;
+  }
+
+  // compare results
+  auto TeffPowOfFunction = TeffPowTexp.getReadHandle();
+  for (int i = 0; i < TeffPowTexp.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < TeffPowTexp.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(TeffPowOfFunction(i, j),
+                       TeffPowTexpResArr[TeffPowTexp.getCornerY() + i][TeffPowTexp.getCornerX() + j]);
+    }
+  }
+}
+
+TEST(CUASKernelsTest, calculateSeValues) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  PETScGrid S(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid Se(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid Sp(GRID_SIZE_X, GRID_SIZE_Y);
+
+  // init S
+  auto S2d = S.getWriteHandle();
+  PetscScalar *Sarr[GRID_SIZE_Y];
+  PetscScalar SarrValues[GRID_SIZE_X];
+  for (int i = 0; i < GRID_SIZE_X; ++i) {
+    SarrValues[i] = 0.0000982977696;
+  }
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Sarr[i] = SarrValues;
+  }
+
+  for (int i = 0; i < S.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < S.getLocalNumOfCols(); ++j) {
+      S2d(i, j) = Sarr[S.getCornerY() + i][S.getCornerX() + j];
+    }
+  }
+  S2d.setValues();
+
+  // init Sp
+  auto Sp2d = Sp.getWriteHandle();
+  PetscScalar *SpArr[GRID_SIZE_Y];
+  PetscScalar SpArrValues[GRID_SIZE_X];
+  for (int i = 0; i < GRID_SIZE_X; ++i) {
+    SpArrValues[i] = i;
+  }
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    SpArr[i] = SpArrValues;
+  }
+
+  for (int i = 0; i < Sp.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < Sp.getLocalNumOfCols(); ++j) {
+      Sp2d(i, j) = SpArr[Sp.getCornerY() + i][Sp.getCornerX() + j];
+    }
+  }
+  Sp2d.setValues();
+
+  CUAS::calculateSeValues(Se, Sp, S);
+
+  // compare results
+  PetscScalar *SeArr[GRID_SIZE_Y];
+  PetscScalar SeValues[GRID_SIZE_X];
+
+  for (int i = 0; i < GRID_SIZE_X; ++i) {
+    SeValues[i] = (0.0000982977696) + i;
+  }
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    SeArr[i] = SeValues;
+  }
+
+  auto Se2d = Se.getReadHandle();
+  for (int i = 0; i < Se.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < Se.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(Se2d(i, j), SeArr[Se.getCornerY() + i][Se.getCornerX() + j]);
+    }
+  }
+}
+
+TEST(CUASKernelsTest, doChannels) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  PETScGrid u_n(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid melt(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid creep(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid gradMask(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid T(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid T_n(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid pIce(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
+  // init args
+  PetscScalar flowConstant = 5e-25;
+  PetscScalar roughnessFactor = 1.0;
+  PetscScalar Texp = 1;
+  PetscScalar noSmoothMelt = false;
+  PetscScalar cavityBeta = 0.0005;
+  PetscScalar basalVelocityIce = 1e-06;
+  PetscScalar bt = 0.1;
+  PetscScalar dx = 1000.0;
+
+  // init u_n
+  auto u_n2d = u_n.getWriteHandleGhost();
+  PetscScalar *u_nArr[GRID_SIZE_Y + 2];
+  PetscScalar u_nArrValues[GRID_SIZE_X + 2] = {1820, 1729, 1638, 1547, 1456, 1365, 1274, 1183, 1092, 1001,
+                                               910,  819,  728,  637,  546,  455,  364,  273,  182,  91};
+  for (int i = 0; i < GRID_SIZE_Y + 2; ++i) {
+    u_nArr[i] = u_nArrValues;
+  }
+
+  for (int i = 0; i < u_n.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < u_n.getLocalGhostNumOfCols(); ++j) {
+      u_n2d(i, j) = u_nArr[u_n.getCornerY() + i][u_n.getCornerX() + j];
+    }
+  }
+  u_n2d.setValues();
+
+  // init T values
+  auto T2d = T.getWriteHandle();
+  PetscScalar *Tarr[GRID_SIZE_Y];
+  PetscScalar TarrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Tarr[i] = TarrValues;
+  }
+
+  for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
+      T2d(i, j) = Tarr[T.getCornerY() + i][T.getCornerX() + j];
+    }
+  }
+  T2d.setValues();
+
+  // init T_n
+  auto T_n2d = T_n.getWriteHandle();
+
+  PetscScalar *T_nArr[GRID_SIZE_Y];
+  PetscScalar T_nArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                                           0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    T_nArr[i] = T_nArrValues;
+  }
+
+  for (int i = 0; i < T_n.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < T_n.getLocalNumOfCols(); ++j) {
+      T_n2d(i, j) = T_nArr[T_n.getCornerY() + i][T_n.getCornerX() + j];
+    }
+  }
+  T_n2d.setValues();
+
+  // init K values
+  auto K2d = K.getWriteHandle();
+
+  PetscScalar *Karr[GRID_SIZE_Y];
+  PetscScalar KarrValues[GRID_SIZE_X] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    Karr[i] = KarrValues;
+  }
+
+  for (int i = 0; i < K.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < K.getLocalNumOfCols(); ++j) {
+      K2d(i, j) = Karr[K.getCornerY() + i][K.getCornerX() + j];
+    }
+  }
+  K2d.setValues();
+
+  // init gradmask
+  auto gradMask2d = gradMask.getWriteHandleGhost();
+
+  PetscScalar *gradMaskArr[GRID_SIZE_Y + 2];
+  PetscScalar gradMaskBeginningEnd[GRID_SIZE_X + 2];
+  for (int i = 0; i < GRID_SIZE_X + 2; ++i) {
+    gradMaskBeginningEnd[i] = 1;
+  }
+
+  PetscScalar gradMaskMiddle[GRID_SIZE_X + 2];
+  gradMaskMiddle[0] = 1;
+  gradMaskMiddle[1] = 1;
+  for (int i = 2; i < GRID_SIZE_X + 2; ++i) {
+    gradMaskMiddle[i] = 0;
+  }
+
+  gradMaskArr[0] = gradMaskBeginningEnd;
+  gradMaskArr[1] = gradMaskBeginningEnd;
+  for (int i = 2; i < GRID_SIZE_Y; ++i) {
+    gradMaskArr[i] = gradMaskMiddle;
+  }
+  gradMaskArr[GRID_SIZE_Y] = gradMaskBeginningEnd;
+  gradMaskArr[GRID_SIZE_Y + 1] = gradMaskBeginningEnd;
+
+  for (int i = 0; i < gradMask.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < gradMask.getLocalGhostNumOfCols(); ++j) {
+      gradMask2d(i, j) = gradMaskArr[gradMask.getCornerY() + i][gradMask.getCornerX() + j];
+    }
+  }
+  gradMask2d.setValues();
+
+  // init p_ice
+  auto pIce2d = pIce.getWriteHandleGhost();
+  PetscScalar *pIceArr[GRID_SIZE_Y + 2];
+  PetscScalar pIceArrValues[GRID_SIZE_X + 2] = {17854200, 16961490, 16068780, 15176070, 14283360, 13390650, 12497940,
+                                                11605230, 10712520, 9819810,  8927100,  8034390,  7141680,  6248970,
+                                                5356260,  4463550,  3570840,  2678130,  1785420,  892710};
+  for (int i = 0; i < GRID_SIZE_Y + 2; ++i) {
+    pIceArr[i] = pIceArrValues;
+  }
+
+  for (int i = 0; i < pIce.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < pIce.getLocalGhostNumOfCols(); ++j) {
+      pIce2d(i, j) = pIceArr[pIce.getCornerY() + i][pIce.getCornerX() + j];
+    }
+  }
+  pIce2d.setValues();
+
+  // topg is zero
+
+  CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, flowConstant, Texp, roughnessFactor, noSmoothMelt, bt, dx);
+
+  // compare results
+  PetscScalar *meltArr[GRID_SIZE_Y];
+  PetscScalar meltFirstRow[GRID_SIZE_X] = {0,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312,
+                                           0.00000006681961077844312};
+
+  PetscScalar meltSecondRow[GRID_SIZE_X] = {
+      0.00000006681961077844312, 0.0000004009176646706587, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004677372754491018, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004677372754491018, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004677372754491018, 0.0000004677372754491018, 0.0000004677372754491018,
+      0.0000004677372754491018,  0.0000004009176646706587};
+
+  PetscScalar meltMiddleRow[GRID_SIZE_X] = {
+      0.00000006681961077844312,      0.0000004677372754491018,       0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.0000005345568862275449275449,
+      0.0000005345568862275449275449, 0.0000005345568862275449275449, 0.00000046773727544910184};
+
+  meltArr[0] = meltFirstRow;
+  meltArr[1] = meltSecondRow;
+
+  for (int i = 2; i < GRID_SIZE_Y - 2; ++i) {
+    meltArr[i] = meltMiddleRow;
+  }
+
+  meltArr[GRID_SIZE_Y - 2] = meltSecondRow;
+  meltArr[GRID_SIZE_Y - 1] = meltFirstRow;
+
+  auto melt2d = melt.getReadHandle();
+  for (int i = 0; i < melt.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < melt.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(melt2d(i, j), meltArr[melt.getCornerY() + i][melt.getCornerX() + j]);
+    }
+  }
+
+  PetscScalar *creepArr[GRID_SIZE_Y];
+  PetscScalar creepValues[GRID_SIZE_X];
+  for (int i = 0; i < GRID_SIZE_X; ++i) {
+    creepValues[i] = 0.0000000000000000069931566;
+  }
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    creepArr[i] = creepValues;
+  }
+
+  auto creep2d = creep.getReadHandle();
+  for (int i = 0; i < creep.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < creep.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(creep2d(i, j), creepArr[creep.getCornerY() + i][creep.getCornerX() + j]);
+    }
+  }
+}
+
+// noChannels just sets both passed grids to zero
+// TEST(CUASKernelsTest, noChannels) { ASSERT_EQ(mpiSize, MPI_SIZE); }
 
 TEST(CUASKernelsTest, convolve) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
