@@ -1,1 +1,2 @@
 include(cxxopts)
+include(spdlog)

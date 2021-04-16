@@ -1,6 +1,8 @@
 #ifndef CUAS_TIMEPARSE_H
 #define CUAS_TIMEPARSE_H
 
+#include "Logger.h"
+
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -38,8 +40,8 @@ inline timeSecs parseTime(std::string const &timeString) {
   // check if the size is a multiple of 2. This has to be the case as there is always a quantifyer (integer) with the
   // time unit
   if (splitString.size() % 2 != 0) {
-    std::cout << "Wrong format of input string" << std::endl;
-    return 0;
+    Logger::instance().error("timeparse.h: Wrong format of input string. Needs to be multiple of 2. Exiting.");
+    exit(1);
   }
 
   // convert the timeString to secs using the timeUnits map and the split timeString
@@ -55,10 +57,10 @@ inline timeSecs parseTime(std::string const &timeString) {
       // remove the used time-unit so that constructs like 2 years 1 year are impossible in the input string
       timeUnits.erase(currentTimeUnit);
     } else {
-      std::cout << "Wrong format! You either used a non-existing time-unit or used a time-unit multiple times in the "
-                   "input string!"
-                << std::endl;
-      return 0;
+      Logger::instance().error(
+          "timeparse.h: Wrong format! You either used a non-existing time-unit or used a time-unit multiple times in "
+          "the input string! Exiting.");
+      exit(1);
     }
   }
 
@@ -68,8 +70,8 @@ inline timeSecs parseTime(std::string const &timeString) {
 std::string parseTime(timeSecs const secs) {
   // secs < 0 is invalid input
   if (secs < 0) {
-    std::cout << "Invalid Input" << std::endl;
-    return "";
+    Logger::instance().error("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
+    exit(1);
   }
   // hour is the smallest timeUnit
   if (secs < 60 * 60) {

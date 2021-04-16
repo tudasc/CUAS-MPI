@@ -1,5 +1,7 @@
 #include "timeparse.h"
 
+#include "Logger.h"
+
 #include "gtest/gtest.h"
 
 TEST(timeparseTest, parse19y1m2w15d5h) {
@@ -22,8 +24,9 @@ TEST(timeparseTest, parse3h) {
 
 TEST(timeparseTest, parse1y2y1m) {
   std::string inputTime = "1 year 2 years 1 month";
-  CUAS::timeSecs secs = CUAS::parseTime(inputTime);
-  ASSERT_EQ(secs, 0);
+  ASSERT_EXIT(CUAS::parseTime(inputTime), ::testing::ExitedWithCode(1),
+              "timeparse.h: Wrong format! You either used a non-existing time-unit or used a time-unit multiple times "
+              "in the input string! Exiting.");
 }
 
 TEST(timeparseReverseTest, parse1y1mReverse) {
@@ -56,8 +59,8 @@ TEST(timeparseReverseTest, parse19y1m2w6d5hReverse) {
 
 TEST(timeparseReverseTest, wrongInput) {
   CUAS::timeSecs secs = -1;
-  std::string timeString = CUAS::parseTime(secs);
-  ASSERT_EQ(timeString, "");
+  ASSERT_EXIT(CUAS::parseTime(secs), ::testing::ExitedWithCode(1),
+              "timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
 }
 
 TEST(timeparseReverseTest, lessThan1hour) {

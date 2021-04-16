@@ -3,6 +3,7 @@
 
 #include "petsc.h"
 
+#include "Logger.h"
 #include "PETScVec.h"
 
 #define GHOSTED true
@@ -42,16 +43,17 @@ class PETScGrid {
   struct ReadHandle {
     PETScGrid const *grid;
     explicit ReadHandle(PETScGrid const *grid) : grid(grid){};
+
     PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
       if (ghosted) {
         if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
-          // TODO error log
+          Logger::instance().error("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
           exit(1);
         }
         return grid->valuesGhosted[i][j];
       } else {
         if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
-          // TODO error log
+          Logger::instance().error("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
           exit(1);
         }
         return grid->values[i][j];
@@ -71,7 +73,7 @@ class PETScGrid {
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
-        // TODO error log
+        Logger::instance().error("PETScGrid.h: WriteHandle: Access out of range. Exiting.");
         exit(1);
       }
       return grid->values[i][j];
@@ -90,7 +92,7 @@ class PETScGrid {
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
-        // TODO error log
+        Logger::instance().error("PETScGrid.h: WriteHandleGhost: Access out of range. Exiting.");
         exit(1);
       }
       return grid->valuesGhosted[i][j];
@@ -132,7 +134,7 @@ class PETScGrid {
   void setZero() { setConst(0); }
 
   // copys the content of one grid to another
-  int copy(PETScGrid const &input);
+  void copy(PETScGrid const &input);
 
   bool isCompatible(PETScGrid const &grid) const {
     if (totalNumOfCols == grid.totalNumOfCols && totalNumOfRows == grid.totalNumOfRows &&

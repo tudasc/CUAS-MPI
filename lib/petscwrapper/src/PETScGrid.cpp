@@ -68,6 +68,7 @@ void PETScGrid::setGlobalVecColMajor(PETScVec &globalVec, bool ghosted) {
 
   if (ghosted) {
     if (globalVec.getSize() != totalGhostNumOfCols * totalGhostNumOfRows) {
+      Logger::instance().error("PETScGrid.cpp: setGlobalVecColMajor(): sizes do not fit! Exiting.");
       exit(1);
     }
 
@@ -95,6 +96,7 @@ void PETScGrid::setGlobalVecColMajor(PETScVec &globalVec, bool ghosted) {
 
   } else {
     if (globalVec.getSize() != totalNumOfCols * totalNumOfRows) {
+      Logger::instance().error("PETScGrid.cpp: setGlobalVecColMajor(): sizes do not fit! Exiting.");
       exit(1);
     }
 
@@ -128,6 +130,7 @@ void PETScGrid::setGlobalVecRowMajor(PETScVec &globalVec, bool ghosted) {
 
   if (ghosted) {
     if (globalVec.getSize() != totalGhostNumOfCols * totalGhostNumOfRows) {
+      Logger::instance().error("PETScGrid.cpp: setGlobalVecRowMajor(): sizes do not fit! Exiting.");
       exit(1);
     }
 
@@ -155,6 +158,7 @@ void PETScGrid::setGlobalVecRowMajor(PETScVec &globalVec, bool ghosted) {
 
   } else {
     if (globalVec.getSize() != totalNumOfCols * totalNumOfRows) {
+      Logger::instance().error("PETScGrid.cpp: setGlobalVecRowMajor(): sizes do not fit! Exiting.");
       exit(1);
     }
 
@@ -212,16 +216,14 @@ void PETScGrid::setConst(PetscScalar value) {
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
 }
 
-int PETScGrid::copy(PETScGrid const &input) {
+void PETScGrid::copy(PETScGrid const &input) {
   if (!isCompatible(input)) {
-    // TODO error log output
-    return 1;
+    Logger::instance().error("PETScGrid.cpp: copy: input is not compatible. Exiting.");
+    exit(1);
   }
 
   VecCopy(input.local, local);
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
-
-  return 0;
 }
 
 // int PETScGrid::countNonZero() const {

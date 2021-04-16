@@ -6,3 +6,5 @@ target_include_directories(petscwrapper PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inclu
 
 target_link_libraries(petscwrapper ${PETSC_LIBRARIES})
 target_include_directories(petscwrapper PUBLIC ${PETSC_INCLUDES})
+
+add_spdlog(petscwrapper)
