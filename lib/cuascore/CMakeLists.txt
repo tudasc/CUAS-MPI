@@ -12,4 +12,4 @@ set_property(TARGET cuascore PROPERTY CXX_STANDARD 14)
 target_link_libraries(cuascore petscwrapper)
 
 add_cxxopts(cuascore)
-
+add_spdlog(cuascore)

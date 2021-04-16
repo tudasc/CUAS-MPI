@@ -2,6 +2,8 @@
 
 #include "CUASConstants.h"
 
+#include "Logger.h"
+
 namespace CUAS {
 
 CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(numOfRows) {
@@ -20,8 +22,10 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
 void CUASModel::init() {
   dx = cols[1] - cols[0];
   dy = rows[1] - rows[0];
-  if (dx != dy)
+  if (dx != dy) {
+    Logger::instance().error("CUASModel.cpp: init(): dx and dy are not equal. Exiting.");
     exit(1);
+  }
 
   // pIce = thk * RHO_ICE * GRAVITY (python)
   auto &thk2d = thk->getReadHandle();

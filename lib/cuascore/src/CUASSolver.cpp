@@ -6,15 +6,13 @@
 #include "specialgradient.h"
 #include "systemmatrix.h"
 
+#include "Logger.h"
 #include "PETScMat.h"
 #include "PETScSolver.h"
 #include "PETScVec.h"
 
 #include <cmath>
 #include <memory>
-
-// TODO should not be necessary in a solver use spdlog instead
-#include <iostream>
 
 namespace CUAS {
 
@@ -136,9 +134,8 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
   } else if (args->initialHead == "topg") {
     u_n->copy(*model->topg);
   } else {
-    // throw error
-    std::cerr << "initialHead needs to be zero, Nzero or topg!" << std::endl;
-    return;
+    Logger::instance().error("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero or topg. Exiting.");
+    exit(1);
   }
 
   //  if(args->restart){
@@ -156,8 +153,8 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
   }
 
   if (args->verbose) {
-    std::cout << "runtime = " << totaltime_secs << ", time step = " << dt_secs << ", Ntsaved = " << Ntsaved
-              << " for saveEvery = " << args->saveEvery << std::endl;
+    Logger::instance().info("CUASSolver.cpp: solve(): runtime = {}, time step = {}, Ntsaved = {} for saveEvery = {}.",
+                            totaltime_secs, dt_secs, Ntsaved, args->saveEvery);
   }
 
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
@@ -234,7 +231,7 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
   // end
   if (rank == 0) {
     t = clock() - t;
-    std::cout << "computation took: " << ((float)t) / CLOCKS_PER_SEC << " seconds." << std::endl;
+    Logger::instance().info("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC);
   }
 }
 

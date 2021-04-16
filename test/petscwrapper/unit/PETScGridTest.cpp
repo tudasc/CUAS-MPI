@@ -174,10 +174,9 @@ TEST(PETScGridTest, copyTest) {
   auto grid_2 = std::make_unique<PETScGrid>(cols, rows, 10);
 
   grid_2->setConst(10);
+  grid_1->copy(*grid_2);
 
-  if (grid_1->copy(*grid_2)) {
-    FAIL() << "Did not expect an error!";
-  }
+  SUCCEED();
 
   // test if all values have been written to the other grid
 
@@ -194,9 +193,8 @@ TEST(PETScGridTest, copyTest) {
 
   grid_3->setConst(15);
 
-  if (int error = grid_1->copy(*grid_3)) {
-    EXPECT_EQ(error, 1);
-  }
+  ASSERT_EXIT(grid_1->copy(*grid_3), ::testing::ExitedWithCode(1),
+              "PETScGrid.cpp: copy: input is not compatible. Exiting.");
 }
 
 TEST(PETScGridTest, handleTest) {
