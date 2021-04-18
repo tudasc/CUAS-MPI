@@ -45,22 +45,12 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
       model.bndMask->getTotalGhostNumOfCols() - 1) {
     auto bndMask2d = model.bndMask->getWriteHandleGhost();
     for (int i = 0; i < model.bndMask->getLocalGhostNumOfRows(); ++i) {
+      if (model.bndMask->getCornerYGhost() + i <= 0 ||
+          model.bndMask->getCornerYGhost() + i >= model.bndMask->getTotalGhostNumOfRows() - 3) {
+        continue;
+      }
       bndMask2d(i, model.bndMask->getLocalGhostNumOfCols() - 1) = DIRICHLET_FLAG;
       bndMask2d(i, model.bndMask->getLocalGhostNumOfCols() - 2) = DIRICHLET_FLAG;
-    }
-    // reset corner
-    if (model.bndMask->getCornerY() == 0) {
-      bndMask2d(0, 6) = NOFLOW_FLAG;
-      bndMask2d(0, 7) = NOFLOW_FLAG;
-      bndMask2d(1, 6) = NOFLOW_FLAG;
-      bndMask2d(1, 7) = NOFLOW_FLAG;
-    }
-    if (model.bndMask->getCornerYGhost() + model.bndMask->getLocalGhostNumOfRows() ==
-        model.bndMask->getTotalGhostNumOfRows() - 1) {
-      bndMask2d(5, 6) = NOFLOW_FLAG;
-      bndMask2d(5, 7) = NOFLOW_FLAG;
-      bndMask2d(6, 6) = NOFLOW_FLAG;
-      bndMask2d(6, 7) = NOFLOW_FLAG;
     }
   }
 

@@ -105,22 +105,17 @@ void CUASSolver::setup() {
   // TODO: Time dependent tidal forcing
 }
 
-void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid> &u_n, int const Nt,
-                       PetscScalar const totaltime_secs, PetscScalar const dt_secs) {
+void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScalar const dt_secs) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   //
   // SOLVER PREPARATION
   //
-  PETScVec sol(model->Nrows * model->Ncols);
 
   PetscScalar It[Nt + 1];
   for (int i = 0; i < Nt + 1; ++i) {
     It[i] = i;
   }
-
-  // auto u = std::make_unique<PETScGrid>(model->Ncols, model->Nrows);    // unknown u at new time level
-  // auto u_n = std::make_unique<PETScGrid>(model->Ncols, model->Nrows);  // u at the previous time level
 
   // why is this not an arg?
   const int theta = 1;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
@@ -207,9 +202,9 @@ void CUASSolver::solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid>
     systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt_secs, theta, *u_n, currentQ,
                  *dirichletValues, *dirichletMask);
     // solve the equation A*sol = b
-    PETScSolver::solve(A, b, sol);
+    PETScSolver::solve(A, b, *sol);
 
-    u->setGlobalVecColMajor(sol);
+    u->setGlobalVecColMajor(*sol);
 
     if (args->dochannels) {
       doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, args->flowConstant, args->Texp,
