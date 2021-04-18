@@ -75,7 +75,6 @@ test-cuascore:
     - mpirun -n 6 --timeout 60 ./test-forcing
     - mpirun -n 1 --timeout 10 ./test-systemmatrix
     - mpirun -n 6 --timeout 60 ./test-fillNoData
-    - mpirun -n 9 --timeout 60 ./test-noData
 
 test-cuas:
   stage: integration-test
@@ -85,6 +84,6 @@ test-cuas:
   variables:
     GIT_STRATEGY: none
   script:
-    - cd test/cuascore/integration
-    - ./runner.sh
+    - cd build/test/cuascore/integration
+    - mpirun -n 9 --timeout 60 ./test-noData
 

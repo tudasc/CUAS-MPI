@@ -14,6 +14,8 @@ class CUASSolver {
     int numOfCols = model->Ncols;
     int numOfRows = model->Nrows;
 
+    u = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    u_n = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     S = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     Sp = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     K = std::make_unique<PETScGrid>(numOfCols, numOfRows);
@@ -24,14 +26,20 @@ class CUASSolver {
     seaLevelForcingMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+    sol = std::make_unique<PETScVec>(numOfCols * numOfRows);
   }
   CUASSolver(CUASSolver &) = delete;
   CUASSolver(CUASSolver &&) = delete;
 
-  void solve(std::unique_ptr<PETScGrid> &u, std::unique_ptr<PETScGrid> &u_n, int const Nt,
-             PetscScalar const totaltime_secs, PetscScalar const dt_secs);
+  void solve(int const Nt, PetscScalar const totaltime_secs, PetscScalar const dt_secs);
 
   void setup();
+
+ public:
+  std::unique_ptr<PETScGrid> u;    // unknown u at new time level
+  std::unique_ptr<PETScGrid> u_n;  // u at the previous time level
+  std::unique_ptr<PETScVec> sol;
 
  private:
   std::unique_ptr<PETScGrid> S;
