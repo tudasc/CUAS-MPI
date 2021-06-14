@@ -59,6 +59,9 @@ class PETScGrid {
         return grid->values[i][j];
       }
     };
+
+    PetscScalar **getRaw() { return grid->values; }
+    PetscScalar **getRawGhosted() { return grid->valuesGhosted; }
   };
 
   /*
@@ -84,6 +87,9 @@ class PETScGrid {
     void setValues() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); };
 
     ~WriteHandle() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); }
+
+    PetscScalar **getRaw() { return grid->values; }
+    PetscScalar **getRawGhosted() { return grid->valuesGhosted; }
   };
 
   struct WriteHandleGhost {

@@ -46,3 +46,10 @@ add_executable(test-forcing
 target_link_libraries(test-forcing cuascore)
 target_link_libraries(test-forcing gtest)
 set_property(TARGET test-forcing PROPERTY CXX_STANDARD 14)
+
+add_executable(test-netcdf
+        netcdfTest.cpp
+        )
+target_link_libraries(test-netcdf cuascore)
+target_link_libraries(test-netcdf gtest)
+set_property(TARGET test-netcdf PROPERTY CXX_STANDARD 14)
