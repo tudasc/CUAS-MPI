@@ -129,7 +129,7 @@ void CUASFile::read(std::string const &varName, PETScGrid &input) {
   size_t start[2];
   size_t count[2];
 
-  auto grid = input.getReadHandle();
+  auto grid = input.getWriteHandle();
   auto gridFromNetcdf = grid.getRaw();
 
   start[1] = input.getCornerX();

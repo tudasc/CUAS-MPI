@@ -60,8 +60,8 @@ class PETScGrid {
       }
     };
 
-    PetscScalar **getRaw() { return grid->values; }
-    PetscScalar **getRawGhosted() { return grid->valuesGhosted; }
+    PetscScalar const *const *const getRaw() const { return grid->values; }
+    PetscScalar const *const *const getRawGhosted() const { return grid->valuesGhosted; }
   };
 
   /*
@@ -88,8 +88,7 @@ class PETScGrid {
 
     ~WriteHandle() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); }
 
-    PetscScalar **getRaw() { return grid->values; }
-    PetscScalar **getRawGhosted() { return grid->valuesGhosted; }
+    PetscScalar *const *const getRaw() { return grid->values; }
   };
 
   struct WriteHandleGhost {
@@ -109,6 +108,8 @@ class PETScGrid {
     void setValues() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); };
 
     ~WriteHandleGhost() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); }
+
+    PetscScalar *const *const getRaw() { return grid->valuesGhosted; }
   };
 
   // creates a Grid of numOfCols times numOfRows,
