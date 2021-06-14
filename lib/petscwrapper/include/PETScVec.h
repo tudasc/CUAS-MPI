@@ -22,6 +22,8 @@ class PETScVec {
     VecAssemblyEnd(vec);
   }
 
+  void getOwnershipRange(int &firstIndex, int &lastIndex) const { VecGetOwnershipRange(vec, &firstIndex, &lastIndex); }
+
   int getSize() const { return size; }
 
   Vec getRaw() { return vec; }

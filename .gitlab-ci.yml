@@ -15,7 +15,8 @@ stages:
   - ssh-add ~/.ssh/gitlab_rsa
   - module use /work/projects/project01298/.modules
   - module load ISSMProject/GCC83 petsc
-#  - module load git cmake gcc/9.2 openmpi/4.0 PETSc
+  - module load netcdf/4.7
+#  - module load git cmake gcc/9.2 openmpi/4.0 PETSc netcdf
 
 .lb-tear-down: &lb-tear-down
   - echo $SSH_AUTH_SOCK
@@ -41,7 +42,7 @@ build-cuas:
     GIT_STRATEGY: none
   script:
     - rm -rf build && mkdir build && cd build
-    - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DPETSC_DIR=$PETSC_ROOT ..
+    - cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$NETCDF_ROOT ..
     - make -j $(cat /proc/cpuinfo | grep processor | wc -l)
     - *lb-tear-down
 
@@ -75,6 +76,7 @@ test-cuascore:
     - mpirun -n 6 --timeout 60 ./test-forcing
     - mpirun -n 1 --timeout 10 ./test-systemmatrix
     - mpirun -n 6 --timeout 60 ./test-fillNoData
+    - mpirun -n 5 --timeout 10 ./test-netcdf
 
 test-cuas:
   stage: integration-test
