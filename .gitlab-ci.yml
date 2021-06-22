@@ -13,10 +13,12 @@ stages:
 .lb-setup: &lb-setup
   - eval $(ssh-agent -s)
   - ssh-add ~/.ssh/gitlab_rsa
-  - module use /work/projects/project01298/.modules
-  - module load ISSMProject/GCC83 petsc
+  - module use /home/groups/da_sc/moduletree/tmp_tuda_modules
+  - export TUDA_SC_MODULES_ROOT="$DA_SC/moduletree/modules"
+  - module use $TUDA_SC_MODULES_ROOT
+  - export TUDA_ADDITIONAL_MODULEPATH=$TUDA_SC_MODULES_ROOT
+  - module load cmake gcc/10.2 openmpi/4.0 petsc/3.14
   - module load netcdf/4.7
-#  - module load git cmake gcc/9.2 openmpi/4.0 PETSc netcdf
 
 .lb-tear-down: &lb-tear-down
   - echo $SSH_AUTH_SOCK
