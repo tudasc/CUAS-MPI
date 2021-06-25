@@ -153,14 +153,12 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   }
 
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
-  // melt, creep and Q are supposed to be part of the solution class.
+  // melt and creep are supposed to be part of the solution class.
   PETScGrid melt(model->Ncols, model->Nrows);
   PETScGrid creep(model->Ncols, model->Nrows);
-  PETScGrid Q(model->Ncols, model->Nrows);
 
   melt.setZero();
   creep.setZero();
-  Q.setZero();
 
   PetscScalar currTime = 0.0;
   clock_t t;
