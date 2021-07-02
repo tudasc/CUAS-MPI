@@ -53,3 +53,13 @@ add_executable(test-netcdf
 target_link_libraries(test-netcdf cuascore)
 target_link_libraries(test-netcdf gtest)
 set_property(TARGET test-netcdf PROPERTY CXX_STANDARD 14)
+
+install(TARGETS test-systemmatrix DESTINATION test/cuascore/unit)
+install(TARGETS test-CUASKernels DESTINATION test/cuascore/unit)
+install(TARGETS test-specialgradient DESTINATION test/cuascore/unit)
+install(TARGETS test-fillNoData DESTINATION test/cuascore/unit)
+install(TARGETS test-CUASArgs DESTINATION test/cuascore/unit)
+install(TARGETS test-timeparse DESTINATION test/cuascore/unit)
+install(TARGETS test-forcing DESTINATION test/cuascore/unit)
+install(TARGETS test-netcdf DESTINATION test/cuascore/unit)
+
