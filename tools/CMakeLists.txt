@@ -4,3 +4,5 @@ add_executable(cuas.exe
 target_link_libraries(cuas.exe cuascore)
 target_link_libraries(cuas.exe petscwrapper) 
 set_property(TARGET cuas.exe PROPERTY CXX_STANDARD 14)
+
+install(TARGETS cuas.exe DESTINATION bin)

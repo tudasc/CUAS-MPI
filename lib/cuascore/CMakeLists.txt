@@ -18,3 +18,7 @@ add_netcdf(cuascore)
 
 add_cxxopts(cuascore)
 add_spdlog(cuascore)
+
+install(TARGETS cuascore DESTINATION lib)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
+

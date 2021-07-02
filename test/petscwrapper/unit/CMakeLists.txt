@@ -30,3 +30,9 @@ add_executable(test-PETScGrid
 target_link_libraries(test-PETScGrid petscwrapper)
 target_link_libraries(test-PETScGrid gtest)
 set_property(TARGET test-PETScGrid PROPERTY CXX_STANDARD 14)
+
+install(TARGETS test-PETScVec DESTINATION test/petscwrapper/unit)
+install(TARGETS test-PETScMat DESTINATION test/petscwrapper/unit)
+install(TARGETS test-PETScSolver DESTINATION test/petscwrapper/unit)
+install(TARGETS test-PETScGrid DESTINATION test/petscwrapper/unit)
+
