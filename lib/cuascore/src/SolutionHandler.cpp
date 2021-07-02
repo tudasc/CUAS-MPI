@@ -2,10 +2,39 @@
 
 namespace CUAS {
 
-SolutionHandler::SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY,
-                                 int mpiRank)
+SolutionHandler::SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery,
+                                 std::string const &inputFileName)
     : Nt(Nt) {
-  file = std::make_unique<CUASFile>(fileName, dimX, dimY, mpiRank);
+  // read from input
+  int inputFileId;
+  if (int retval = nc_open_par(inputFileName.c_str(), NC_NOWRITE, PETSC_COMM_WORLD, MPI_INFO_NULL, &inputFileId)) {
+    std::string netcdfError = nc_strerror(retval);
+    Logger::instance().error("CUASFile.cpp: CUASFile() in read-mode: A netcdf error occured: " + netcdfError +
+                             "Exiting.");
+    exit(1);
+  }
+  // get dimId of x
+  int dimIdX;
+  nc_inq_dimid(inputFileId, "x", &dimIdX);
+  // get lenght of dimension x
+  size_t dimXAsSize;
+  nc_inq_dimlen(inputFileId, dimIdX, &dimXAsSize);
+  // get dimId of y
+  int dimIdY;
+  nc_inq_dimid(inputFileId, "y", &dimIdY);
+  // get lenght of dimension y
+  size_t dimYAsSize;
+  nc_inq_dimlen(inputFileId, dimIdY, &dimYAsSize);
+  nc_close(inputFileId);
+  int dimX = dimXAsSize;
+  int dimY = dimYAsSize;
+  file = std::make_unique<CUASFile>(fileName, dimX, dimY);
+  SolutionHandler::defineSolution(saveEvery);
+}
+
+SolutionHandler::SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY)
+    : Nt(Nt) {
+  file = std::make_unique<CUASFile>(fileName, dimX, dimY);
   SolutionHandler::defineSolution(saveEvery);
 }
 
@@ -66,8 +95,7 @@ void SolutionHandler::saveSolution(int timeStep, CUASArgs const &args, int rank,
   }
 
   timeSteps.push_back(timeStep);
-  if (timeStep >= Nt) {
-    file->writeTimeSteps(timeSteps);
-  }
 }
+
+SolutionHandler::~SolutionHandler() { file->writeTimeSteps(timeSteps); }
 };  // namespace CUAS

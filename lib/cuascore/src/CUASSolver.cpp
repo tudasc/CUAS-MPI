@@ -52,32 +52,34 @@ void CUASSolver::setup() {
 
   T_n->copy(*T);
 
-  auto global_dir_mask = dirichletMask->getWriteHandle();
+  {
+    auto global_dir_mask = dirichletMask->getWriteHandle();
 
-  rows = dirichletMask->getLocalNumOfRows();
-  cols = dirichletMask->getLocalNumOfCols();
+    rows = dirichletMask->getLocalNumOfRows();
+    cols = dirichletMask->getLocalNumOfCols();
 
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      if (mask(i, j) == (PetscScalar)DIRICHLET_FLAG) {
-        global_dir_mask(i, j) = true;
-      } else {
-        global_dir_mask(i, j) = false;
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        if (mask(i, j) == (PetscScalar)DIRICHLET_FLAG) {
+          global_dir_mask(i, j) = true;
+        } else {
+          global_dir_mask(i, j) = false;
+        }
       }
     }
-  }
 
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      if (mask(i, j) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
-        global_dir_mask(i, j) = true;
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        if (mask(i, j) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
+          global_dir_mask(i, j) = true;
+        }
       }
     }
-  }
 
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      global_dir_mask(i, j) = global_dir_mask(i, j) || global_mask(i, j);
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        global_dir_mask(i, j) = global_dir_mask(i, j) || global_mask(i, j);
+      }
     }
   }
 
@@ -151,9 +153,8 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     Logger::instance().info("CUASSolver.cpp: solve(): runtime = {}, time step = {}, Ntsaved = {} for saveEvery = {}.",
                             totaltime_secs, dt_secs, Ntsaved, args->saveEvery);
   }
-
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
-  // melt and creep are supposed to be part of the solution class.
+  // melt, creep and Q are supposed to be part of the solution class.
   PETScGrid melt(model->Ncols, model->Nrows);
   PETScGrid creep(model->Ncols, model->Nrows);
 
@@ -216,10 +217,9 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     u_n.swap(u);
     T_n.swap(T);
 
-    // we need solution.saveTimestep() for this to work
-    /*if (timeStep % args->saveEvery == 0) {
-      saveSolution(timeStep, *args, rank, *u, *u_n, *model, melt, cavity_opening);
-    }*/
+    if (solutionHandler != nullptr && timeStep % args->saveEvery == 0) {
+      solutionHandler->saveSolution(timeStep, *args, rank, *u, *u_n, *model, melt, cavity_opening);
+    }
   }
   // end
   if (rank == 0) {

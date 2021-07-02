@@ -35,7 +35,7 @@ class CUASFile {
   // open file
   CUASFile(std::string const &fileName, char const mode);
   // create file
-  CUASFile(std::string const &fileName, int dimX, int dimY, int mpiRank);
+  CUASFile(std::string const &fileName, int dimX, int dimY);
   // get the fileName of the netcdf file
   int getFileId() { return fileId; };
   // defines a grid with the name varName in a netcdf file

@@ -10,15 +10,15 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   options.add_options()("x,Tmax", "Maximum T to be allowed in the evolution.",
                         cxxopts::value<PetscScalar>()->default_value("20.0"))(
       "i,Tmin", "Minimum T to be allowed in the evolution.", cxxopts::value<PetscScalar>()->default_value("0.0000001"))(
-      "h,help", "Print help")("input", "Netcdf input file.", cxxopts::value<std::string>())(
-      "output", "Netcdf output file.", cxxopts::value<std::string>())(
+      "h,help", "Print help")("input", "Netcdf input file.", cxxopts::value<std::string>()->default_value(""))(
+      "output", "Netcdf output file.", cxxopts::value<std::string>()->default_value(""))(
       "totaltime",
-      "Total time to run model. Example: --totaltime '4 Weeks', --totaltime '3 years 6 months' or --totaltime "
-      "'50years'",
+      "Total time to run model. Example: --totaltime '4 weeks', --totaltime '3 years 6 months' or --totaltime "
+      "'50 years'",
       cxxopts::value<std::string>()->default_value("10 years"))(
       "dt", "Time step length. Example: --dt '12 hours', --dt 1day",
-      cxxopts::value<std::string>()->default_value("12 hourse"))("saveEvery", "Save every nth timestep to netcdf.",
-                                                                 cxxopts::value<int>()->default_value("100"))(
+      cxxopts::value<std::string>()->default_value("12 hours"))("saveEvery", "Save every nth timestep to netcdf.",
+                                                                cxxopts::value<int>()->default_value("100"))(
       "conductivity", "Conductivity of layer.", cxxopts::value<PetscScalar>()->default_value("10"))(
       "dochannels", "Evolve channels?")("disableUnconfined", "Disable unconfined aquifer case.")(
       "flowConstant", "Ice Flow Constant A.", cxxopts::value<PetscScalar>()->default_value("5e-25"))(
@@ -77,6 +77,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.version = result["version"].as<bool>();
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
+  args.output = result["output"].as<std::string>();
+  args.netcdf = result["input"].as<std::string>();
 }
 
 }  // namespace CUAS

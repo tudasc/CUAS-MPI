@@ -3,6 +3,7 @@
 
 #include "CUASArgs.h"
 #include "CUASModel.h"
+#include "SolutionHandler.h"
 
 #include "PETScGrid.h"
 
@@ -10,7 +11,8 @@ namespace CUAS {
 
 class CUASSolver {
  public:
-  explicit CUASSolver(CUASModel *model, CUASArgs const *const args) : model(model), args(args) {
+  explicit CUASSolver(CUASModel *model, CUASArgs const *const args, CUAS::SolutionHandler *solutionHandler = nullptr)
+      : model(model), args(args), solutionHandler(solutionHandler) {
     int numOfCols = model->Ncols;
     int numOfRows = model->Nrows;
 
@@ -55,6 +57,7 @@ class CUASSolver {
 
   CUASModel *const model;
   CUASArgs const *const args;
+  CUAS::SolutionHandler *const solutionHandler;
 };
 
 }  // namespace CUAS
