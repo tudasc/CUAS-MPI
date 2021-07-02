@@ -23,13 +23,17 @@ class SolutionHandler {
  public:
   // create a new CUASFile and netcdf file with the name fileName to write the solution to. Nt is the total number of
   // time steps and saveEvery determines at what time steps the solution should be saved.
-  SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY, int mpiRank);
+  // use this constructor if you have an input file
+  SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, std::string const &inputFileName);
+  // use this constructor if you want to determine the shape of the solution on your own
+  SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY);
   // defines all grids that are written in saveSolution. saveEvery determines at which timeStep the values are written
   // to the netcdf file. This is important to get the naming for the netcdf variables right.
   void defineSolution(int saveEvery);
   // write the values passed as parameters to the netcdf file
   void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u, PETScGrid const &u_n,
                     CUASModel const &model, PETScGrid const &melt, PetscScalar cavity_opening);
+  ~SolutionHandler();
 };
 }  // namespace CUAS
 

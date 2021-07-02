@@ -3,7 +3,7 @@
 #include "gtest/gtest.h"
 
 TEST(CUASArgs, allOpts) {
-  int argc = 17;
+  int argc = 19;
   char arg0[] = "test";
   char arg05[] = "--verbose";
   char arg1[] = "--Tmax=7";
@@ -22,8 +22,10 @@ TEST(CUASArgs, allOpts) {
   char arg13[] = "--restart='restartFile.nc'";
   char arg14[] = "--noSmoothMelt";
   char arg15[] = "--seaLevelForcing='seaForcingFile.nc'";
-  char *argv[] = {arg0, arg05, arg1,  arg2,  arg3,  arg4,  arg5,  arg6, arg7,
-                  arg8, arg9,  arg10, arg11, arg12, arg13, arg14, arg15};
+  char arg16[] = "--output='output.nc'";
+  char arg17[] = "--input='input.nc'";
+  char *argv[] = {arg0, arg05, arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7, arg8,
+                  arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17};
   CUAS::CUASArgs args;
   CUAS::parseArgs(argc, argv, args);
 
@@ -44,4 +46,6 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.restart, "'restartFile.nc'");
   ASSERT_EQ(args.noSmoothMelt, true);
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
+  ASSERT_EQ(args.output, "'output.nc'");
+  ASSERT_EQ(args.netcdf, "'input.nc'");
 }

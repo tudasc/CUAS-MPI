@@ -30,6 +30,7 @@ std::unique_ptr<CUAS::CUASModel> ModelReader::fillModelFromNetcdf() {
   file->read("topg", *model.topg.get());
   file->read("thk", *model.thk.get());
   file->read("bnd_mask", *model.bndMask.get());
+  file->read("bmelt", *model.bmelt.get());
 
   model.init();
 

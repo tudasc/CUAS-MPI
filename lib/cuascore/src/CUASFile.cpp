@@ -104,13 +104,15 @@ CUASFile::CUASFile(std::string const &fileName, char const mode) : fileName(file
   nc_enddef(fileId);
 }
 
-CUASFile::CUASFile(std::string const &fileName, int dimX, int dimY, int mpiRank) : fileName(fileName) {
+CUASFile::CUASFile(std::string const &fileName, int dimX, int dimY) : fileName(fileName) {
   if (int retval = nc_create_par(fileName.c_str(), NC_MPIIO | NC_NETCDF4, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId)) {
     std::string netcdfError = nc_strerror(retval);
     Logger::instance().error("CUASFile.cpp: CUASFile() in create-mode: A netcdf error occured: " + netcdfError +
                              "Exiting.");
     exit(1);
   }
+
+  // define dimensions for grids
   dimIdsGrid.reserve(2);
   nc_def_dim(fileId, "x", dimX, &dimIdsGrid[1]);
   nc_def_dim(fileId, "y", dimY, &dimIdsGrid[0]);

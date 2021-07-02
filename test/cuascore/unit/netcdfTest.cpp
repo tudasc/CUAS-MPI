@@ -1,8 +1,7 @@
-#include "CUASFile.h"
-#include "Logger.h"
-#include "ModelReader.h"
-#include "SolutionHandler.h"
 #include "fillNoData.h"
+
+#include "CUASFile.h"
+#include "SolutionHandler.h"
 
 #include "gtest/gtest.h"
 
@@ -40,8 +39,9 @@ TEST(readTest, writeToNetcdf) {
   int Nt = 100;
   int saveEvery = 20;
   CUAS::CUASArgs args;
+  args.saveEvery = saveEvery;
   auto model = fillNoData();
-  CUAS::SolutionHandler handler(FILENAME, Nt, saveEvery, NODATA_COLS, NODATA_ROWS, mpiRank);
+  CUAS::SolutionHandler handler(FILENAME, Nt, saveEvery, NODATA_COLS, NODATA_ROWS);
 
   for (int i = 1; i < Nt + 1; ++i) {
     if (i % saveEvery == 0) {
