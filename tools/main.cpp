@@ -13,7 +13,6 @@ int main(int argc, char *argv[]) {
     CUAS::CUASArgs args;
     CUAS::parseArgs(argc, argv, args);
     std::string outfile = args.output;
-    int save_every = args.saveEvery;
 
     PetscScalar totaltime_secs = CUAS::parseTime(args.totaltime);
     PetscScalar dt_secs = CUAS::parseTime(args.dt);
@@ -26,8 +25,14 @@ int main(int argc, char *argv[]) {
 
     model->Q = std::make_unique<CUAS::ConstantForcing>(*model->bmelt, args.supplyMultiplier);
 
-    CUAS::SolutionHandler solutionHandler(args.output, Nt, args.saveEvery, args.netcdf);
-    auto solver = std::make_unique<CUAS::CUASSolver>(model.get(), &args, &solutionHandler);
+    std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
+    if (args.saveEvery > 0) {
+      solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, Nt, args.saveEvery, args.netcdf);
+    } else {
+      solutionHandler = nullptr;
+    }
+
+    auto solver = std::make_unique<CUAS::CUASSolver>(model.get(), &args, solutionHandler.get());
 
     solver->setup();
 
