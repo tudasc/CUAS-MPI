@@ -143,16 +143,19 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   //  }
 
   // save timedependent values
-  PetscScalar Ntsaved;
-  auto Itlength = sizeof(It) / sizeof(It[0]);
-  if (Itlength % args->saveEvery > 0) {
-    Ntsaved = ceil(Itlength / args->saveEvery);
+  if (args->saveEvery > 0) {
+    PetscScalar Ntsaved;
+    auto Itlength = sizeof(It) / sizeof(It[0]);
+    if (Itlength % args->saveEvery > 0) {
+      Ntsaved = ceil(Itlength / args->saveEvery);
+    }
+
+    if (args->verbose) {
+      Logger::instance().info("CUASSolver.cpp: solve(): runtime = {}, time step = {}, Ntsaved = {} for saveEvery = {}.",
+                              totaltime_secs, dt_secs, Ntsaved, args->saveEvery);
+    }
   }
 
-  if (args->verbose) {
-    Logger::instance().info("CUASSolver.cpp: solve(): runtime = {}, time step = {}, Ntsaved = {} for saveEvery = {}.",
-                            totaltime_secs, dt_secs, Ntsaved, args->saveEvery);
-  }
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
   // melt, creep and Q are supposed to be part of the solution class.
   PETScGrid melt(model->Ncols, model->Nrows);
