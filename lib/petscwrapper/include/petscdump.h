@@ -2,8 +2,8 @@
 #define CUAS_PETSCDUMP_H
 
 #include "PETScGrid.h"
-#include "PETScMat.h"
-#include "PETScVec.h"
+#include "PETScMatrix.h"
+#include "PETScVector.h"
 
 #include "petsc.h"
 

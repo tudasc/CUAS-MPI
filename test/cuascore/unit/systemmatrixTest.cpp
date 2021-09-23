@@ -16,8 +16,8 @@ TEST(fillMatrixTest, randomValues) {
   int dx = 10;
   int dtsecs = 40278;
   int theta = 3;
-  PETScMat MatA(NY * NX, NY * NX);
-  PETScVec VecB(NY * NX);
+  PETScMatrix MatA(NY * NX, NY * NX);
+  PETScVector VecB(NY * NX);
   PETScGrid SeGrid(NX, NY);
   PETScGrid TeffPowGrid(NX, NY);
   PETScGrid u_nGrid(NX, NY);

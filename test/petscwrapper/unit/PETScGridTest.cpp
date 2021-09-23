@@ -1,5 +1,5 @@
 #include "PETScGrid.h"
-#include "PETScVec.h"
+#include "PETScVector.h"
 
 #include "gtest/gtest.h"
 
@@ -243,7 +243,7 @@ TEST(PETScGridTest, setGlobalVecColMajor) {
   grid.setZero();
 
   {
-    PETScVec inputNoneGhosted(cols * rows);
+    PETScVector inputNoneGhosted(cols * rows);
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputNoneGhosted.getSize(); ++i) {
@@ -273,7 +273,7 @@ TEST(PETScGridTest, setGlobalVecColMajor) {
   }
 
   {
-    PETScVec inputGhosted((cols + 2) * (rows + 2));
+    PETScVector inputGhosted((cols + 2) * (rows + 2));
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputGhosted.getSize(); ++i) {
@@ -313,7 +313,7 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
   grid.setZero();
 
   {
-    PETScVec inputNoneGhosted(cols * rows);
+    PETScVector inputNoneGhosted(cols * rows);
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputNoneGhosted.getSize(); ++i) {
@@ -343,7 +343,7 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
   }
 
   {
-    PETScVec inputGhosted((cols + 2) * (rows + 2));
+    PETScVector inputGhosted((cols + 2) * (rows + 2));
 
     if (mpiRank == 0) {
       for (int i = 0; i < inputGhosted.getSize(); ++i) {

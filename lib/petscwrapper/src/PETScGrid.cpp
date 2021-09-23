@@ -62,7 +62,7 @@ void PETScGrid::setInnerBoundariesConst(PetscScalar value) {
   DMGlobalToLocal(dm, global, INSERT_VALUES, local);
 }
 
-void PETScGrid::setGlobalVecColMajor(PETScVec &globalVec, bool ghosted) {
+void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
   // the following lines are copying the globalVec Vector to each processor.
   // could probably be optimized to get the specific needed values.
 
@@ -124,7 +124,7 @@ void PETScGrid::setGlobalVecColMajor(PETScVec &globalVec, bool ghosted) {
   }
 }
 
-void PETScGrid::setGlobalVecRowMajor(PETScVec &globalVec, bool ghosted) {
+void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
   // the following lines are copying the globalVec Vector to each processor.
   // could probably be optimized to get the specific needed values.
 

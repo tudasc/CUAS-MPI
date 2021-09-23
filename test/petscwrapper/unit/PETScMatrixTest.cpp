@@ -1,4 +1,4 @@
-#include "PETScMat.h"
+#include "PETScMatrix.h"
 
 #include "gtest/gtest.h"
 
@@ -11,12 +11,12 @@ int mpiSize;
 #define MAT_COLS 20
 #define MAT_ROWS 25
 
-TEST(PETScMatTest, size) {
+TEST(PETScMatrixTest, size) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PETScMat>(rows, cols);
+  auto mat = std::make_unique<PETScMatrix>(rows, cols);
   ASSERT_EQ(mat->getCols(), cols);
   ASSERT_EQ(mat->getRows(), rows);
 
@@ -28,13 +28,13 @@ TEST(PETScMatTest, size) {
 }
 
 // mpiSize needs to be a divisor of cols and rows
-TEST(PETScMatTest, localsize) {
+TEST(PETScMatrixTest, localsize) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
   // ASSERT_EQ(size % mpiSize, 0);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PETScMat>(rows, cols);
+  auto mat = std::make_unique<PETScMatrix>(rows, cols);
   int petsclocalcols;
   int petsclocalrows;
   MatGetLocalSize(mat->getRaw(), &petsclocalrows, &petsclocalcols);
@@ -42,12 +42,12 @@ TEST(PETScMatTest, localsize) {
   ASSERT_EQ(petsclocalcols, cols / mpiSize);
 }
 
-TEST(PETScMatTest, getColsRows) {
+TEST(PETScMatrixTest, getColsRows) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PETScMat>(rows, cols);
+  auto mat = std::make_unique<PETScMatrix>(rows, cols);
 
   int colsFromMat = mat->getCols();
   ASSERT_EQ(cols, colsFromMat);
@@ -56,12 +56,12 @@ TEST(PETScMatTest, getColsRows) {
   ASSERT_EQ(rows, rowsFromMat);
 }
 
-TEST(PETScMatTest, setvalue) {
+TEST(PETScMatrixTest, setvalue) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
-  auto mat = std::make_unique<PETScMat>(rows, cols);
+  auto mat = std::make_unique<PETScMatrix>(rows, cols);
   mat->assemble();
 
   if (mpiRank == 0) {

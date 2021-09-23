@@ -24,18 +24,18 @@
  * (rows, j, m)
  */
 
-class PETScMat {
+class PETScMatrix {
  public:
   // constructor
-  explicit PETScMat(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
+  explicit PETScMatrix(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
     MatCreate(PETSC_COMM_WORLD, &mat);
     MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, numOfRows, numOfCols);
     MatSetFromOptions(mat);
     MatSetUp(mat);
   }
-  PETScMat(PETScMat &) = delete;
-  PETScMat(PETScMat &&) = delete;
-  ~PETScMat() { MatDestroy(&mat); }
+  PETScMatrix(PETScMatrix &) = delete;
+  PETScMatrix(PETScMatrix &&) = delete;
+  ~PETScMatrix() { MatDestroy(&mat); }
 
   // getter
   Mat getRaw() { return mat; }
