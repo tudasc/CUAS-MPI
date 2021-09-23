@@ -1,6 +1,6 @@
 #include "PETScSolver.h"
-#include "PETScMat.h"
-#include "PETScVec.h"
+#include "PETScMatrix.h"
+#include "PETScVector.h"
 
 #include "gtest/gtest.h"
 
@@ -12,9 +12,9 @@ int mpiSize;
 
 TEST(PetscSolverTest, solve) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
-  auto A = std::make_unique<PETScMat>(VEC_SIZE, VEC_SIZE);
-  auto b = std::make_unique<PETScVec>(VEC_SIZE);
-  auto s = std::make_unique<PETScVec>(VEC_SIZE);
+  auto A = std::make_unique<PETScMatrix>(VEC_SIZE, VEC_SIZE);
+  auto b = std::make_unique<PETScVector>(VEC_SIZE);
+  auto s = std::make_unique<PETScVector>(VEC_SIZE);
 
   A->setValue(0, 0, 2);
   A->setValue(1, 1, 2);

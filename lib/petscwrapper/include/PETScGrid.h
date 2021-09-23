@@ -4,7 +4,7 @@
 #include "petsc.h"
 
 #include "Logger.h"
-#include "PETScVec.h"
+#include "PETScVector.h"
 
 #define GHOSTED true
 #define NONE_GHOSTED false
@@ -130,9 +130,9 @@ class PETScGrid {
   void setInnerBoundariesConst(PetscScalar value);
 
   // sets the grids values from globalVec using the column major layout
-  void setGlobalVecColMajor(PETScVec &globalVec, bool ghosted = NONE_GHOSTED);
+  void setGlobalVecColMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
   // sets the grids values from globalVec using the column major layout
-  void setGlobalVecRowMajor(PETScVec &globalVec, bool ghosted = NONE_GHOSTED);
+  void setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
 
   // sets each entry of grid to value
   void setConst(PetscScalar value);

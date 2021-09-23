@@ -7,9 +7,9 @@
 #include "systemmatrix.h"
 
 #include "Logger.h"
-#include "PETScMat.h"
+#include "PETScMatrix.h"
 #include "PETScSolver.h"
-#include "PETScVec.h"
+#include "PETScVector.h"
 
 #include <cmath>
 #include <memory>
@@ -122,7 +122,7 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   // why is this not an arg?
   const int theta = 1;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
 
-  PETScVec b(model->Nrows * model->Ncols);
+  PETScVector b(model->Nrows * model->Ncols);
 
   if (args->initialHead == "zero") {
     u_n->setZero();
@@ -174,7 +174,7 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   // creating grids outside of loop to save time
   PETScGrid Se(Sp->getTotalNumOfCols(), Sp->getTotalNumOfRows());
   int size = model->Ncols * model->Nrows;
-  PETScMat A(size, size);
+  PETScMatrix A(size, size);
   PetscScalar cavity_opening = 0;
   PETScGrid Teff(T->getTotalNumOfCols(), T->getTotalNumOfRows());
   PETScGrid TeffPowTexp(T->getTotalNumOfCols(), T->getTotalNumOfRows());

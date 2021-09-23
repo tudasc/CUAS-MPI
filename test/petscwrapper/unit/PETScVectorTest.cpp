@@ -1,4 +1,4 @@
-#include "PETScVec.h"
+#include "PETScVector.h"
 
 #include "gtest/gtest.h"
 
@@ -10,33 +10,33 @@ int mpiSize;
 #define MPI_SIZE 5
 #define VEC_SIZE 20
 
-TEST(PETScVecTest, size) {
+TEST(PETScVectorTest, size) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int size = VEC_SIZE;
-  auto vec = std::make_unique<PETScVec>(size);
+  auto vec = std::make_unique<PETScVector>(size);
   ASSERT_EQ(vec->getSize(), size);
   int petscsize;
   VecGetSize(vec->getRaw(), &petscsize);
   ASSERT_EQ(petscsize, size);
 }
 
-TEST(PETScVecTest, localsize) {
+TEST(PETScVectorTest, localsize) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
   // ASSERT_EQ(size % mpiSize, 0);
 
   const int size = VEC_SIZE;
-  auto vec = std::make_unique<PETScVec>(size);
+  auto vec = std::make_unique<PETScVector>(size);
   int petsclocalsize;
   VecGetLocalSize(vec->getRaw(), &petsclocalsize);
   ASSERT_EQ(petsclocalsize, size / mpiSize);
 }
 
-TEST(PETScVecTest, initialvalues) {
+TEST(PETScVectorTest, initialvalues) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int size = VEC_SIZE;
-  auto vec = std::make_unique<PETScVec>(size);
+  auto vec = std::make_unique<PETScVector>(size);
 
   PetscScalar v;
   int p[] = {mpiRank * (size / mpiSize) + 1};
@@ -44,11 +44,11 @@ TEST(PETScVecTest, initialvalues) {
   ASSERT_EQ(v, 0);
 }
 
-TEST(PETScVecTest, setconst) {
+TEST(PETScVectorTest, setconst) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int size = VEC_SIZE;
-  auto vec = std::make_unique<PETScVec>(size);
+  auto vec = std::make_unique<PETScVector>(size);
 
   vec->setConst(5.3);
   PetscScalar v;
@@ -61,11 +61,11 @@ TEST(PETScVecTest, setconst) {
   ASSERT_EQ(v, 0);
 }
 
-TEST(PETScVecTest, setvalue) {
+TEST(PETScVectorTest, setvalue) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int size = VEC_SIZE;
-  auto vec = std::make_unique<PETScVec>(size);
+  auto vec = std::make_unique<PETScVector>(size);
   if (mpiRank == 1) {
     // vec->setValue(15, 2.3);
     vec->setValue(6, 2.7);

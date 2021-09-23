@@ -4,7 +4,7 @@
 #include "CUASArgs.h"
 #include "CUASModel.h"
 #include "PETScGrid.h"
-#include "PETScVec.h"
+#include "PETScVector.h"
 
 #include <netcdf.h>
 #include <netcdf_par.h>
@@ -27,7 +27,7 @@ class CUASFile {
   // checks if the input PETScGrid has the same number of cols/rows like the grid in the netcdf file
   bool checkDimensions(std::string const &varName, PETScGrid const &input);
   // checks if the input PetscVector has the same dimensions as the corresponding vector in the netcdf file
-  bool checkDimensions(std::string const &varName, PETScVec const &input);
+  bool checkDimensions(std::string const &varName, PETScVector const &input);
   // checks if the input vector has the same dimensions as the corresponding vector in the netcdf file
   bool checkDimensions(std::string const &varName, std::vector<PetscScalar> const &input);
 
@@ -44,8 +44,8 @@ class CUASFile {
   void defineScalar(std::string const &varName);
   // writes the grid with the name varName from a netcdf file in the input PETScGrid
   void read(std::string const &varName, PETScGrid &input);
-  // writes the vector with the name varName from a netcdf file in the input PETScVec
-  void read(std::string const &varName, PETScVec &input);
+  // writes the vector with the name varName from a netcdf file in the input PETScVector
+  void read(std::string const &varName, PETScVector &input);
   // writes the vector with the name varName from a netcdf file in the input std::vector
   // the vector read by this function is not shared. For shared vectors use the read method with the PetscVec
   void read(std::string const &varName, std::vector<PetscScalar> &input);

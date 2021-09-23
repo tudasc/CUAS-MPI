@@ -57,8 +57,8 @@ test-petscwrapper:
     GIT_STRATEGY: none
   script:
     - cd build/test/petscwrapper/unit
-    - mpirun -n 5 --timeout 10 ./test-PETScVec
-    - mpirun -n 5 --timeout 10 ./test-PETScMat
+    - mpirun -n 5 --timeout 10 ./test-PETScVector
+    - mpirun -n 5 --timeout 10 ./test-PETScMatrix
     - mpirun -n 4 --timeout 10 ./test-PETScSolver
     - mpirun -n 4 --timeout 10 ./test-PETScGrid
 

@@ -29,7 +29,7 @@ class CUASSolver {
     dirichletMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
-    sol = std::make_unique<PETScVec>(numOfCols * numOfRows);
+    sol = std::make_unique<PETScVector>(numOfCols * numOfRows);
   }
   CUASSolver(CUASSolver &) = delete;
   CUASSolver(CUASSolver &&) = delete;
@@ -41,7 +41,7 @@ class CUASSolver {
  public:
   std::unique_ptr<PETScGrid> u;    // unknown u at new time level
   std::unique_ptr<PETScGrid> u_n;  // u at the previous time level
-  std::unique_ptr<PETScVec> sol;
+  std::unique_ptr<PETScVector> sol;
 
  private:
   std::unique_ptr<PETScGrid> S;

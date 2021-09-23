@@ -3,16 +3,16 @@
 
 #include "petsc.h"
 
-class PETScVec {
+class PETScVector {
  public:
-  explicit PETScVec(int size) : size(size) {
+  explicit PETScVector(int size) : size(size) {
     VecCreate(PETSC_COMM_WORLD, &vec);
     VecSetSizes(vec, PETSC_DECIDE, size);
     VecSetFromOptions(vec);
   }
-  PETScVec(PETScVec &) = delete;
-  PETScVec(PETScVec &&) = delete;
-  ~PETScVec() { VecDestroy(&vec); }
+  PETScVector(PETScVector &) = delete;
+  PETScVector(PETScVector &&) = delete;
+  ~PETScVector() { VecDestroy(&vec); }
 
   void setValue(int position, PetscScalar value) { VecSetValue(vec, position, value, INSERT_VALUES); }
   void setConst(PetscScalar value) { VecSet(vec, value); }

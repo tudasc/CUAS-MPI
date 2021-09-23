@@ -1,14 +1,14 @@
 #ifndef CUAS_PETSCSOLVER_H
 #define CUAS_PETSCSOLVER_H
 
-#include "PETScMat.h"
-#include "PETScVec.h"
+#include "PETScMatrix.h"
+#include "PETScVector.h"
 
 #include "petsc.h"
 
 class PETScSolver {
  public:
-  inline static void solve(PETScMat const &A, PETScVec const &b, PETScVec &solution) {
+  inline static void solve(PETScMatrix const &A, PETScVector const &b, PETScVector &solution) {
     KSP ksp;
     PC pc;
 

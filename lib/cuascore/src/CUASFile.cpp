@@ -28,7 +28,7 @@ bool CUASFile::checkDimensions(std::string const &varName, PETScGrid const &inpu
   }
 }
 
-bool CUASFile::checkDimensions(std::string const &varName, PETScVec const &input) {
+bool CUASFile::checkDimensions(std::string const &varName, PETScVector const &input) {
   int varId = getVarId(varName);
   size_t size;
   int dimId;
@@ -149,11 +149,11 @@ void CUASFile::read(std::string const &varName, PETScGrid &input) {
   }
 };
 
-void CUASFile::read(std::string const &varName, PETScVec &input) {
+void CUASFile::read(std::string const &varName, PETScVector &input) {
   int varId = getVarId(varName);
 
   if (!checkDimensions(varName, input)) {
-    Logger::instance().error("CUASFile.cpp: read with PETScVec: size does not fit! Exiting.");
+    Logger::instance().error("CUASFile.cpp: read with PETScVector: size does not fit! Exiting.");
     exit(1);
   }
 
@@ -169,7 +169,8 @@ void CUASFile::read(std::string const &varName, PETScVec &input) {
 
   if (int retval = nc_get_vara_double(fileId, varId, &start, &count, &vecFromNetcdf[0])) {
     std::string netcdfError = nc_strerror(retval);
-    Logger::instance().error("CUASFile.cpp:read() with PETScVec: A netcdf error occured: " + netcdfError + "Exiting.");
+    Logger::instance().error("CUASFile.cpp:read() with PETScVector: A netcdf error occured: " + netcdfError +
+                             "Exiting.");
     exit(1);
   }
 
