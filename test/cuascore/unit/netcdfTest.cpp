@@ -35,7 +35,8 @@ TEST(readTest, writeToNetcdf) {
     }
   }
 
-  PetscScalar cavityOpening = 10.0;
+  PETScGrid cavityOpening(NODATA_COLS, NODATA_ROWS);
+  cavityOpening.setConst(10.0);
   int Nt = 100;
   int saveEvery = 20;
   CUAS::CUASArgs args;
@@ -150,9 +151,16 @@ TEST(readTest, writeToNetcdf) {
   }
 
   // test cavityOpening
-  PetscScalar cavityResult;
+  PETScGrid cavityResult(NODATA_COLS, NODATA_ROWS);
   file.read("cavity_opening20", cavityResult);
-  ASSERT_EQ(cavityResult, cavityOpening);
+  auto cavityResult2d = cavityResult.getReadHandle();
+  auto cavityActual = cavityOpening.getReadHandle();
+
+  for (int i = 0; i < cavityResult.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < cavityResult.getLocalNumOfCols(); ++j) {
+      ASSERT_EQ(cavityResult2d(i, j), cavityActual(i, j));
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {

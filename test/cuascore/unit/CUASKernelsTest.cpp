@@ -585,6 +585,8 @@ TEST(CUASKernelsTest, doChannels) {
   PETScGrid pIce(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid noFlowMask(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid cavityOpening(GRID_SIZE_X, GRID_SIZE_Y);
   // init args
   PetscScalar flowConstant = 5e-25;
   PetscScalar roughnessFactor = 1.0;
@@ -594,6 +596,9 @@ TEST(CUASKernelsTest, doChannels) {
   PetscScalar basalVelocityIce = 1e-06;
   PetscScalar bt = 0.1;
   PetscScalar dx = 1000.0;
+  PetscScalar dtSecs = 43200;
+  PetscScalar tMin = 1e-07;
+  PetscScalar tMax = 20.0;
 
   // init u_n
   auto u_n2d = u_n.getWriteHandleGhost();
@@ -663,6 +668,38 @@ TEST(CUASKernelsTest, doChannels) {
   }
   K2d.setValues();
 
+  // init noFlowMask
+  auto noFlowMask2d = noFlowMask.getWriteHandleGhost();
+
+  bool *nFMask[GRID_SIZE_Y + 2];
+  bool nFBeginningEnd[GRID_SIZE_X + 2];
+  for (int i = 0; i < GRID_SIZE_X + 2; ++i) {
+    nFBeginningEnd[i] = true;
+  }
+  bool nFMiddle[GRID_SIZE_X + 2];
+  nFMiddle[0] = true;
+  for (int i = 1; i < GRID_SIZE_X + 2; ++i) {
+    nFMiddle[i] = false;
+  }
+
+  nFMask[0] = nFBeginningEnd;
+
+  for (int i = 1; i < GRID_SIZE_Y + 1; ++i) {
+    nFMask[i] = nFMiddle;
+  }
+
+  nFMask[GRID_SIZE_Y + 1] = nFBeginningEnd;
+
+  for (int i = 0; i < noFlowMask.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < noFlowMask.getLocalGhostNumOfCols(); ++j) {
+      noFlowMask2d(i, j) = nFMask[noFlowMask.getCornerY() + i][noFlowMask.getCornerX() + j];
+    }
+  }
+  noFlowMask2d.setValues();
+
+  // set cavityOpening to zero
+  cavityOpening.setZero();
+
   // init gradmask
   auto gradMask2d = gradMask.getWriteHandleGhost();
 
@@ -712,9 +749,10 @@ TEST(CUASKernelsTest, doChannels) {
   pIce2d.setValues();
 
   // topg is zero
+  topg.setZero();
 
-  CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, flowConstant, Texp, roughnessFactor, noSmoothMelt,
-                   bt, dx);
+  CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, noFlowMask, cavityOpening, flowConstant, Texp,
+                   roughnessFactor, noSmoothMelt, cavityBeta, basalVelocityIce, tMin, tMax, bt, dx, dtSecs);
 
   // compare results
   PetscScalar *meltArr[GRID_SIZE_Y];
@@ -783,6 +821,57 @@ TEST(CUASKernelsTest, doChannels) {
   for (int i = 0; i < creep.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < creep.getLocalNumOfCols(); ++j) {
       EXPECT_DOUBLE_EQ(creep2d(i, j), creepArr[creep.getCornerY() + i][creep.getCornerX() + j]);
+    }
+  }
+
+  PetscScalar *cavityArr[GRID_SIZE_Y];
+  PetscScalar cavityMiddleRow[GRID_SIZE_X];
+  for (int i = 0; i < GRID_SIZE_X; ++i) {
+    cavityMiddleRow[i] = 0.000000005;
+  }
+
+  for (int i = 0; i < GRID_SIZE_Y; ++i) {
+    cavityArr[i] = cavityMiddleRow;
+  }
+
+  auto cavity2d = cavityOpening.getReadHandle();
+  for (int i = 0; i < cavityOpening.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < cavityOpening.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(cavity2d(i, j), cavityArr[cavityOpening.getCornerY() + i][cavityOpening.getCornerX() + j]);
+    }
+  }
+  // check updated T
+  PetscScalar *updatedTArr[GRID_SIZE_Y];
+  PetscScalar updatedTFirstRow[GRID_SIZE_X] = {
+      0.2002159999996979,  0.20310260718532666, 0.20310260718532666, 0.20310260718532666, 0.20310260718532666,
+      0.20310260718532666, 0.20310260718532666, 0.20310260718532666, 0.20310260718532666, 0.20310260718532666,
+      0.20310260718532666, 0.20310260718532666, 0.20310260718532666, 0.20310260718532666, 0.20310260718532666,
+      0.20310260718532666, 0.20310260718532666, 0.20310260718532666};
+  PetscScalar updatedTSecondRow[GRID_SIZE_X] = {
+      0.20310260718532666, 0.21753564311347037, 0.2204222502990991, 0.2204222502990991, 0.2204222502990991,
+      0.2204222502990991,  0.2204222502990991,  0.2204222502990991, 0.2204222502990991, 0.2204222502990991,
+      0.2204222502990991,  0.2204222502990991,  0.2204222502990991, 0.2204222502990991, 0.2204222502990991,
+      0.2204222502990991,  0.2204222502990991,  0.21753564311347037};
+  PetscScalar updatedTThirdRow[GRID_SIZE_X] = {
+      0.20310260718532666, 0.2204222502990991,  0.22330885748472784, 0.22330885748472784, 0.22330885748472784,
+      0.22330885748472784, 0.22330885748472784, 0.22330885748472784, 0.22330885748472784, 0.22330885748472784,
+      0.22330885748472784, 0.22330885748472784, 0.22330885748472784, 0.22330885748472784, 0.22330885748472784,
+      0.22330885748472784, 0.22330885748472784, 0.22042225029909912};
+
+  updatedTArr[0] = updatedTFirstRow;
+  updatedTArr[1] = updatedTSecondRow;
+
+  for (int i = 2; i < GRID_SIZE_Y - 2; ++i) {
+    updatedTArr[i] = updatedTThirdRow;
+  }
+
+  updatedTArr[GRID_SIZE_Y - 2] = updatedTSecondRow;
+  updatedTArr[GRID_SIZE_Y - 1] = updatedTFirstRow;
+
+  auto updatedTGlobal = T.getReadHandle();
+  for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(updatedTGlobal(i, j), updatedTArr[T.getCornerY() + i][T.getCornerX() + j]);
     }
   }
 }
@@ -892,6 +981,45 @@ TEST(CUASKernelsTest, convolve) {
     for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
         EXPECT_DOUBLE_EQ(res2d(i, j), resultArr[result.getCornerY() + i][result.getCornerX() + j]);
+      }
+    }
+  }
+}
+
+TEST(CUASKernelsTest, clamp) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  PETScGrid input(GRID_SIZE_Y, GRID_SIZE_X);
+  PETScGrid result(GRID_SIZE_Y, GRID_SIZE_X);
+
+  PetscScalar minimum = 1.0;
+  PetscScalar maximum = 100.0;
+  // setup
+  {
+    auto inputGlobal = input.getWriteHandle();
+    for (int j = 0; j < input.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < input.getLocalNumOfCols(); ++i) {
+        if (i % 3 == 0) {
+          inputGlobal(j, i) = 110.0;
+        } else if (i % 2 == 0) {
+          inputGlobal(j, i) = -3.14;
+        } else {
+          inputGlobal(j, i) = 10;
+        }
+      }
+    }
+  }
+
+  // clamp
+  CUAS::clamp(input, minimum, maximum);
+
+  // check
+  {
+    auto inputGlobal = input.getReadHandle();
+    for (int j = 0; j < input.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < input.getLocalNumOfCols(); ++i) {
+        ASSERT_EQ(inputGlobal(j, i) >= minimum, true);
+        ASSERT_EQ(inputGlobal(j, i) <= maximum, true);
       }
     }
   }

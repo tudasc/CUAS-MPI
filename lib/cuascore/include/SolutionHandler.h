@@ -32,7 +32,7 @@ class SolutionHandler {
   void defineSolution(int saveEvery);
   // write the values passed as parameters to the netcdf file
   void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u, PETScGrid const &u_n,
-                    CUASModel const &model, PETScGrid const &melt, PetscScalar cavity_opening);
+                    CUASModel const &model, PETScGrid const &melt, PETScGrid const &cavityOpening);
   ~SolutionHandler();
 };
 }  // namespace CUAS

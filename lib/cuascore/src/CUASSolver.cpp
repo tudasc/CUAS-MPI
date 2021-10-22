@@ -160,9 +160,11 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   // melt, creep and Q are supposed to be part of the solution class.
   PETScGrid melt(model->Ncols, model->Nrows);
   PETScGrid creep(model->Ncols, model->Nrows);
+  PETScGrid cavityOpening(model->Ncols, model->Nrows);
 
   melt.setZero();
   creep.setZero();
+  cavityOpening.setZero();
 
   PetscScalar currTime = 0.0;
   clock_t t;
@@ -175,7 +177,6 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   PETScGrid Se(Sp->getTotalNumOfCols(), Sp->getTotalNumOfRows());
   int size = model->Ncols * model->Nrows;
   PETScMatrix A(size, size);
-  PetscScalar cavity_opening = 0;
   PETScGrid Teff(T->getTotalNumOfCols(), T->getTotalNumOfRows());
   PETScGrid TeffPowTexp(T->getTotalNumOfCols(), T->getTotalNumOfRows());
 
@@ -209,11 +210,11 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     u->setGlobalVecColMajor(*sol);
 
     if (args->dochannels) {
-      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, args->flowConstant, args->Texp,
-                 args->roughnessFactor, args->noSmoothMelt, args->layerThickness, model->dx);
+      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *noFlowMask, cavityOpening,
+                 args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
+                 args->basalVelocityIce, args->tMin, args->tMax, args->layerThickness, model->dx, dt_secs);
     } else {
-      cavity_opening = 0;
-      noChannels(melt, creep);
+      noChannels(melt, creep, cavityOpening);
     }
 
     // switch pointers
@@ -221,7 +222,7 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     T_n.swap(T);
 
     if (solutionHandler != nullptr && timeStep % args->saveEvery == 0) {
-      solutionHandler->saveSolution(timeStep, *args, rank, *u, *u_n, *model, melt, cavity_opening);
+      solutionHandler->saveSolution(timeStep, *args, rank, *u, *u_n, *model, melt, cavityOpening);
     }
   }
   // end
