@@ -50,8 +50,7 @@ void SolutionHandler::defineSolution(int saveEvery) {
   grids["pIce"];
 
   grids["melt"];
-
-  scalars["cavity_opening"];
+  grids["cavity_opening"];
 
   int fileId = file->getFileId();
   nc_redef(fileId);
@@ -70,7 +69,7 @@ void SolutionHandler::defineSolution(int saveEvery) {
 
 void SolutionHandler::saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u,
                                    PETScGrid const &u_n, CUASModel const &model, PETScGrid const &melt,
-                                   PetscScalar cavity_opening) {
+                                   PETScGrid const &cavityOpening) {
   grids["u"] = &u;
   grids["u_n"] = &u_n;
 
@@ -81,8 +80,7 @@ void SolutionHandler::saveSolution(int timeStep, CUASArgs const &args, int rank,
   grids["pIce"] = model.pIce.get();
 
   grids["melt"] = &melt;
-
-  scalars["cavity_opening"] = cavity_opening;
+  grids["cavity_opening"] = &cavityOpening;
 
   // write grids and scalars
   for (auto const &grid : grids) {

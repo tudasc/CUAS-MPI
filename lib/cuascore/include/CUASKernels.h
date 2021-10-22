@@ -7,6 +7,8 @@
 #include "Logger.h"
 #include "PETScGrid.h"
 
+#include <algorithm>
+
 namespace CUAS {
 
 /*
@@ -256,11 +258,21 @@ inline void convolveStar11411(PETScGrid &melt, PETScGrid &result) {
   }
 }
 
-inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, PETScGrid const &gradMask,
-                       PETScGrid const &T, PETScGrid const &T_n, PETScGrid const &pIce, PETScGrid const &topg,
-                       PETScGrid const &K, PetscScalar const flowConstant, PetscScalar const Texp,
-                       PetscScalar const roughnessFactor, bool noSmoothMelt, PetscScalar const bt,
-                       PetscScalar const dx) {
+inline void clamp(PETScGrid &input, PetscScalar const minimum, PetscScalar const maximum) {
+  auto inputGlobal = input.getWriteHandle();
+  for (int j = 0; j < input.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < input.getLocalNumOfCols(); ++i) {
+      inputGlobal(j, i) = std::clamp(inputGlobal(j, i), minimum, maximum);
+    }
+  }
+}
+
+inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, PETScGrid const &gradMask, PETScGrid &T,
+                       PETScGrid const &T_n, PETScGrid const &pIce, PETScGrid const &topg, PETScGrid const &K,
+                       PETScGrid const &noFlowMask, PETScGrid &cavityOpening, PetscScalar const flowConstant,
+                       PetscScalar const Texp, PetscScalar const roughnessFactor, bool const noSmoothMelt,
+                       PetscScalar const cavityBeta, PetscScalar const basalVelocityIce, PetscScalar const tMin,
+                       PetscScalar const tMax, PetscScalar const bt, PetscScalar const dx, PetscScalar const dt_secs) {
   if (!melt.isCompatible(creep) || !melt.isCompatible(u_n)) {
     Logger::instance().error("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.");
     exit(1);
@@ -314,11 +326,41 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
     convolveStar11411(melt, result);
     melt.copy(result);
   }
+  cavityOpenB(cavityOpening, cavityBeta, basalVelocityIce, K);
+
+  // Update T with melt cavityOpening and creep
+  {
+    auto TGlobal = T.getWriteHandle();
+    auto T_nGlobal = T_n.getReadHandle();
+    auto meltGlobal = melt.getReadHandle();
+    auto creepGlobal = creep.getReadHandle();
+    auto cavityGlobal = cavityOpening.getReadHandle();
+    for (int j = 0; j < T.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < T.getLocalNumOfCols(); ++i) {
+        TGlobal(j, i) = T_nGlobal(j, i) + (meltGlobal(j, i) + cavityGlobal(j, i) - creepGlobal(j, i)) * dt_secs;
+      }
+    }
+  }
+
+  clamp(T, tMin, tMax);
+
+  {
+    auto TGlobal = T.getWriteHandle();
+    auto noFlowGlobal = noFlowMask.getReadHandle();
+    for (int j = 0; j < T.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < T.getLocalNumOfCols(); ++i) {
+        if (noFlowGlobal(j, i) == true) {
+          TGlobal(j, i) = NOFLOW_VALUE;
+        }
+      }
+    }
+  }
 }
 
-inline void noChannels(PETScGrid &melt, PETScGrid &creep) {
+inline void noChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid &cavityOpening) {
   melt.setZero();
   creep.setZero();
+  cavityOpening.setZero();
 
   // this is probably faster than setting zero
   /*auto meltGlobal = melt.getWriteHandle();
@@ -327,6 +369,7 @@ inline void noChannels(PETScGrid &melt, PETScGrid &creep) {
     for (int i = 0; i < melt.getLocalNumOfCols(); ++i) {
       meltGlobal(j, i) = 0;
       creepGlobal(j, i) = 0;
+      cavityOpening(j, i) = 0;
     }
   }*/
 }
