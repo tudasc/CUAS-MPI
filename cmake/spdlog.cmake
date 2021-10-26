@@ -1,12 +1,15 @@
 include(ExternalProject)
 
+# Note, the spdlog library is header only.
 if(DEFINED SPDLOG_INCLUDE)
-  message("SPDLOG_INCLUDE predefined: ${SPDLOG_INCLUDE}")
+  add_custom_target(spdlog
+          COMMAND echo "SPDLOG_INCLUDE predefined: ${SPDLOG_INCLUDE}, skipping rebuild")
 else()
-  find_path(SPDLOG_LIBRARY NAMES spdlog)
-  if(SPDLOG_LIBRARY)
-    set(SPDLOG_INCLUDE ${SPDLOG_LIBRARY}/spdlog/include)
-    message("SPDLOG found in ${SPDLOG_INCLUDE}")
+  # in lib/petscwrapper/include/Logger.h: #include "spdlog/spdlog.h"
+  find_path(SPDLOG_INCLUDE spdlog/spdlog.h)
+  if(SPDLOG_INCLUDE)
+    add_custom_target(spdlog
+            COMMAND echo "SPDLOG_INCLUDE found in: ${SPDLOG_INCLUDE}, skipping rebuild")
   else()
     message("SPDLOG library not found, download into extern during make")
     ExternalProject_Add(spdlog

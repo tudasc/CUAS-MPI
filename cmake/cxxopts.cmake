@@ -1,12 +1,15 @@
 include(ExternalProject)
 
+# Note, the cxxopts library is header only.
 if(DEFINED CXXOPTS_INCLUDE)
-  message("CXXOPTS_INCLUDE predefined: ${CXXOPTS_INCLUDE}")
+  add_custom_target(cxxopts
+          COMMAND echo "CXXOPTS_INCLUDE predefined: ${CXXOPTS_INCLUDE}, skipping rebuild")
 else()
-  find_path(CXXOPTS_LIBRARY NAMES cxxopts)
-  if(CXXOPTS_LIBRARY)
-    set(CXXOPTS_INCLUDE ${CXXOPTS_LIBRARY}/cxxopts/include)
-    message("CXXOPTS found in ${CXXOPTS_INCLUDE}")
+  # in lib/cuascore/src/CUASArgs.cpp: #include "cxxopts.hpp""
+  find_path(CXXOPTS_INCLUDE cxxopts.hpp)
+  if(CXXOPTS_INCLUDE)
+    add_custom_target(cxxopts
+            COMMAND echo "CXXOPTS_INCLUDE found in: ${CXXOPTS_INCLUDE}, skipping rebuild")
   else()
     message("CXXOPTS library not found, download into extern during make")
     ExternalProject_Add(cxxopts
