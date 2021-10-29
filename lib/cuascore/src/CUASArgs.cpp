@@ -1,5 +1,7 @@
 #include "CUASArgs.h"
 
+#include "Logger.h"
+
 #include "cxxopts.hpp"
 
 namespace CUAS {
@@ -9,8 +11,15 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   // clang-format off
   options
+    .positional_help("INPUT [OUTPUT]")
+    .show_positional_help()
     .add_options()
-      ("h,help", "Print help")
+      ("h,help",
+       "Print help")
+      ("v,verbose",
+       "Verbose output. Disables Progressbar")
+      ("version",
+       "Show version information")
       ("x,Tmax",
        "Maximum T to be allowed in the evolution.",
        cxxopts::value<PetscScalar>()->default_value("20.0"))
@@ -82,20 +91,27 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("tempResults",
        "Save temporary results to this file(s) to later restart from them.",
        cxxopts::value<std::string>()->default_value(""))
-      ("version",
-       "Show version information")
       ("seaLevelForcing",
        "Apply sea level forcing from netcdf scalar time series file.",
        cxxopts::value<std::string>()->default_value(""))
-      ("v,verbose",
-       "Verbose output. Disables Progressbar");
+      ("positional",
+        "Positional arguments: these are the arguments that are entered "
+        "without an option", cxxopts::value<std::vector<std::string>>());
   // clang-format on
+
+  options.parse_positional({"input", "output", "positional"});
 
   cxxopts::ParseResult result = options.parse(argc, argv);
 
   if (result.count("help")) {
     std::cout << options.help({""}) << std::endl;
     exit(0);
+  }
+
+  // by using explicit positional arguments for input and output this should not happen
+  if (result.count("positional")) {
+    Logger::instance().error("CUASArgs.cpp: parseArgs(): Only two positional arguments allowed. Exiting.");
+    exit(1);
   }
 
   args.tMax = result["Tmax"].as<PetscScalar>();
@@ -126,8 +142,13 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.version = result["version"].as<bool>();
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
+  args.input = result["input"].as<std::string>();
   args.output = result["output"].as<std::string>();
-  args.netcdf = result["input"].as<std::string>();
+
+  if (args.verbose) {
+    Logger::instance().info("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
+                            result["output"].as<std::string>());
+  }
 }
 
 }  // namespace CUAS

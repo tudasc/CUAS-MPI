@@ -20,14 +20,14 @@ int main(int argc, char *argv[]) {
     double relationTotalDt = (double)totaltime_secs / (double)dt_secs;
     int Nt = (int)std::rint(relationTotalDt);
 
-    CUAS::ModelReader reader(args.netcdf);
+    CUAS::ModelReader reader(args.input);
     auto model = reader.fillModelFromNetcdf();
 
     model->Q = std::make_unique<CUAS::ConstantForcing>(*model->bmelt, args.supplyMultiplier);
 
     std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
     if (args.saveEvery > 0) {
-      solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, Nt, args.saveEvery, args.netcdf);
+      solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, Nt, args.saveEvery, args.input);
     } else {
       solutionHandler = nullptr;
     }
