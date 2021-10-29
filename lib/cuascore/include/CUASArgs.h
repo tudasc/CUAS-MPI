@@ -34,8 +34,8 @@ struct CUASArgs {
   bool version;
   std::string seaLevelForcing;
   bool verbose;
+  std::string input;
   std::string output;
-  std::string netcdf;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);

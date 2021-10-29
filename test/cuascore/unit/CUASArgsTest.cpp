@@ -47,5 +47,5 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.noSmoothMelt, true);
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
   ASSERT_EQ(args.output, "'output.nc'");
-  ASSERT_EQ(args.netcdf, "'input.nc'");
+  ASSERT_EQ(args.input, "'input.nc'");
 }
