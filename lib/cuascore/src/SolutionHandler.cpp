@@ -164,27 +164,27 @@ void SolutionHandler::storeInitialSetup(int timeStep, int rank, PETScGrid const 
 
   // Todo: this should be done in an automated way using 'reflection'.
   //  The code below will break soon or later if somebody changes CUASArgs
-  file->addGlobalAttribute("Tmax", &args.Tmax);
-  file->addGlobalAttribute("Tmin", &args.Tmin);
+  file->addGlobalAttribute("Tmax", args.Tmax);
+  file->addGlobalAttribute("Tmin", args.Tmin);
   file->addGlobalAttribute("totaltime", args.totaltime);
   file->addGlobalAttribute("dt", args.dt);
-  file->addGlobalAttribute("saveEvery", &args.saveEvery);
-  file->addGlobalAttribute("conductivity", &args.conductivity);
-  file->addGlobalAttribute("dochannels", &args.dochannels);
-  file->addGlobalAttribute("disableUnconfined", &args.disableUnconfined);
-  file->addGlobalAttribute("flowConstant", &args.flowConstant);
-  file->addGlobalAttribute("roughnessFactor", &args.roughnessFactor);
-  file->addGlobalAttribute("supplyMultiplier", &args.supplyMultiplier);
-  file->addGlobalAttribute("layerThickness", &args.layerThickness);
-  file->addGlobalAttribute("unconfSmooth", &args.unconfSmooth);
+  file->addGlobalAttribute("saveEvery", args.saveEvery);
+  file->addGlobalAttribute("conductivity", args.conductivity);
+  file->addGlobalAttribute("dochannels", args.dochannels);
+  file->addGlobalAttribute("disableUnconfined", args.disableUnconfined);
+  file->addGlobalAttribute("flowConstant", args.flowConstant);
+  file->addGlobalAttribute("roughnessFactor", args.roughnessFactor);
+  file->addGlobalAttribute("supplyMultiplier", args.supplyMultiplier);
+  file->addGlobalAttribute("layerThickness", args.layerThickness);
+  file->addGlobalAttribute("unconfSmooth", args.unconfSmooth);
   file->addGlobalAttribute("restart", args.restart);
-  file->addGlobalAttribute("Ssmulti", &args.Ssmulti);
-  file->addGlobalAttribute("Sy", &args.Sy);
-  file->addGlobalAttribute("Texp", &args.Texp);
-  file->addGlobalAttribute("noSmoothMelt", &args.noSmoothMelt);
-  file->addGlobalAttribute("loopForcing", &args.loopForcing);
-  file->addGlobalAttribute("basalVelocityIce", &args.basalVelocityIce);
-  file->addGlobalAttribute("cavityBeta", &args.cavityBeta);
+  file->addGlobalAttribute("Ssmulti", args.Ssmulti);
+  file->addGlobalAttribute("Sy", args.Sy);
+  file->addGlobalAttribute("Texp", args.Texp);
+  file->addGlobalAttribute("noSmoothMelt", args.noSmoothMelt);
+  file->addGlobalAttribute("loopForcing", args.loopForcing);
+  file->addGlobalAttribute("basalVelocityIce", args.basalVelocityIce);
+  file->addGlobalAttribute("cavityBeta", args.cavityBeta);
   file->addGlobalAttribute("initialHead", args.initialHead);
   // ignore (std::string) tempResults,
   // ignore (bool) version,
