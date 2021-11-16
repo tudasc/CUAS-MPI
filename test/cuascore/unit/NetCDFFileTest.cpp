@@ -45,8 +45,8 @@ TEST(NetCDFFileTest, addAttributes) {
 TEST(NetCDFFileTest, addGlobalAttributes) {
   CUAS::NetCDFFile file("globalAttributes.nc", GRID_SIZE_X, GRID_SIZE_Y);
 
-  file.addGlobalAttribute("globalText1", "testvalue1");
-  file.addGlobalAttribute("globalText2", "testvalue2");
+  file.addGlobalAttribute("globalText1", std::string("testvalue1"));
+  file.addGlobalAttribute("globalText2", std::string("testvalue2"));
   file.addGlobalAttribute("globalBool", true);
   file.addGlobalAttribute("globalScalar", 1.23456);
   file.addGlobalAttribute("globalInt", 42);
