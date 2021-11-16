@@ -30,8 +30,8 @@ TEST(CUASArgs, allOpts) {
   CUAS::parseArgs(argc, argv, args);
 
   ASSERT_EQ(args.verbose, true);
-  ASSERT_EQ(args.tMax, 7);
-  ASSERT_EQ(args.tMin, 3);
+  ASSERT_EQ(args.Tmax, 7);
+  ASSERT_EQ(args.Tmin, 3);
   ASSERT_EQ(args.totaltime, "'4 Weeks'");
   ASSERT_EQ(args.dt, "'1 day'");
   ASSERT_EQ(args.saveEvery, 12);

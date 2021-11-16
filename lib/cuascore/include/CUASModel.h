@@ -18,16 +18,16 @@ class CUASModel {
   //~CUASModel();
 
   // x = cols, y = rows
-  int const Ncols, Nrows;
+  int const Ncols, Nrows;  // TODO equivalent xAxis.size() and yAxis.size()
   PetscScalar dx, dy;
-  std::vector<PetscScalar> cols, rows;
+  std::vector<PetscScalar> xAxis, yAxis;
   std::unique_ptr<PETScGrid> usurf;
   std::unique_ptr<PETScGrid> topg;
   std::unique_ptr<PETScGrid> thk;
   std::unique_ptr<PETScGrid> bndMask;
-  std::unique_ptr<Forcing> Q;
   std::unique_ptr<PETScGrid> pIce;
   std::unique_ptr<PETScGrid> bmelt;
+  std::unique_ptr<Forcing> Q;
 
   void init();
 };

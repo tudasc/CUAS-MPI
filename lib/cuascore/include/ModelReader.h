@@ -1,7 +1,8 @@
 #ifndef CUAS_MODEL_READER_H
 #define CUAS_MODEL_READER_H
-#include "CUASFile.h"
+
 #include "CUASModel.h"
+#include "NetCDFFile.h"
 
 // example usage:
 // create a model reader
@@ -15,7 +16,7 @@ namespace CUAS {
 
 class ModelReader {
  private:
-  std::unique_ptr<CUASFile> file;
+  std::unique_ptr<NetCDFFile> file;
 
  public:
   ModelReader(std::string const &fileName);

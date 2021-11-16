@@ -17,8 +17,8 @@ TEST(PETScMatrixTest, size) {
   const int cols = MAT_COLS;
   const int rows = MAT_ROWS;
   auto mat = std::make_unique<PETScMatrix>(rows, cols);
-  ASSERT_EQ(mat->getCols(), cols);
-  ASSERT_EQ(mat->getRows(), rows);
+  ASSERT_EQ(mat->getNumberOfCols(), cols);
+  ASSERT_EQ(mat->getNumberOfRows(), rows);
 
   int petscCols;
   int petscRows;
@@ -49,10 +49,10 @@ TEST(PETScMatrixTest, getColsRows) {
   const int rows = MAT_ROWS;
   auto mat = std::make_unique<PETScMatrix>(rows, cols);
 
-  int colsFromMat = mat->getCols();
+  int colsFromMat = mat->getNumberOfCols();
   ASSERT_EQ(cols, colsFromMat);
 
-  int rowsFromMat = mat->getRows();
+  int rowsFromMat = mat->getNumberOfRows();
   ASSERT_EQ(rows, rowsFromMat);
 }
 

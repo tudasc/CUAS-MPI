@@ -4,7 +4,7 @@ add_library(cuascore
   src/CUASArgs.cpp
   src/systemmatrix.cpp
   src/CUASSolver.cpp
-  src/CUASFile.cpp
+  src/NetCDFFile.cpp
   src/SolutionHandler.cpp
   src/ModelReader.cpp
 )

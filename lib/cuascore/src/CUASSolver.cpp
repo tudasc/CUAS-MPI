@@ -2,7 +2,6 @@
 
 #include "CUASConstants.h"
 #include "CUASKernels.h"
-#include "savetimestep.h"
 #include "specialgradient.h"
 #include "systemmatrix.h"
 
@@ -160,11 +159,11 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   // melt, creep and Q are supposed to be part of the solution class.
   PETScGrid melt(model->Ncols, model->Nrows);
   PETScGrid creep(model->Ncols, model->Nrows);
-  PETScGrid cavityOpening(model->Ncols, model->Nrows);
+  PETScGrid cavity(model->Ncols, model->Nrows);
 
   melt.setZero();
   creep.setZero();
-  cavityOpening.setZero();
+  cavity.setZero();
 
   PetscScalar currTime = 0.0;
   clock_t t;
@@ -179,6 +178,11 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   PETScMatrix A(size, size);
   PETScGrid Teff(T->getTotalNumOfCols(), T->getTotalNumOfRows());
   PETScGrid TeffPowTexp(T->getTotalNumOfCols(), T->getTotalNumOfRows());
+
+  // initial condition
+  if (solutionHandler != nullptr) {
+    solutionHandler->storeInitialSetup(0, rank, *u, *T, *model, melt, creep, cavity, *args);
+  }
 
   for (int timeStep = 1; timeStep < Nt + 1; ++timeStep) {
     currTime += dt_secs;
@@ -210,21 +214,22 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     u->setGlobalVecColMajor(*sol);
 
     if (args->dochannels) {
-      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *noFlowMask, cavityOpening,
+      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *noFlowMask, cavity,
                  args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
-                 args->basalVelocityIce, args->tMin, args->tMax, args->layerThickness, model->dx, dt_secs);
+                 args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt_secs);
     } else {
-      noChannels(melt, creep, cavityOpening);
+      noChannels(melt, creep, cavity);
     }
 
     // switch pointers
     u_n.swap(u);
     T_n.swap(T);
 
-    if (solutionHandler != nullptr && timeStep % args->saveEvery == 0) {
-      solutionHandler->saveSolution(timeStep, *args, rank, *u, *u_n, *model, melt, cavityOpening);
+    if (solutionHandler != nullptr && ((timeStep % args->saveEvery == 0) || (timeStep == Nt))) {
+      solutionHandler->storeSolution(timeStep, rank, *u, *T, *model, melt, creep, cavity);
     }
   }
+
   // end
   if (rank == 0) {
     t = clock() - t;

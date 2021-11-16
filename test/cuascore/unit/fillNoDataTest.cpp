@@ -24,13 +24,13 @@ TEST(fillNoDataTest, fillNoData) {
   ASSERT_EQ(model->dx, 1000.0);
   ASSERT_EQ(model->dy, 1000.0);
 
-  ASSERT_EQ(model->cols[0], 0.0);
-  ASSERT_EQ(model->cols[1], 1000.0);
-  ASSERT_EQ(model->cols[13], 13000.0);
+  ASSERT_EQ(model->xAxis[0], 0.0);
+  ASSERT_EQ(model->xAxis[1], 1000.0);
+  ASSERT_EQ(model->xAxis[13], 13000.0);
 
-  ASSERT_EQ(model->rows[0], 0.0);
-  ASSERT_EQ(model->rows[1], 1000.0);
-  ASSERT_EQ(model->rows[7], 7000.0);
+  ASSERT_EQ(model->yAxis[0], 0.0);
+  ASSERT_EQ(model->yAxis[1], 1000.0);
+  ASSERT_EQ(model->yAxis[7], 7000.0);
 
   ASSERT_TRUE(model->usurf->isCompatible(*model->topg));
   ASSERT_TRUE(model->usurf->isCompatible(*model->thk));

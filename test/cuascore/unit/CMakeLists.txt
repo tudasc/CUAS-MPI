@@ -40,11 +40,23 @@ add_executable(test-forcing
 target_link_libraries(test-forcing cuascore)
 target_link_libraries(test-forcing gtest)
 
-add_executable(test-netcdf
-        netcdfTest.cpp
+add_executable(test-NetCDFFile
+        NetCDFFileTest.cpp
         )
-target_link_libraries(test-netcdf cuascore)
-target_link_libraries(test-netcdf gtest)
+target_link_libraries(test-NetCDFFile cuascore)
+target_link_libraries(test-NetCDFFile gtest)
+
+add_executable(test-ModelReader
+        ModelReaderTest.cpp
+        )
+target_link_libraries(test-ModelReader cuascore)
+target_link_libraries(test-ModelReader gtest)
+
+add_executable(test-SolutionHandler
+        SolutionHandlerTest.cpp
+        )
+target_link_libraries(test-SolutionHandler cuascore)
+target_link_libraries(test-SolutionHandler gtest)
 
 install(TARGETS test-systemmatrix DESTINATION test/cuascore/unit)
 install(TARGETS test-CUASKernels DESTINATION test/cuascore/unit)
@@ -53,5 +65,7 @@ install(TARGETS test-fillNoData DESTINATION test/cuascore/unit)
 install(TARGETS test-CUASArgs DESTINATION test/cuascore/unit)
 install(TARGETS test-timeparse DESTINATION test/cuascore/unit)
 install(TARGETS test-forcing DESTINATION test/cuascore/unit)
-install(TARGETS test-netcdf DESTINATION test/cuascore/unit)
+install(TARGETS test-NetCDFFile DESTINATION test/cuascore/unit)
+install(TARGETS test-ModelReader DESTINATION test/cuascore/unit)
+install(TARGETS test-SolutionHandler DESTINATION test/cuascore/unit)
 

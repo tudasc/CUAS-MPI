@@ -32,6 +32,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("output",
        "Netcdf output file.",
        cxxopts::value<std::string>()->default_value("out.nc"))
+      ("outputSize",
+       "Netcdf output file size. ('small', 'normal', 'large')",
+        cxxopts::value<std::string>()->default_value("normal"))
       ("totaltime",
        "Total time to run model. Example: --totaltime '4 weeks', --totaltime '3 years 6 months' or --totaltime "
        "'50 years'",
@@ -52,7 +55,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("flowConstant",
        "Ice Flow Constant A.",
        cxxopts::value<PetscScalar>()->default_value("5e-25"))
-      ("roughnessFactor", "Roughness factor for opening term.",
+      ("roughnessFactor",
+       "Roughness factor for opening term.",
        cxxopts::value<PetscScalar>()->default_value("1.0"))
       ("supplyMultiplier",
        "Multiplier for supply.",
@@ -114,8 +118,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
     exit(1);
   }
 
-  args.tMax = result["Tmax"].as<PetscScalar>();
-  args.tMin = result["Tmin"].as<PetscScalar>();
+  args.Tmax = result["Tmax"].as<PetscScalar>();
+  args.Tmin = result["Tmin"].as<PetscScalar>();
 
   // need to be parsed
   args.totaltime = result["totaltime"].as<std::string>();
@@ -144,6 +148,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.verbose = result["verbose"].as<bool>();
   args.input = result["input"].as<std::string>();
   args.output = result["output"].as<std::string>();
+  args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')
 
   if (args.verbose) {
     Logger::instance().info("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),

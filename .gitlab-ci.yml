@@ -81,7 +81,12 @@ test-cuascore:
     - mpirun -n 6 --timeout 60 ./test-forcing
     - mpirun -n 1 --timeout 10 ./test-systemmatrix
     - mpirun -n 6 --timeout 60 ./test-fillNoData
-    - mpirun -n 5 --timeout 10 ./test-netcdf
+    - mpirun -n 1 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 2 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 3 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 4 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 4 --timeout 60 ./test-SolutionHandler
+    #- ./test-ModelReader
 
 test-cuas:
   stage: integration-test
