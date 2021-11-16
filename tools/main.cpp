@@ -27,7 +27,8 @@ int main(int argc, char *argv[]) {
 
     std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
     if (args.saveEvery > 0) {
-      solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, Nt, args.saveEvery, args.input);
+      solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, Nt, args.saveEvery, model->Ncols,
+                                                                model->Nrows, args.outputSize);
     } else {
       solutionHandler = nullptr;
     }

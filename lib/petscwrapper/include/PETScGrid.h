@@ -11,27 +11,27 @@
 
 /*
  * We interpret grids in row major
- * access values[i * cols + j]
+ * access values[i * xAxis + j]
  * access 2darray[i][j]
  *
  * grids are stored row-wise in the global vector
- * +-------------------->(m, x, first dimension, cols, j)
+ * +-------------------->(m, x, first dimension, cols, xAxis, j)
  * |  0  1  4  5  8  9
  * |  2  3  6  7 10 11
  * | 12 13 16 17 20 21
  * | 14 15 18 19 22 23
  * |
  * v
- * (n, y, second dimension, rows, i)
+ * (n, y, second dimension, rows, yAxis, i)
  *
  * petsc does split the vector along the first dimension (m) of the grid first
  * they are assigned to processes in the following order:
- * +---------------------------------->(m, x, first dimension, cols, j)
+ * +---------------------------------->(m, x, first dimension, cols, xAxis, j)
  * | process 0   process 1   process 2
  * | process 4   process 2   process 5
  * |
  * v
- * (n, y, second dimension, rows, i)
+ * (n, y, second dimension, rows, yAxis, i)
  */
 
 class PETScGrid {

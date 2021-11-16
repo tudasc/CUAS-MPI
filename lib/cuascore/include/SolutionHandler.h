@@ -1,38 +1,56 @@
 #ifndef CUAS_SOLUTION_HANDLER_H
 #define CUAS_SOLUTION_HANDLER_H
 
-#include "CUASFile.h"
+#include "CUASArgs.h"
+#include "CUASModel.h"
+#include "NetCDFFile.h"
 
-#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace CUAS {
+
+enum class OutputSize { SMALL, NORMAL, LARGE };
 
 class SolutionHandler {
  private:
   // netcdf file that the SolutionHandler handles
-  std::unique_ptr<CUASFile> file;
+  std::unique_ptr<NetCDFFile> file;
   // mapping of the name of a PETScGrid and the corresponding values
-  std::map<std::string, const PETScGrid *> grids;
+  // std::unordered_map<std::string, const PETScGrid *> grids;
+  // mapping og the name of a variable to its attributes
+  //  std::unordered_map<std::string, std::vector<std::vector<std::string>>> attributes;
   // mapping of the name of a PetscScalar and the corresponding value
-  std::map<std::string, PetscScalar> scalars;
+  // std::unordered_map<std::string, PetscScalar> scalars;
   // vector of all timesteps that get executed by the SolutionHandler
-  std::vector<int> timeSteps;
+  // std::vector<int> timeSteps;
   // total number of timeSteps
   const int Nt;
+  // save every
+  const int saveEvery;
+  // index of the next solution
+  int nextSolution = 0;
+  //
+  OutputSize osize = OutputSize::SMALL;
+
+  // defines all grids that are written in storeSolution. saveEvery determines at which timeStep the values are written
+  // to the netcdf file. This is important to get the naming for the netcdf variables right.
+  void defineSolution();
 
  public:
-  // create a new CUASFile and netcdf file with the name fileName to write the solution to. Nt is the total number of
-  // time steps and saveEvery determines at what time steps the solution should be saved.
-  // use this constructor if you have an input file
-  SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, std::string const &inputFileName);
   // use this constructor if you want to determine the shape of the solution on your own
-  SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY);
-  // defines all grids that are written in saveSolution. saveEvery determines at which timeStep the values are written
-  // to the netcdf file. This is important to get the naming for the netcdf variables right.
-  void defineSolution(int saveEvery);
+  // TODO do we need Nt and saveEvery
+  SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY,
+                  std::string const &outputSize);
+
   // write the values passed as parameters to the netcdf file
-  void saveSolution(int timeStep, CUASArgs const &args, int rank, PETScGrid const &u, PETScGrid const &u_n,
-                    CUASModel const &model, PETScGrid const &melt, PETScGrid const &cavityOpening);
+  void storeInitialSetup(int timeStep, int rank, PETScGrid const &hydraulicHead,
+                         PETScGrid const &hydraulicTransmissivity, CUASModel const &model, PETScGrid const &melt,
+                         PETScGrid const &creep, PETScGrid const &cavity, CUASArgs const &args);
+  // write the values passed as parameters to the netcdf file
+  void storeSolution(int timeStep, int rank, PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
+                     CUASModel const &model, PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity);
   ~SolutionHandler();
 };
 }  // namespace CUAS

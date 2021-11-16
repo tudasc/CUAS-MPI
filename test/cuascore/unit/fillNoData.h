@@ -13,11 +13,11 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   auto &model = *pmodel;
 
   // initialize x and y like in python: x = np.arange(20) * 1000.0
-  for (int i = 0; i < model.cols.size(); ++i) {
-    model.cols[i] = i * 1000;
+  for (int i = 0; i < model.xAxis.size(); ++i) {
+    model.xAxis[i] = i * 1000;
   }
-  for (int i = 0; i < model.rows.size(); ++i) {
-    model.rows[i] = i * 1000;
+  for (int i = 0; i < model.yAxis.size(); ++i) {
+    model.yAxis[i] = i * 1000;
   }
 
   {

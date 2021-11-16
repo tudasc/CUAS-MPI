@@ -53,8 +53,8 @@ TEST(fillMatrixTest, randomValues) {
   // compare nnz of Matrix A
   {
     PetscScalar v;
-    for (int i = 0; i < MatA.getCols(); ++i) {
-      for (int j = 0; j < MatA.getRows(); ++j) {
+    for (int i = 0; i < MatA.getNumberOfCols(); ++i) {
+      for (int j = 0; j < MatA.getNumberOfRows(); ++j) {
         MatGetValues(MatA.getRaw(), 1, &i, 1, &j, &v);
         if (v != 0) {
           APetscNonZero.push_back(v);

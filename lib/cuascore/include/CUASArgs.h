@@ -8,8 +8,8 @@
 namespace CUAS {
 
 struct CUASArgs {
-  PetscScalar tMax;
-  PetscScalar tMin;
+  PetscScalar Tmax;
+  PetscScalar Tmin;
   std::string totaltime;
   std::string dt;
   int saveEvery;
@@ -36,6 +36,7 @@ struct CUASArgs {
   bool verbose;
   std::string input;
   std::string output;
+  std::string outputSize;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);

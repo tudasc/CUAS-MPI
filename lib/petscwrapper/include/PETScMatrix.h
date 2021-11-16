@@ -5,29 +5,29 @@
 
 /*
  * Matrices in PETSc are stored row major
- * access values[j * cols + i]
+ * access values[j * xAxis + i]
  * keep in mind that we ues Compressed Sparse Row (CSR) structure
  * therefore the following is only an abstraction
  *
- * +------------------>(cols, i, n)
+ * +------------------>(cols, xAxis, i, n)
  * | 0  1  2  3  4  5  6
  * | 7  8  9 10 11 12 13
  * |
  * v
- * (rows, j, m)
+ * (rows, yAxis, j, m)
  *
- * +------------------>(cols, i, n)
+ * +------------------>(cols, xAxis, i, n)
  * | process 0
  * | process 1
  * | process 2
  * v
- * (rows, j, m)
+ * (rows, yAxis, j, m)
  */
 
 class PETScMatrix {
  public:
   // constructor
-  explicit PETScMatrix(int numOfRows, int numOfCols) : rows(numOfRows), cols(numOfCols) {
+  explicit PETScMatrix(int numOfRows, int numOfCols) : nRows(numOfRows), nCols(numOfCols) {
     MatCreate(PETSC_COMM_WORLD, &mat);
     MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, numOfRows, numOfCols);
     MatSetFromOptions(mat);
@@ -39,8 +39,8 @@ class PETScMatrix {
 
   // getter
   Mat getRaw() { return mat; }
-  int getCols() const { return cols; }
-  int getRows() const { return rows; }
+  int getNumberOfCols() const { return nCols; }
+  int getNumberOfRows() const { return nRows; }
   // setter
   void setValue(int row, int col, PetscScalar val) { MatSetValue(mat, row, col, val, INSERT_VALUES); }
   // utils
@@ -51,8 +51,8 @@ class PETScMatrix {
 
  private:
   Mat mat;
-  const int cols;
-  const int rows;
+  const int nCols;
+  const int nRows;
 
   friend class PETScSolver;
 };
