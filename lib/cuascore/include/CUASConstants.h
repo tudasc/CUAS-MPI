@@ -14,10 +14,11 @@
 #define SPY 3.154e7
 #define Ss 0.000982977696
 
-#define COMPUTE_FLAG 0
-#define DIRICHLET_FLAG 1  // connection to the ocean
-#define NOFLOW_FLAG 2
-#define DIRICHLET_LAKE_FLAG 3  // connected to periglacial lake, not tidal influenced
-#define INVALID_FLAG 5         // from gen_bnd_mask.py
+#define COMPUTE_FLAG 0          // active cuas grid point
+#define DIRICHLET_FLAG 1        // lateral boundary
+#define NOFLOW_FLAG 2           // lateral boundary
+#define DIRICHLET_OCEAN_FLAG 3  // connected to ocean, tidal influenced
+#define DIRICHLET_LAKE_FLAG 4   // connected to periglacial lake, not tidal influenced
+#define INVALID_FLAG 5          // from gen_bnd_mask.py
 
 #endif

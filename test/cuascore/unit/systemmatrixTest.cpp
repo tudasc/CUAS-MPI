@@ -23,14 +23,14 @@ TEST(fillMatrixTest, randomValues) {
   PETScGrid u_nGrid(NX, NY);
   PETScGrid QGrid(NX, NY);
   PETScGrid dirichValGrid(NX, NY);
-  PETScGrid dirichMaskGrid(NX, NY);
+  PETScGrid bndMaskGrid(NX, NY);
   {
     auto SeWrite = SeGrid.getWriteHandle();
     auto TeffPowWrite = TeffPowGrid.getWriteHandle();
     auto u_nWrite = u_nGrid.getWriteHandle();
     auto QWrite = QGrid.getWriteHandle();
     auto dirichValWrite = dirichValGrid.getWriteHandle();
-    auto dirichMaskWrite = dirichMaskGrid.getWriteHandle();
+    auto bndMaskWrite = bndMaskGrid.getWriteHandle();
 
     for (int i = 0; i < NY; ++i) {
       for (int j = 0; j < NX; ++j) {
@@ -39,14 +39,14 @@ TEST(fillMatrixTest, randomValues) {
         u_nWrite(i, j) = u_n[i][j];
         QWrite(i, j) = current_Q[i][j];
         dirichValWrite(i, j) = dirich_val[i][j];
-        dirichMaskWrite(i, j) = dirich_mask[i][j];
+        bndMaskWrite(i, j) = bnd_mask[i][j];
       }
     }
   }
   // using SPY here because the dumped Q was from currentQ after applying forcing
   auto forcing = std::make_unique<CUAS::ConstantForcing>(QGrid, SPY);
   CUAS::systemmatrix(MatA, VecB, NY, NX, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrentQ(),
-                     dirichValGrid, dirichMaskGrid);
+                     dirichValGrid, bndMaskGrid);
 
   std::vector<double> APetscNonZero;
 

@@ -23,10 +23,7 @@ class CUASSolver {
     K = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     T = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     T_n = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    noFlowMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    seaLevelForcingMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    dirichletMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
     sol = std::make_unique<PETScVector>(numOfCols * numOfRows);
@@ -49,10 +46,7 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> K;
   std::unique_ptr<PETScGrid> T;
   std::unique_ptr<PETScGrid> T_n;
-  std::unique_ptr<PETScGrid> noFlowMask;
   std::unique_ptr<PETScGrid> gradMask;
-  std::unique_ptr<PETScGrid> seaLevelForcingMask;
-  std::unique_ptr<PETScGrid> dirichletMask;
   std::unique_ptr<PETScGrid> dirichletValues;
 
   CUASModel *const model;

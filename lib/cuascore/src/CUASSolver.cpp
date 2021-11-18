@@ -25,81 +25,44 @@ void CUASSolver::setup() {
 
   S->setConst(Ss * bt * args->Ssmulti);
 
-  auto global_mask = noFlowMask->getWriteHandle();
   auto K_arr = K->getWriteHandle();
   auto T_arr = T->getWriteHandle();
   auto &mask = model->bndMask->getReadHandle();
 
-  auto rows = noFlowMask->getLocalNumOfRows();
-  auto cols = noFlowMask->getLocalNumOfCols();
+  auto rows = T->getLocalNumOfRows();
+  auto cols = T->getLocalNumOfCols();
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
       if (mask(i, j) == (PetscScalar)NOFLOW_FLAG) {
-        global_mask(i, j) = true;
         K_arr(i, j) = NOFLOW_VALUE;
         T_arr(i, j) = NOFLOW_VALUE;
-      } else {
-        global_mask(i, j) = false;
       }
     }
   }
 
   // needed for function call later on
-  global_mask.setValues();
   T_arr.setValues();
 
   T_n->copy(*T);
 
+  // local noFlowMask
   {
-    auto global_dir_mask = dirichletMask->getWriteHandle();
+    auto cols = model->bndMask->getTotalNumOfCols();
+    auto rows = model->bndMask->getTotalNumOfRows();
+    auto grid = std::make_unique<PETScGrid>(cols, rows);
+    auto glob = grid->getWriteHandle();
+    auto &mask = model->bndMask->getReadHandle();
 
-    rows = dirichletMask->getLocalNumOfRows();
-    cols = dirichletMask->getLocalNumOfCols();
-
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        if (mask(i, j) == (PetscScalar)DIRICHLET_FLAG) {
-          global_dir_mask(i, j) = true;
-        } else {
-          global_dir_mask(i, j) = false;
-        }
+    for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
+        // should we use true = 1.0 and false = 0.0 to match type of PetscScalar?
+        glob(i, j) = (mask(i, j) == (PetscScalar)NOFLOW_FLAG) ? true : false;
       }
     }
-
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        if (mask(i, j) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
-          global_dir_mask(i, j) = true;
-        }
-      }
-    }
-
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        global_dir_mask(i, j) = global_dir_mask(i, j) || global_mask(i, j);
-      }
-    }
+    glob.setValues();
+    binaryDilation(*gradMask, *grid);
   }
-
-  pressure2head(*dirichletValues, *model->pIce, *model->topg, 0.0);
-
-  auto global_sea_mask = seaLevelForcingMask->getWriteHandle();
-
-  rows = seaLevelForcingMask->getLocalNumOfRows();
-  cols = seaLevelForcingMask->getLocalNumOfCols();
-
-  for (int i = 0; i < rows; ++i) {
-    for (int j = 0; j < cols; ++j) {
-      if (mask(i, j) == (PetscScalar)DIRICHLET_FLAG) {
-        global_sea_mask(i, j) = true;
-      } else {
-        global_sea_mask(i, j) = false;
-      }
-    }
-  }
-
-  binaryDialation(*gradMask, *noFlowMask);
 
   // TODO: Time dependent forcing (Interpolierung)
   //
@@ -140,6 +103,10 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
   //    }
   // TODO
   //  }
+
+  // todo: do all checks with u_n and T_n after restart
+
+  dirichletValues->copy(*u_n);  // store initial values as dirichlet values for this run
 
   // save timedependent values
   if (args->saveEvery > 0) {
@@ -207,14 +174,14 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     calculateSeValues(Se, *Sp, *S);
 
     systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt_secs, theta, *u_n, currentQ,
-                 *dirichletValues, *dirichletMask);
+                 *dirichletValues, *model->bndMask);
     // solve the equation A*sol = b
     PETScSolver::solve(A, b, *sol);
 
     u->setGlobalVecColMajor(*sol);
 
     if (args->dochannels) {
-      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *noFlowMask, cavity,
+      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *model->bndMask, cavity,
                  args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
                  args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt_secs);
     } else {
