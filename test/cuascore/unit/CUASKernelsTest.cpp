@@ -291,41 +291,40 @@ TEST(CUASKernelsTest, computeMelt) {
   }
 }
 
-TEST(CUASKernelsTest, binaryDialation) {
+TEST(CUASKernelsTest, binaryDilation) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  PETScGrid noFlowMask(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid genericMask(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid gradMask(GRID_SIZE_X, GRID_SIZE_Y);
 
+  // + 2 to account for the ghosts
   bool *nfMask[GRID_SIZE_Y + 2];
   bool nfBeginningEnd[GRID_SIZE_X + 2];
   for (int i = 0; i < GRID_SIZE_X + 2; ++i) {
     nfBeginningEnd[i] = true;
   }
   bool nfMiddle[GRID_SIZE_X + 2];
-  nfMiddle[0] = true;
+  nfMiddle[0] = true;  // this is outside the visible CUAS range in NetCDF
   for (int i = 1; i < GRID_SIZE_X + 2; ++i) {
     nfMiddle[i] = false;
   }
 
+  // combine the rows
   nfMask[0] = nfBeginningEnd;
-
   for (int i = 1; i < (GRID_SIZE_Y + 1); ++i) {
     nfMask[i] = nfMiddle;
   }
-
   nfMask[GRID_SIZE_Y + 1] = nfBeginningEnd;
 
-  auto nf2d = noFlowMask.getWriteHandleGhost();
-  for (int i = 0; i < noFlowMask.getLocalGhostNumOfRows(); ++i) {
-    for (int j = 0; j < noFlowMask.getLocalGhostNumOfCols(); ++j) {
-      nf2d(i, j) = nfMask[noFlowMask.getCornerY() + i][noFlowMask.getCornerX() + j];
+  auto mask = genericMask.getWriteHandleGhost();
+  for (int i = 0; i < genericMask.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < genericMask.getLocalGhostNumOfCols(); ++j) {
+      mask(i, j) = nfMask[genericMask.getCornerY() + i][genericMask.getCornerX() + j];
     }
   }
+  mask.setValues();  // needed if in "{ ... }"?
 
-  nf2d.setValues();
-
-  CUAS::binaryDialation(gradMask, noFlowMask);
+  CUAS::binaryDilation(gradMask, genericMask);
 
   bool *gMask[GRID_SIZE_Y];
   bool gBeginningEnd[GRID_SIZE_X];
@@ -338,12 +337,11 @@ TEST(CUASKernelsTest, binaryDialation) {
     gMiddle[i] = false;
   }
 
+  // combine the rows
   gMask[0] = gBeginningEnd;
-
   for (int i = 1; i < GRID_SIZE_Y - 1; ++i) {
     gMask[i] = gMiddle;
   }
-
   gMask[GRID_SIZE_Y - 1] = gBeginningEnd;
 
   auto grad2d = gradMask.getReadHandle();
@@ -585,7 +583,7 @@ TEST(CUASKernelsTest, doChannels) {
   PETScGrid pIce(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid noFlowMask(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid bndMask(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid cavityOpening(GRID_SIZE_X, GRID_SIZE_Y);
   // init args
   PetscScalar flowConstant = 5e-25;
@@ -597,8 +595,8 @@ TEST(CUASKernelsTest, doChannels) {
   PetscScalar bt = 0.1;
   PetscScalar dx = 1000.0;
   PetscScalar dtSecs = 43200;
-  PetscScalar tMin = 1e-07;
-  PetscScalar tMax = 20.0;
+  PetscScalar Tmin = 1e-07;
+  PetscScalar Tmax = 20.0;
 
   // init u_n
   auto u_n2d = u_n.getWriteHandleGhost();
@@ -669,33 +667,32 @@ TEST(CUASKernelsTest, doChannels) {
   K2d.setValues();
 
   // init noFlowMask
-  auto noFlowMask2d = noFlowMask.getWriteHandleGhost();
+  auto mask = bndMask.getWriteHandleGhost();
 
-  bool *nFMask[GRID_SIZE_Y + 2];
-  bool nFBeginningEnd[GRID_SIZE_X + 2];
+  PetscScalar *nFMask[GRID_SIZE_Y + 2];
+  PetscScalar nFBeginningEnd[GRID_SIZE_X + 2];
   for (int i = 0; i < GRID_SIZE_X + 2; ++i) {
-    nFBeginningEnd[i] = true;
+    nFBeginningEnd[i] = (PetscScalar)NOFLOW_FLAG;  // noFlowMask = true
   }
-  bool nFMiddle[GRID_SIZE_X + 2];
-  nFMiddle[0] = true;
-  for (int i = 1; i < GRID_SIZE_X + 2; ++i) {
-    nFMiddle[i] = false;
+  PetscScalar nFMiddle[GRID_SIZE_X + 2];
+  nFMiddle[0] = (PetscScalar)NOFLOW_FLAG;                   // noFlowMask = true
+  nFMiddle[GRID_SIZE_X + 1] = (PetscScalar)DIRICHLET_FLAG;  // noFlowMask = false
+  for (int i = 1; i < GRID_SIZE_X + 1; ++i) {
+    nFMiddle[i] = (PetscScalar)COMPUTE_FLAG;  // noFlowMask = false
   }
 
   nFMask[0] = nFBeginningEnd;
-
   for (int i = 1; i < GRID_SIZE_Y + 1; ++i) {
     nFMask[i] = nFMiddle;
   }
-
   nFMask[GRID_SIZE_Y + 1] = nFBeginningEnd;
 
-  for (int i = 0; i < noFlowMask.getLocalGhostNumOfRows(); ++i) {
-    for (int j = 0; j < noFlowMask.getLocalGhostNumOfCols(); ++j) {
-      noFlowMask2d(i, j) = nFMask[noFlowMask.getCornerY() + i][noFlowMask.getCornerX() + j];
+  for (int i = 0; i < bndMask.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < bndMask.getLocalGhostNumOfCols(); ++j) {
+      mask(i, j) = nFMask[bndMask.getCornerY() + i][bndMask.getCornerX() + j];
     }
   }
-  noFlowMask2d.setValues();
+  mask.setValues();
 
   // set cavityOpening to zero
   cavityOpening.setZero();
@@ -751,8 +748,8 @@ TEST(CUASKernelsTest, doChannels) {
   // topg is zero
   topg.setZero();
 
-  CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, noFlowMask, cavityOpening, flowConstant, Texp,
-                   roughnessFactor, noSmoothMelt, cavityBeta, basalVelocityIce, tMin, tMax, bt, dx, dtSecs);
+  CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, bndMask, cavityOpening, flowConstant, Texp,
+                   roughnessFactor, noSmoothMelt, cavityBeta, basalVelocityIce, Tmin, Tmax, bt, dx, dtSecs);
 
   // compare results
   PetscScalar *meltArr[GRID_SIZE_Y];

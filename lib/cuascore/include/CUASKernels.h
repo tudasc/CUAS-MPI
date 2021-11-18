@@ -121,10 +121,14 @@ inline void computeMelt(PETScGrid &melt, PetscScalar const r, PetscScalar const 
     }
   }
 }
-
-inline void binaryDialation(PETScGrid &output, PETScGrid const &input) {
+/** morphology operation for expanding the shapes in an image.
+ *
+ * @param output
+ * @param input
+ */
+inline void binaryDilation(PETScGrid &output, PETScGrid const &input) {
   if (!output.isCompatible(input)) {
-    Logger::instance().error("CUASKernels.h: binaryDialation was called with incompatible PETScGrids. Exiting.");
+    Logger::instance().error("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -269,7 +273,7 @@ inline void clamp(PETScGrid &input, PetscScalar const minimum, PetscScalar const
 
 inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, PETScGrid const &gradMask, PETScGrid &T,
                        PETScGrid const &T_n, PETScGrid const &pIce, PETScGrid const &topg, PETScGrid const &K,
-                       PETScGrid const &noFlowMask, PETScGrid &cavityOpening, PetscScalar const flowConstant,
+                       PETScGrid const &bndMask, PETScGrid &cavityOpening, PetscScalar const flowConstant,
                        PetscScalar const Texp, PetscScalar const roughnessFactor, bool const noSmoothMelt,
                        PetscScalar const cavityBeta, PetscScalar const basalVelocityIce, PetscScalar const tMin,
                        PetscScalar const tMax, PetscScalar const bt, PetscScalar const dx, PetscScalar const dt_secs) {
@@ -346,10 +350,10 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
 
   {
     auto TGlobal = T.getWriteHandle();
-    auto noFlowGlobal = noFlowMask.getReadHandle();
+    auto mask = bndMask.getReadHandle();
     for (int j = 0; j < T.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < T.getLocalNumOfCols(); ++i) {
-        if (noFlowGlobal(j, i) == true) {
+        if (mask(j, i) == (PetscScalar)NOFLOW_FLAG) {
           TGlobal(j, i) = NOFLOW_VALUE;
         }
       }
