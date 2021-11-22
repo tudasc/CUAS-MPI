@@ -167,7 +167,11 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("dt", args.dt);
   file->addGlobalAttribute("saveEvery", args.saveEvery);
   file->addGlobalAttribute("conductivity", args.conductivity);
-  file->addGlobalAttribute("dochannels", args.dochannels);
+  file->addGlobalAttribute("doAllChannels", args.doAllChannels);
+  file->addGlobalAttribute("doAnyChannels", args.doAnyChannel);
+  file->addGlobalAttribute("doCavity", args.doCavity);
+  file->addGlobalAttribute("doMelt", args.doMelt);
+  file->addGlobalAttribute("doCreep", args.doCreep);
   file->addGlobalAttribute("disableUnconfined", args.disableUnconfined);
   file->addGlobalAttribute("flowConstant", args.flowConstant);
   file->addGlobalAttribute("roughnessFactor", args.roughnessFactor);

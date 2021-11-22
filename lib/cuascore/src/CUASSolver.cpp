@@ -188,10 +188,15 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
 
     u->setGlobalVecColMajor(*sol);
 
-    if (args->dochannels) {
+    if (args->doAllChannels) {
       doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *model->bndMask, cavity,
                  args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
                  args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt);
+    } else if (args->doAnyChannel) {
+      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *model->bndMask, cavity,
+                 args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
+                 args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt, args->doMelt,
+                 args->doCreep, args->doCavity);
     } else {
       noChannels(melt, creep, cavity);
     }

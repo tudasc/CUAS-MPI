@@ -6,6 +6,8 @@
 
 namespace CUAS {
 
+inline void evaluateDoChannels(CUASArgs &args, bool doChannels, std::string const &selectedChannels);
+
 void parseArgs(int argc, char **argv, CUASArgs &args) {
   cxxopts::Options options("CUAS", "MPI parallel version of CUAS");
 
@@ -48,8 +50,11 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("conductivity",
        "Conductivity of layer.",
        cxxopts::value<PetscScalar>()->default_value("10"))
-      ("dochannels",
+      ("doChannels",
        "Evolve channels?")
+      ("selectedChannels",
+       "select an individual channel configuration",
+       cxxopts::value<std::string>()->default_value("noselected"))
       ("disableUnconfined",
        "Disable unconfined aquifer case.")
       ("flowConstant",
@@ -126,7 +131,6 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.dt = result["dt"].as<std::string>();
   args.saveEvery = result["saveEvery"].as<int>();
   args.conductivity = result["conductivity"].as<PetscScalar>();
-  args.dochannels = result["dochannels"].as<bool>();
   args.disableUnconfined = result["disableUnconfined"].as<bool>();
   args.flowConstant = result["flowConstant"].as<PetscScalar>();
   args.roughnessFactor = result["roughnessFactor"].as<PetscScalar>();
@@ -150,9 +154,40 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.output = result["output"].as<std::string>();
   args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')
 
+  auto doChannels = result["doChannels"].as<bool>();
+  auto selectedChannels = result["selectedChannels"].as<std::string>();
+  // check if all channels or any channels should be applied
+  evaluateDoChannels(args, doChannels, selectedChannels);
+
   if (args.verbose) {
     Logger::instance().info("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
                             result["output"].as<std::string>());
+  }
+}
+
+inline void evaluateDoChannels(CUASArgs &args, bool doChannels, std::string const &selectedChannels) {
+  // doChannels should not be executed as neither doChannels nor selectedChannels is given
+
+  // selectedChannels is not given, doChannels enables or disables all
+  if (selectedChannels == std::string("noselected")) {
+    args.doAllChannels = args.doAnyChannel = args.doMelt = args.doCreep = args.doCavity = doChannels;
+  }
+  // selectedChannels is given but its empty. We assume that no channels will be applied.
+  else if (selectedChannels.empty()) {
+    args.doAllChannels = args.doAnyChannel = false;
+    args.doMelt = args.doCreep = args.doCavity = false;
+  }
+  // selectedChannels is given and contains some input.
+  else {
+    // check if melt is applied
+    args.doMelt = selectedChannels.find("melt") != std::string::npos;
+    // check if creep is applied
+    args.doCreep = selectedChannels.find("creep") != std::string::npos;
+    // check if cavity is applied
+    args.doCavity = selectedChannels.find("cavity") != std::string::npos;
+    // if channels were applied set doAllChannels and doAnyChannel
+    args.doAllChannels = (args.doMelt && args.doCreep && args.doCavity);
+    args.doAnyChannel = (args.doMelt || args.doCreep || args.doCavity);
   }
 }
 

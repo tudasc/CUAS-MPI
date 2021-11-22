@@ -597,6 +597,9 @@ TEST(CUASKernelsTest, doChannels) {
   PetscScalar dtSecs = 43200;
   PetscScalar Tmin = 1e-07;
   PetscScalar Tmax = 20.0;
+  bool doMelt = true;
+  bool doCreep = true;
+  bool doCavity = true;
 
   // init u_n
   auto u_n2d = u_n.getWriteHandleGhost();
@@ -749,7 +752,8 @@ TEST(CUASKernelsTest, doChannels) {
   topg.setZero();
 
   CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, bndMask, cavityOpening, flowConstant, Texp,
-                   roughnessFactor, noSmoothMelt, cavityBeta, basalVelocityIce, Tmin, Tmax, bt, dx, dtSecs);
+                   roughnessFactor, noSmoothMelt, cavityBeta, basalVelocityIce, Tmin, Tmax, bt, dx, dtSecs, doMelt,
+                   doCreep, doCavity);
 
   // compare results
   PetscScalar *meltArr[GRID_SIZE_Y];
