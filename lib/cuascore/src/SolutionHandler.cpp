@@ -2,9 +2,7 @@
 
 namespace CUAS {
 
-SolutionHandler::SolutionHandler(std::string const &fileName, const int Nt, const int saveEvery, int dimX, int dimY,
-                                 std::string const &outputSize)
-    : Nt(Nt), saveEvery(saveEvery) {
+SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize) {
   file = std::make_unique<NetCDFFile>(fileName, dimX, dimY);
 
   if (outputSize == "small") {
@@ -145,10 +143,9 @@ void SolutionHandler::defineSolution() {
   }
 }
 
-void SolutionHandler::storeInitialSetup(int timeStep, int rank, PETScGrid const &hydraulicHead,
-                                        PETScGrid const &hydraulicTransmissivity, CUASModel const &model,
-                                        PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity,
-                                        CUASArgs const &args) {
+void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
+                                        CUASModel const &model, PETScGrid const &melt, PETScGrid const &creep,
+                                        PETScGrid const &cavity, CUASArgs const &args) {
   file->write("x", model.xAxis);
   file->write("y", model.yAxis);
 
@@ -195,14 +192,14 @@ void SolutionHandler::storeInitialSetup(int timeStep, int rank, PETScGrid const 
   file->addGlobalAttribute("outputSize", args.outputSize);
 
   // store initial conditions if needed
-  storeSolution(timeStep, rank, hydraulicHead, hydraulicTransmissivity, model, melt, creep, cavity);
+  storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, melt, creep, cavity);
 }
 
-void SolutionHandler::storeSolution(int timeStep, int rank, PETScGrid const &hydraulicHead,
+void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hydraulicHead,
                                     PETScGrid const &hydraulicTransmissivity, CUASModel const &model,
                                     PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity) {
   // write scalars
-  file->write("time", timeStep, nextSolution);  // TODO: this should be the time in seconds since ref. date
+  file->write("time", currTime, nextSolution);
 
   // TODO make eps_inf and Teps_inf available for storage
   PetscScalar dummy(-9999.0);

@@ -4,6 +4,7 @@
 #include "CUASArgs.h"
 #include "CUASModel.h"
 #include "SolutionHandler.h"
+#include "timeparse.h"
 
 #include "PETScGrid.h"
 
@@ -31,7 +32,7 @@ class CUASSolver {
   CUASSolver(CUASSolver &) = delete;
   CUASSolver(CUASSolver &&) = delete;
 
-  void solve(int const Nt, PetscScalar const totaltime_secs, PetscScalar const dt_secs);
+  void solve(std::vector<CUAS::timeSecs> &timeSteps);
 
   void setup();
 

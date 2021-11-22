@@ -69,17 +69,12 @@ void CUASSolver::setup() {
   // TODO: Time dependent tidal forcing
 }
 
-void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScalar const dt_secs) {
+void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   //
   // SOLVER PREPARATION
   //
-
-  PetscScalar It[Nt + 1];
-  for (int i = 0; i < Nt + 1; ++i) {
-    It[i] = i;
-  }
 
   // why is this not an arg?
   const int theta = 1;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
@@ -108,20 +103,6 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
 
   dirichletValues->copy(*u_n);  // store initial values as dirichlet values for this run
 
-  // save timedependent values
-  if (args->saveEvery > 0) {
-    PetscScalar Ntsaved;
-    auto Itlength = sizeof(It) / sizeof(It[0]);
-    if (Itlength % args->saveEvery > 0) {
-      Ntsaved = ceil(Itlength / args->saveEvery);
-    }
-
-    if (args->verbose) {
-      Logger::instance().info("CUASSolver.cpp: solve(): runtime = {}, time step = {}, Ntsaved = {} for saveEvery = {}.",
-                              totaltime_secs, dt_secs, Ntsaved, args->saveEvery);
-    }
-  }
-
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
   // melt, creep and Q are supposed to be part of the solution class.
   PETScGrid melt(model->Ncols, model->Nrows);
@@ -148,11 +129,17 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
 
   // initial condition
   if (solutionHandler != nullptr) {
-    solutionHandler->storeInitialSetup(0, rank, *u, *T, *model, melt, creep, cavity, *args);
+    solutionHandler->storeInitialSetup(*u, *T, *model, melt, creep, cavity, *args);
   }
 
-  for (int timeStep = 1; timeStep < Nt + 1; ++timeStep) {
-    currTime += dt_secs;
+  if (args->verbose) {
+    Logger::instance().info("Starting CUASSolver");
+  }
+
+  for (int timeStepIndex = 1; timeStepIndex < timeSteps.size(); ++timeStepIndex) {
+    auto currTime = timeSteps[timeStepIndex];
+    auto prevTime = timeSteps[timeStepIndex - 1];
+    auto dt = currTime - prevTime;
 
     // time dependent forcing
     auto &currentQ = model->Q->getCurrentQ(currTime);
@@ -173,7 +160,7 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
 
     calculateSeValues(Se, *Sp, *S);
 
-    systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt_secs, theta, *u_n, currentQ,
+    systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt, theta, *u_n, currentQ,
                  *dirichletValues, *model->bndMask);
     // solve the equation A*sol = b
     PETScSolver::solve(A, b, *sol);
@@ -183,7 +170,7 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     if (args->dochannels) {
       doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *model->bndMask, cavity,
                  args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
-                 args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt_secs);
+                 args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt);
     } else {
       noChannels(melt, creep, cavity);
     }
@@ -192,8 +179,9 @@ void CUASSolver::solve(int const Nt, PetscScalar const totaltime_secs, PetscScal
     u_n.swap(u);
     T_n.swap(T);
 
-    if (solutionHandler != nullptr && ((timeStep % args->saveEvery == 0) || (timeStep == Nt))) {
-      solutionHandler->storeSolution(timeStep, rank, *u, *T, *model, melt, creep, cavity);
+    if (solutionHandler != nullptr &&
+        ((timeStepIndex % args->saveEvery == 0) || (timeStepIndex == timeSteps.size() - 1))) {
+      solutionHandler->storeSolution(currTime, *u, *T, *model, melt, creep, cavity);
     }
   }
 

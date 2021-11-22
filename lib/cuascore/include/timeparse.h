@@ -67,7 +67,7 @@ inline timeSecs parseTime(std::string const &timeString) {
   return secs;
 };
 
-std::string parseTime(timeSecs const secs) {
+inline std::string parseTime(timeSecs const secs) {
   // secs < 0 is invalid input
   if (secs < 0) {
     Logger::instance().error("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
@@ -104,6 +104,17 @@ std::string parseTime(timeSecs const secs) {
   // remove the last " " from the string
   timeString.pop_back();
   return timeString;
+}
+
+inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTime, timeSecs dt) {
+  std::vector<CUAS::timeSecs> timeSteps;
+  auto currTime = startTime;
+  timeSteps.push_back(currTime);
+  while (currTime < endTime) {
+    currTime += dt;
+    timeSteps.push_back(currTime);
+  }
+  return timeSteps;
 }
 
 }  // namespace CUAS
