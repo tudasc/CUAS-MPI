@@ -92,6 +92,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     exit(1);
   }
 
+  // TODO: restart needs to read T_n, u_n
   //  if(args->restart){
   //    if(args->verbose){
   //      std::cout << "Read restart from file " << args->restart << std::endl;
@@ -99,8 +100,28 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   // TODO
   //  }
 
-  // todo: do all checks with u_n and T_n after restart
+  // after restart apply checks and set values consistent to cuas mask
+  {
+    auto trans = T_n->getWriteHandle();
+    auto head = u_n->getWriteHandle();
+    auto &mask = model->bndMask->getReadHandle();
 
+    auto rows = T_n->getLocalNumOfRows();
+    auto cols = T_n->getLocalNumOfCols();
+
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        if (mask(i, j) == (PetscScalar)NOFLOW_FLAG) {
+          // no-flow must be obtained after restart
+          trans(i, j) = NOFLOW_VALUE;
+        } else if (mask(i, j) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
+          // ensure proper ocean bc's after restart
+          trans(i, j) = args->Tmax;
+          head(i, j) = 0.0;
+        }
+      }
+    }
+  }
   dirichletValues->copy(*u_n);  // store initial values as dirichlet values for this run
 
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
