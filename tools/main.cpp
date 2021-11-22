@@ -5,20 +5,12 @@
 #include "SolutionHandler.h"
 #include "timeparse.h"
 
-#include <math.h>
-
 int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   {
     CUAS::CUASArgs args;
     CUAS::parseArgs(argc, argv, args);
     std::string outfile = args.output;
-
-    PetscScalar totaltime_secs = CUAS::parseTime(args.totaltime);
-    PetscScalar dt_secs = CUAS::parseTime(args.dt);
-    // rounds division to the nearest integer
-    double relationTotalDt = (double)totaltime_secs / (double)dt_secs;
-    int Nt = (int)std::rint(relationTotalDt);
 
     CUAS::ModelReader reader(args.input);
     auto model = reader.fillModelFromNetcdf();
@@ -27,8 +19,8 @@ int main(int argc, char *argv[]) {
 
     std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
     if (args.saveEvery > 0) {
-      solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, Nt, args.saveEvery, model->Ncols,
-                                                                model->Nrows, args.outputSize);
+      solutionHandler =
+          std::make_unique<CUAS::SolutionHandler>(args.output, model->Ncols, model->Nrows, args.outputSize);
     } else {
       solutionHandler = nullptr;
     }
@@ -37,7 +29,10 @@ int main(int argc, char *argv[]) {
 
     solver->setup();
 
-    solver->solve(Nt, totaltime_secs, dt_secs);
+    std::vector<CUAS::timeSecs> timeSteps;
+    timeSteps = CUAS::getTimeStepArray(0, CUAS::parseTime(args.totaltime), CUAS::parseTime(args.dt));
+
+    solver->solve(timeSteps);
   }
   PetscFinalize();
   return 0;

@@ -131,11 +131,13 @@ TEST(noDataTest, solverComparison) {
   CUAS::CUASSolver solver(&model, &args);
   solver.setup();
 
-  int Nt = 7300;
-  PetscScalar totaltime_secs = 1.0;
-  PetscScalar dt_secs = 43200;
+  auto n = 7300;
+  CUAS::timeSecs dt_secs = 43200;
+  CUAS::timeSecs totaltime_secs = dt_secs * n;
 
-  solver.solve(Nt, totaltime_secs, dt_secs);
+  auto timeSteps = CUAS::getTimeStepArray(0, totaltime_secs, dt_secs);
+
+  solver.solve(timeSteps);
 
   PETScGrid uPy(NX, NY);
   PETScGrid u_nPy(NX, NY);

@@ -63,6 +63,14 @@ TEST(timeparseReverseTest, wrongInput) {
               "timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
 }
 
+TEST(timeStepArray, getTimeStepArray) {
+  auto timeStepArray = CUAS::getTimeStepArray(0, 23, 4);
+  ASSERT_EQ(timeStepArray.size(), 7);
+  for (int i = 0; i < timeStepArray.size(); ++i) {
+    ASSERT_EQ(timeStepArray[i], 4 * i);
+  }
+}
+
 TEST(timeparseReverseTest, lessThan1hour) {
   CUAS::timeSecs secs = 60;
   std::string timeString = CUAS::parseTime(secs);
