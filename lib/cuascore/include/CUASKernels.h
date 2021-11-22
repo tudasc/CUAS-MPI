@@ -276,7 +276,8 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
                        PETScGrid const &bndMask, PETScGrid &cavityOpening, PetscScalar const flowConstant,
                        PetscScalar const Texp, PetscScalar const roughnessFactor, bool const noSmoothMelt,
                        PetscScalar const cavityBeta, PetscScalar const basalVelocityIce, PetscScalar const tMin,
-                       PetscScalar const tMax, PetscScalar const bt, PetscScalar const dx, PetscScalar const dt_secs) {
+                       PetscScalar const tMax, PetscScalar const bt, PetscScalar const dx, PetscScalar const dt_secs,
+                       bool doMelt = true, bool doCreep = true, bool doCavity = true) {
   if (!melt.isCompatible(creep) || !melt.isCompatible(u_n)) {
     Logger::instance().error("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.");
     exit(1);
@@ -339,9 +340,20 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
     auto meltGlobal = melt.getReadHandle();
     auto creepGlobal = creep.getReadHandle();
     auto cavityGlobal = cavityOpening.getReadHandle();
-    for (int j = 0; j < T.getLocalNumOfRows(); ++j) {
-      for (int i = 0; i < T.getLocalNumOfCols(); ++i) {
-        TGlobal(j, i) = T_nGlobal(j, i) + (meltGlobal(j, i) + cavityGlobal(j, i) - creepGlobal(j, i)) * dt_secs;
+    if (doMelt && doCavity && doCreep) {
+      for (int j = 0; j < T.getLocalNumOfRows(); ++j) {
+        for (int i = 0; i < T.getLocalNumOfCols(); ++i) {
+          TGlobal(j, i) = T_nGlobal(j, i) + (meltGlobal(j, i) + cavityGlobal(j, i) - creepGlobal(j, i)) * dt_secs;
+        }
+      }
+    } else {
+      for (int j = 0; j < T.getLocalNumOfRows(); ++j) {
+        for (int i = 0; i < T.getLocalNumOfCols(); ++i) {
+          TGlobal(j, i) = TGlobal(j, i) =
+              T_nGlobal(j, i) + ((doMelt ? meltGlobal(j, i) : 0.0) + (doCavity ? cavityGlobal(j, i) : 0.0) -
+                                 (doCreep ? creepGlobal(j, i) : 0.0)) *
+                                    dt_secs;
+        }
       }
     }
   }

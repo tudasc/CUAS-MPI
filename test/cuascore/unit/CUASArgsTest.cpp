@@ -3,16 +3,15 @@
 #include "gtest/gtest.h"
 
 TEST(CUASArgs, allOpts) {
-  int argc = 19;
+  int argc = 20;
   char arg0[] = "test";
-  char arg05[] = "--verbose";
   char arg1[] = "--Tmax=7";
   char arg2[] = "--Tmin=3";
   char arg3[] = "--totaltime='4 Weeks'";
   char arg4[] = "--dt='1 day'";
   char arg5[] = "--saveEvery=12";
   char arg6[] = "--conductivity=13.37";
-  char arg7[] = "--dochannels";
+  char arg7[] = "--doChannels";
   // disable unconfined = false
   char arg8[] = "--flowConstant=2.1";
   char arg9[] = "--roughnessFactor=2";
@@ -24,8 +23,11 @@ TEST(CUASArgs, allOpts) {
   char arg15[] = "--seaLevelForcing='seaForcingFile.nc'";
   char arg16[] = "--output='output.nc'";
   char arg17[] = "--input='input.nc'";
-  char *argv[] = {arg0, arg05, arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7, arg8,
-                  arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17};
+  char arg18[] = "--selectedChannels=creep";
+  char arg19[] = "--verbose";
+
+  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,
+                  arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19};
   CUAS::CUASArgs args;
   CUAS::parseArgs(argc, argv, args);
 
@@ -36,7 +38,11 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.dt, "'1 day'");
   ASSERT_EQ(args.saveEvery, 12);
   ASSERT_EQ(args.conductivity, 13.37);
-  ASSERT_EQ(args.dochannels, true);
+  ASSERT_EQ(args.doAllChannels, false);
+  ASSERT_EQ(args.doAnyChannel, true);
+  ASSERT_EQ(args.doCreep, true);
+  ASSERT_EQ(args.doMelt, false);
+  ASSERT_EQ(args.doCavity, false);
   ASSERT_EQ(args.disableUnconfined, false);
   ASSERT_EQ(args.flowConstant, 2.1);
   ASSERT_EQ(args.roughnessFactor, 2);
@@ -48,4 +54,105 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
   ASSERT_EQ(args.output, "'output.nc'");
   ASSERT_EQ(args.input, "'input.nc'");
+}
+
+TEST(CUASArgs, selectiveChannels) {
+  int argc = 3;
+  char *argv[3];
+  char arg0[] = "test";
+  argv[0] = arg0;
+
+  // doChannels==true
+  {
+    char doChannels[] = "--doChannels";
+    argv[1] = doChannels;
+    {
+      char selectedChannels[] = "";
+      argv[2] = selectedChannels;
+
+      CUAS::CUASArgs args;
+      CUAS::parseArgs(argc, argv, args);
+
+      ASSERT_EQ(args.doAllChannels, true);
+      ASSERT_EQ(args.doAnyChannel, true);
+      ASSERT_EQ(args.doCreep, true);
+      ASSERT_EQ(args.doMelt, true);
+      ASSERT_EQ(args.doCavity, true);
+    }
+
+    {
+      char selectedChannels[] = "--selectedChannels=melt";
+      argv[2] = selectedChannels;
+
+      CUAS::CUASArgs args;
+      CUAS::parseArgs(argc, argv, args);
+
+      ASSERT_EQ(args.doAllChannels, false);
+      ASSERT_EQ(args.doAnyChannel, true);
+      ASSERT_EQ(args.doCreep, false);
+      ASSERT_EQ(args.doMelt, true);
+      ASSERT_EQ(args.doCavity, false);
+    }
+
+    {
+      char selectedChannels[] = "--selectedChannels=";
+      argv[2] = selectedChannels;
+
+      CUAS::CUASArgs args;
+      CUAS::parseArgs(argc, argv, args);
+
+      ASSERT_EQ(args.doAllChannels, false);
+      ASSERT_EQ(args.doAnyChannel, false);
+      ASSERT_EQ(args.doCreep, false);
+      ASSERT_EQ(args.doMelt, false);
+      ASSERT_EQ(args.doCavity, false);
+    }
+  }
+
+  // doChannels==false
+  {
+    char doChannels[] = "";
+    argv[2] = doChannels;
+    {
+      char selectedChannels[] = "";
+      argv[1] = selectedChannels;
+
+      CUAS::CUASArgs args;
+      CUAS::parseArgs(argc, argv, args);
+
+      ASSERT_EQ(args.doAllChannels, false);
+      ASSERT_EQ(args.doAnyChannel, false);
+      ASSERT_EQ(args.doCreep, false);
+      ASSERT_EQ(args.doMelt, false);
+      ASSERT_EQ(args.doCavity, false);
+    }
+
+    {
+      char selectedChannels[] = "--selectedChannels=melt,creep";
+      argv[1] = selectedChannels;
+
+      CUAS::CUASArgs args;
+      CUAS::parseArgs(argc, argv, args);
+
+      ASSERT_EQ(args.doAllChannels, false);
+      ASSERT_EQ(args.doAnyChannel, true);
+      ASSERT_EQ(args.doCreep, true);
+      ASSERT_EQ(args.doMelt, true);
+      ASSERT_EQ(args.doCavity, false);
+    }
+
+    {
+      char selectedChannels[] = "--selectedChannels=";
+      argv[1] = selectedChannels;
+
+      CUAS::CUASArgs args;
+      CUAS::parseArgs(argc, argv, args);
+
+      ASSERT_EQ(args.doAllChannels, false);
+      ASSERT_EQ(args.doAnyChannel, false);
+      ASSERT_EQ(args.doCreep, false);
+      ASSERT_EQ(args.doMelt, false);
+      ASSERT_EQ(args.doCavity, false);
+    }
+  }
 }

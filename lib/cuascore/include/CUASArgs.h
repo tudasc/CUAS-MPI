@@ -14,7 +14,11 @@ struct CUASArgs {
   std::string dt;
   int saveEvery;
   PetscScalar conductivity;
-  bool dochannels;
+  bool doAllChannels;
+  bool doAnyChannel;
+  bool doCavity;
+  bool doMelt;
+  bool doCreep;
   bool disableUnconfined;
   PetscScalar flowConstant;
   PetscScalar roughnessFactor;
