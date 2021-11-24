@@ -6,6 +6,11 @@
 #include "CUASSolver.h"
 #include "Forcing/ConstantForcing.h"
 
+//#define TESTS_DUMP_NETCDF
+#ifdef TESTS_DUMP_NETCDF
+#include "NetCDFFile.h"
+#endif
+
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -67,7 +72,27 @@ TEST(noDataTest, compareModelToPython) {
     }
   }
 
-  auto &thkPy2d = thkPy.getReadHandle();
+#ifdef TESTS_DUMP_NETCDF
+  {
+    // Gets information about the currently running test.
+    // Do NOT delete the returned object - it's managed by the UnitTest class.
+    const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+    auto filename = std::string(test_info->test_suite_name())
+                        .append(std::string("_-_"))
+                        .append(std::string(test_info->name()))
+                        .append(std::string(".nc"));
+    CUAS::NetCDFFile file(filename, model.Ncols, model.Nrows);
+    file.defineGrid("thk", LIMITED);
+    file.defineGrid("topg", LIMITED);
+    file.defineGrid("bnd_mask", LIMITED);
+    file.defineGrid("bmelt", LIMITED);
+    file.write("thk", *model.thk, 0);
+    file.write("topg", *model.topg, 0);
+    file.write("bnd_mask", *model.bndMask, 0);
+    file.write("bmelt", model.Q->getCurrentQ(0), 0);  // m/s
+  }
+#endif
+
   auto &topgPy2d = topgPy.getReadHandle();
   auto &p_icePy2d = p_icePy.getReadHandle();
   auto &bndPy2d = bndPy.getReadHandle();
@@ -80,6 +105,7 @@ TEST(noDataTest, compareModelToPython) {
     }
   }
 
+  auto &thkPy2d = thkPy.getReadHandle();
   auto &thkGlob = model.thk->getReadHandle();
   for (int i = 0; i < model.thk->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.thk->getLocalNumOfCols(); ++j) {
@@ -111,14 +137,102 @@ TEST(noDataTest, compareModelToPython) {
   }
 }
 
+TEST(noDataTest, solverComparison) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+  auto pmodel = fillNoData();
+  auto &model = *pmodel;
+  model.init();
+
+  int argc = 6;
+  char arg0[] = "test";
+  char arg1[] = "--verbose";
+  char arg2[] = "--Tinit=0.2";                       // will be ignored if no channel evolution
+  char arg3[] = "--specificStorage=0.000982977696";  // old cuas defaults: Ssmulti=1.0, Ss=0.000982977696
+  char arg4[] = "--conductivity=2.0";                // ensure we have T = K*b = Tinit = 0.2"
+  char arg5[] = "--layerThickness=0.1";              // old cuas default -> important to get S = Ss*b right
+  char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5};
+  CUAS::CUASArgs args;
+  CUAS::parseArgs(argc, argv, args);
+
+  CUAS::CUASSolver solver(&model, &args);
+  solver.setup();
+
+  auto n = 7300;
+  CUAS::timeSecs dt_secs = 43200;
+  CUAS::timeSecs totaltime_secs = dt_secs * n;
+
+  auto timeSteps = CUAS::getTimeStepArray(0, totaltime_secs, dt_secs);
+
+  solver.solve(timeSteps);
+
+  PETScGrid uPy(NX, NY);
+  PETScGrid u_nPy(NX, NY);
+  {
+    auto uPyH = uPy.getWriteHandle();
+    auto u_nPyH = u_nPy.getWriteHandle();
+
+    int cornerX = uPy.getCornerX();
+    int cornerY = uPy.getCornerY();
+    for (int i = 0; i < uPy.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < uPy.getLocalNumOfCols(); ++j) {
+        uPyH(i, j) = u[cornerY + i][cornerX + j];
+        u_nPyH(i, j) = u_n[cornerY + i][cornerX + j];
+      }
+    }
+  }
+
+#ifdef TESTS_DUMP_NETCDF
+  {
+    // Gets information about the currently running test.
+    // Do NOT delete the returned object - it's managed by the UnitTest class.
+    const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+    auto filename = std::string(test_info->test_suite_name())
+                        .append(std::string("_-_"))
+                        .append(std::string(test_info->name()))
+                        .append(std::string(".nc"));
+    CUAS::NetCDFFile file(filename, model.Ncols, model.Nrows);
+    file.defineGrid("u", LIMITED);
+    file.defineGrid("u_python", LIMITED);
+    file.defineGrid("bndMask", LIMITED);
+    file.defineGrid("T", LIMITED);
+
+    file.write("u", *solver.nextHead, 0);
+    file.write("u_python", uPy, 0);
+    file.write("bndMask", *model.bndMask, 0);
+    file.write("T", *solver.nextTransmissivity, 0);
+  }
+#endif
+
+  auto &uPyRH = uPy.getReadHandle();
+  auto &u_nPyRH = u_nPy.getReadHandle();
+
+  auto &uGRH = solver.nextHead->getReadHandle();
+  auto &u_nGRH = solver.currHead->getReadHandle();
+  for (int i = 0; i < solver.nextHead->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < solver.nextHead->getLocalNumOfCols(); ++j) {
+      ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;
+      ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;  // obsolete
+    }
+  }
+}
+
 TEST(noDataTest, solverComparisonDirect) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
   auto pmodel = fillNoData();
   auto &model = *pmodel;
   model.init();
 
+  int argc = 7;
+  char arg0[] = "test";
+  char arg1[] = "--verbose";
+  char arg2[] = "--Tinit=0.2";                       // will be ignored if no channel evolution
+  char arg3[] = "--specificStorage=0.000982977696";  // old cuas defaults: Ssmulti=1.0, Ss=0.000982977696
+  char arg4[] = "--conductivity=2.0";                // ensure we have T = K*b = Tinit = 0.2"
+  char arg5[] = "--layerThickness=0.1";              // old cuas default -> important to get S = Ss*b right
+  char arg6[] = "--directSolver";  // we need to use MUMPS to pass this test in 73 steps instead of 7300
+  char *argv[] = {arg0, arg1, arg2, arg3, arg4, arg5, arg6};
   CUAS::CUASArgs args;
-  CUAS::parseArgs(m_argc, m_argv, args);
+  CUAS::parseArgs(argc, argv, args);
 
   CUAS::CUASSolver solver(&model, &args);
   solver.setup();
@@ -148,6 +262,27 @@ TEST(noDataTest, solverComparisonDirect) {
     }
   }
 
+#ifdef TESTS_DUMP_NETCDF
+  {
+    // Gets information about the currently running test.
+    // Do NOT delete the returned object - it's managed by the UnitTest class.
+    const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+    auto filename = std::string(test_info->test_suite_name())
+                        .append(std::string("_-_"))
+                        .append(std::string(test_info->name()))
+                        .append(std::string(".nc"));
+    CUAS::NetCDFFile file(filename, model.Ncols, model.Nrows);
+    file.defineGrid("u", LIMITED);
+    file.defineGrid("u_python", LIMITED);
+    file.defineGrid("bndMask", LIMITED);
+    file.defineGrid("T", LIMITED);
+    file.write("u", *solver.nextHead, 0);
+    file.write("u_python", uPy, 0);
+    file.write("bndMask", *model.bndMask, 0);
+    file.write("T", *solver.nextTransmissivity, 0);
+  }
+#endif
+
   auto &uPyRH = uPy.getReadHandle();
   auto &u_nPyRH = u_nPy.getReadHandle();
 
@@ -158,66 +293,6 @@ TEST(noDataTest, solverComparisonDirect) {
       ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;
       ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;  // obsolete
     }
-  }
-}
-
-TEST(noDataTest, solverComparison) {
-  ASSERT_EQ(mpiSize, MPI_SIZE);
-  auto pmodel = fillNoData();
-  auto &model = *pmodel;
-  model.init();
-
-  CUAS::CUASArgs args;
-  CUAS::parseArgs(m_argc, m_argv, args);
-
-  CUAS::CUASSolver solver(&model, &args);
-  solver.setup();
-
-  auto n = 7300;
-  CUAS::timeSecs dt_secs = 43200;
-  CUAS::timeSecs totaltime_secs = dt_secs * n;
-
-  auto timeSteps = CUAS::getTimeStepArray(0, totaltime_secs, dt_secs);
-
-  solver.solve(timeSteps);
-
-  PETScGrid uPy(NX, NY);
-  PETScGrid u_nPy(NX, NY);
-  {
-    auto uPyH = uPy.getWriteHandle();
-    auto u_nPyH = u_nPy.getWriteHandle();
-
-    int cornerX = uPy.getCornerX();
-    int cornerY = uPy.getCornerY();
-    for (int i = 0; i < uPy.getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < uPy.getLocalNumOfCols(); ++j) {
-        uPyH(i, j) = u[cornerY + i][cornerX + j];
-        u_nPyH(i, j) = u_n[cornerY + i][cornerX + j];
-      }
-    }
-  }
-
-  auto &uPyRH = uPy.getReadHandle();
-  auto &u_nPyRH = u_nPy.getReadHandle();
-
-  auto &uGRH = solver.nextHead->getReadHandle();
-  auto &u_nGRH = solver.currHead->getReadHandle();
-  for (int i = 0; i < solver.nextHead->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < solver.nextHead->getLocalNumOfCols(); ++j) {
-      ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6);
-      ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6);
-    }
-  }
-
-  // check c/solution
-  int low, high;
-  VecGetOwnershipRange(solver.sol->getRaw(), &low, &high);
-  int size = high - low;
-  for (int i = 0; i < size; ++i) {
-    double v;
-    int p[] = {low + i};
-    VecGetValues(solver.sol->getRaw(), 1, p, &v);
-    ASSERT_NEAR((float)v, (float)c[low + i], 0.6);
   }
 }
 

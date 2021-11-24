@@ -12,7 +12,8 @@
 
 namespace CUAS {
 
-enum class OutputSize { SMALL, NORMAL, LARGE };
+enum class OutputSize { SMALL, NORMAL, LARGE, XLARGE };
+enum class OutputReason { NONE, INITIAL, NORMAL };
 
 class SolutionHandler {
  private:
@@ -46,16 +47,23 @@ class SolutionHandler {
 
   // write the values passed as parameters to the netcdf file
   void storeInitialSetup(PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
-                         CUASModel const &model, PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity,
-                         CUASArgs const &args);
+                         CUASModel const &model, PETScGrid const &fluxMagnitude, PETScGrid const &melt,
+                         PETScGrid const &creep, PETScGrid const &cavity, PETScGrid const &effectivePressure,
+                         PETScGrid const &effectiveStorativity, PETScGrid const &effectiveTransmissivity,
+                         PETScGrid const &waterSource, CUASArgs const &args);
   // write the values passed as parameters to the netcdf file
   void storeSolution(CUAS::timeSecs currTime, PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
-                     CUASModel const &model, PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity);
+                     CUASModel const &model, PETScGrid const &fluxMagnitude, PETScGrid const &melt,
+                     PETScGrid const &creep, PETScGrid const &cavity, PETScGrid const &effectivePressure,
+                     PETScGrid const &effectiveStorativity, PETScGrid const &effectiveTransmissivity,
+                     PETScGrid const &waterSource, PetscScalar eps_inf = -9999.0, PetscScalar Teps_inf = -9999.0);
 
   void setTimeUnits(std::string const &s);
   void setCalendar(std::string const &s);
 
   void storePETScOptions();
+  // reason why we need to save this time step
+  OutputReason getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) const;
 
   ~SolutionHandler();
 };

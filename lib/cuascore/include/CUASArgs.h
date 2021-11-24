@@ -10,6 +10,7 @@ namespace CUAS {
 struct CUASArgs {
   PetscScalar Tmax;
   PetscScalar Tmin;
+  PetscScalar Tinit;
   std::string totaltime;
   std::string dt;
   std::string timeStepFile;
@@ -28,16 +29,14 @@ struct CUASArgs {
   PetscScalar unconfSmooth;
   std::string restart;
   bool restartNoneZeroInitialGuess;
-  PetscScalar Ssmulti;
-  PetscScalar Sy;
-  PetscScalar Texp;
+  PetscScalar specificStorage;  // Ss
+  PetscScalar specificYield;    // Sy
   bool noSmoothMelt;
   std::string forcingFile;
   bool loopForcing;
   PetscScalar basalVelocityIce;
   PetscScalar cavityBeta;
   std::string initialHead;
-  std::string tempResults;
   std::string seaLevelForcing;
   bool verbose;
   bool verboseSolver;

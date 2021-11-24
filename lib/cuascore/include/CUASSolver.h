@@ -16,13 +16,16 @@ class CUASSolver {
       : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
     nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    S = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    Sp = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    K = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
     gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+    // rate factor from flow law (ice rheology)
+    rateFactorIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    // basal velocity of ice
+    basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
     sol = std::make_unique<PETScVector>(numOfCols * numOfRows);
   }
@@ -43,11 +46,12 @@ class CUASSolver {
  private:
   int const numOfCols;
   int const numOfRows;
-  std::unique_ptr<PETScGrid> S;
-  std::unique_ptr<PETScGrid> Sp;
-  std::unique_ptr<PETScGrid> K;
+
   std::unique_ptr<PETScGrid> gradMask;
   std::unique_ptr<PETScGrid> dirichletValues;
+
+  std::unique_ptr<PETScGrid> rateFactorIce;
+  std::unique_ptr<PETScGrid> basalVelocityIce;
 
   CUASModel *const model;
   CUASArgs const *const args;
