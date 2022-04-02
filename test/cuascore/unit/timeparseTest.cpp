@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-TEST(timeparseTest, parse19y1m2w15d5h) {
+TEST(timeparseTest, parse10y1m2w15d5h) {
   std::string inputTime = "10 years 1 month 2 weeks 15 days 5 hours";
   CUAS::timeSecs secs = CUAS::parseTime(inputTime);
   ASSERT_EQ(secs, 320475600);
@@ -29,6 +29,12 @@ TEST(timeparseTest, parse1y2y1m) {
               "in the input string! Exiting.");
 }
 
+TEST(timeparseTest, parseFractionalValue) {
+  std::string inputTime = "0.5 hours";
+  ASSERT_EXIT(CUAS::parseTime(inputTime), ::testing::ExitedWithCode(1),
+              "timeparse.h: Wrong format for timeValue: '0.5'! Exiting.");
+}
+
 TEST(timeparseReverseTest, parse1y1mReverse) {
   std::string inputTime = "1 year 1 month";
   CUAS::timeSecs secs = 34128000;
@@ -50,9 +56,16 @@ TEST(timeparseReverseTest, parse50y10hReverse) {
   ASSERT_EQ(inputTime, compareString);
 }
 
-TEST(timeparseReverseTest, parse19y1m2w6d5hReverse) {
+TEST(timeparseReverseTest, parse10y1m2w6d5hReverse) {
   std::string inputTime = "10 years 1 month 2 weeks 6 days 5 hours";
   CUAS::timeSecs secs = 319698000;
+  std::string compareString = CUAS::parseTime(secs);
+  ASSERT_EQ(inputTime, compareString);
+}
+
+TEST(timeparseReverseTest, parse5h28min16sReverse) {
+  std::string inputTime = "5 hours 28 minutes 16 seconds";
+  CUAS::timeSecs secs = 19696;
   std::string compareString = CUAS::parseTime(secs);
   ASSERT_EQ(inputTime, compareString);
 }
@@ -71,8 +84,8 @@ TEST(timeStepArray, getTimeStepArray) {
   }
 }
 
-TEST(timeparseReverseTest, lessThan1hour) {
-  CUAS::timeSecs secs = 60;
+TEST(timeparseReverseTest, lessThan1second) {
+  CUAS::timeSecs secs = 0;
   std::string timeString = CUAS::parseTime(secs);
-  ASSERT_EQ(timeString, "0 hours");
+  ASSERT_EQ(timeString, "0 second");
 }
