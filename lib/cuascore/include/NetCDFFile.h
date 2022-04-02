@@ -90,6 +90,8 @@ class NetCDFFile {
   // writes the vector with the name varName from a netcdf file in the input std::vector
   // the vector read by this function is not shared. For shared vectors use the read method with the PetscVec
   void read(std::string const &varName, std::vector<PetscScalar> &dest) const;
+  //! \brief  Read in a 1d variable of type long
+  void read(std::string const &varName, std::vector<long> &dest) const;
   // writes the scalar with the name varName from a netcdf file in the input PetscScalar
   void read(std::string const &varName, PetscScalar &dest) const;
   // writes the input PETScGrid to the variable in the netcdf file with the name varName
@@ -104,6 +106,9 @@ class NetCDFFile {
   // writes a vector with all timesteps to the netcdf file
   // TODO deprecated?
   // void writeTimeSteps(std::vector<int>);
+
+  //! \brief Get a text attribute.
+  std::string readTextAttribute(std::string const &varName, std::string const &attName);
 
   ~NetCDFFile();
 };

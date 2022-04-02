@@ -30,7 +30,32 @@ int main(int argc, char *argv[]) {
     solver->setup();
 
     std::vector<CUAS::timeSecs> timeSteps;
-    timeSteps = CUAS::getTimeStepArray(0, CUAS::parseTime(args.totaltime), CUAS::parseTime(args.dt));
+    if (!args.timeStepFile.empty()) {
+      if (args.verbose) {
+        Logger::instance().info("read time step array from file: " + args.timeStepFile);
+      }
+      CUAS::NetCDFFile file(args.timeStepFile, 'r');
+      file.read("time", timeSteps);
+      auto units = file.readTextAttribute("time", "units");        // --> "seconds since 01-01-01 00:00:00"
+      auto calendar = file.readTextAttribute("time", "calendar");  // --> "365_day"
+      if (args.verbose) {
+        Logger::instance().info("time units '" + units + "'");
+        Logger::instance().info("  calendar '" + calendar + "'");
+      }
+      if (solutionHandler != nullptr) {
+        if (!units.empty()) {
+          solutionHandler->setTimeUnits(units);
+        }
+        if (!calendar.empty()) {
+          solutionHandler->setCalendar(calendar);
+        }
+      }
+    } else {
+      if (args.verbose) {
+        Logger::instance().info("generates time step array using command line paramters");
+      }
+      timeSteps = CUAS::getTimeStepArray(0, CUAS::parseTime(args.totaltime), CUAS::parseTime(args.dt));
+    }
 
     solver->solve(timeSteps);
   }

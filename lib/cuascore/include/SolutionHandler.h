@@ -51,6 +51,10 @@ class SolutionHandler {
   // write the values passed as parameters to the netcdf file
   void storeSolution(CUAS::timeSecs currTime, PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
                      CUASModel const &model, PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity);
+
+  void setTimeUnits(std::string const &s);
+  void setCalendar(std::string const &s);
+
   ~SolutionHandler();
 };
 }  // namespace CUAS

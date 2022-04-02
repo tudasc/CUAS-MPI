@@ -490,6 +490,32 @@ void NetCDFFile::read(std::string const &varName, std::vector<PetscScalar> &dest
   }
 }
 
+void NetCDFFile::read(std::string const &varName, std::vector<long> &dest) const {
+  int varId = getVarId(varName);
+  int numOfDims;
+  int dimId;
+  size_t dimLen;
+
+  nc_inq_varndims(fileId, varId, &numOfDims);
+  if (numOfDims != 1) {
+    // todo:   "variable '%s' in '%s' should to have 1 dimension (got %d)"
+    Logger::instance().error("NetCDFFile.cpp: read() with std::vector<long>: Wrong number of dimensions! Exiting.");
+    exit(1);
+  }
+
+  nc_inq_vardimid(fileId, varId, &dimId);
+  nc_inq_dimlen(fileId, dimId, &dimLen);
+
+  dest.resize(dimLen);  // memory allocation happens here
+
+  if (int retval = nc_get_var_long(fileId, varId, dest.data())) {
+    std::string netcdfError = nc_strerror(retval);
+    Logger::instance().error("NetCDFFile.cpp: read() with std::vector<long>: A netcdf error occurred: " + netcdfError +
+                             "Exiting.");
+    exit(1);
+  }
+}
+
 void NetCDFFile::read(std::string const &varName, PetscScalar &dest) const {
   int varId = getVarId(varName);
   int numOfDims;
@@ -800,6 +826,51 @@ NetCDFFile::~NetCDFFile() {
     Logger::instance().error("NetCDFFile.cpp: NetCDFFilele(): A netcdf error occurred: " + netcdfError + "Exiting.");
     exit(1);
   }
+}
+
+std::string NetCDFFile::readTextAttribute(const std::string &varName, const std::string &attName) {
+  int varId = getVarId(varName);
+  nc_type ncType;
+  size_t attLen = 0;
+  std::string result;
+
+  int retval = nc_inq_atttype(fileId, varId, attName.c_str(), &ncType);
+  if (retval == NC_NOERR) {
+    //
+    // attribute found by name
+    //
+    if (ncType == NC_CHAR) {
+      int stat = nc_inq_attlen(fileId, varId, attName.c_str(), &attLen);
+      if (stat != NC_NOERR) {
+        result = "";
+      } else {
+        // we have a text attribute with a given length yeah!
+        std::vector<char> buffer(attLen + 1, 0);
+        stat = nc_get_att_text(fileId, varId, attName.c_str(), buffer.data());
+        result = (stat == NC_NOERR) ? buffer.data() : "";
+      }
+    } else {
+      //
+      Logger::instance().error("NetCDFFile.cpp: readTextAttribute(): Invalid attribute type. Exiting.");
+      exit(1);
+    }
+  } else if (retval == NC_ENOTATT) {
+    //
+    // attribute not found
+    //
+    Logger::instance().warn("NetCDFFile.cpp: readTextAttribute(): attribute '" + attName + "' not found", attName);
+    result = "";
+  } else {
+    //
+    // something went wrong
+    //
+    std::string netcdfError = nc_strerror(retval);
+    Logger::instance().error("NetCDFFile.cpp: readTextAttribute(): A netcdf error occurred: " + netcdfError +
+                             "Exiting.");
+    exit(1);
+  }
+
+  return result;
 }
 
 }  // namespace CUAS

@@ -240,5 +240,15 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hy
   ++nextSolution;
 }
 
+void SolutionHandler::setTimeUnits(std::string const &s) {
+  // Todo: do some checks
+  file->addAttributeToVariable("time", "units", s);
+}
+
+void SolutionHandler::setCalendar(std::string const &s) {
+  // Todo: do some checks
+  file->addAttributeToVariable("time", "calendar", s);
+}
+
 SolutionHandler::~SolutionHandler() {}
 };  // namespace CUAS
