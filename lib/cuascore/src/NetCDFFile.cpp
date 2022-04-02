@@ -820,10 +820,18 @@ void NetCDFFile::write(std::string const &varName, PetscScalar input, const int 
   }
 }
 
+void NetCDFFile::sync() const {
+  if (int retval = nc_sync(fileId)) {
+    std::string netcdfError = nc_strerror(retval);
+    Logger::instance().error("NetCDFFile.cpp: sync(): A netcdf error occurred: " + netcdfError + "Exiting.");
+    exit(1);
+  }
+}
+
 NetCDFFile::~NetCDFFile() {
   if (int retval = nc_close(fileId)) {
     std::string netcdfError = nc_strerror(retval);
-    Logger::instance().error("NetCDFFile.cpp: NetCDFFilele(): A netcdf error occurred: " + netcdfError + "Exiting.");
+    Logger::instance().error("NetCDFFile.cpp: ~NetCDFFile(): A netcdf error occurred: " + netcdfError + "Exiting.");
     exit(1);
   }
 }
