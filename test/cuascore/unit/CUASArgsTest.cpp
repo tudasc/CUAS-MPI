@@ -3,7 +3,7 @@
 #include "gtest/gtest.h"
 
 TEST(CUASArgs, allOpts) {
-  int argc = 20;
+  int argc = 21;
   char arg0[] = "test";
   char arg1[] = "--Tmax=7";
   char arg2[] = "--Tmin=3";
@@ -25,9 +25,10 @@ TEST(CUASArgs, allOpts) {
   char arg17[] = "--input='input.nc'";
   char arg18[] = "--selectedChannels=creep";
   char arg19[] = "--verbose";
+  char arg20[] = "--timeStepFile='timesteps.nc'";
 
-  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,
-                  arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19};
+  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9, arg10,
+                  arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20};
   CUAS::CUASArgs args;
   CUAS::parseArgs(argc, argv, args);
 
@@ -54,6 +55,7 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
   ASSERT_EQ(args.output, "'output.nc'");
   ASSERT_EQ(args.input, "'input.nc'");
+  ASSERT_EQ(args.timeStepFile, "'timesteps.nc'");
 }
 
 TEST(CUASArgs, selectiveChannels) {

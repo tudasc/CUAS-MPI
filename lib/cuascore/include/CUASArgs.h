@@ -12,6 +12,7 @@ struct CUASArgs {
   PetscScalar Tmin;
   std::string totaltime;
   std::string dt;
+  std::string timeStepFile;
   int saveEvery;
   PetscScalar conductivity;
   bool doAllChannels;

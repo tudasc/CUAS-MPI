@@ -44,6 +44,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("dt",
        "Time step length. Example: --dt '12 hours', --dt 1day", 
        cxxopts::value<std::string>()->default_value("12 hours"))
+      ("timeStepFile",
+       "NetCDF input file to read a time step array",
+       cxxopts::value<std::string>()->default_value(""))
       ("saveEvery",
        "Save every nth timestep to netcdf.",
        cxxopts::value<int>()->default_value("0"))
@@ -129,6 +132,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   // need to be parsed
   args.totaltime = result["totaltime"].as<std::string>();
   args.dt = result["dt"].as<std::string>();
+  args.timeStepFile = result["timeStepFile"].as<std::string>();
   args.saveEvery = result["saveEvery"].as<int>();
   args.conductivity = result["conductivity"].as<PetscScalar>();
   args.disableUnconfined = result["disableUnconfined"].as<bool>();
