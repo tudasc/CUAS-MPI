@@ -94,6 +94,8 @@ class NetCDFFile {
   void read(std::string const &varName, std::vector<long> &dest) const;
   // writes the scalar with the name varName from a netcdf file in the input PetscScalar
   void read(std::string const &varName, PetscScalar &dest) const;
+  // flushes cached data to file
+  void sync() const;
   // writes the input PETScGrid to the variable in the netcdf file with the name varName
   void write(std::string const &varName, PETScGrid const &input, int currentTimeStep = -1);
   // writes the vector to the variable in the netcdf file with the name varName

@@ -237,6 +237,10 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hy
     file->write("pwater", pwater, nextSolution);
   }
 
+  // Write everything to the file
+  file->sync();
+
+  // Increment time-slice index for next call
   ++nextSolution;
 }
 
