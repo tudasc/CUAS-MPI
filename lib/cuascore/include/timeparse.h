@@ -3,8 +3,10 @@
 
 #include "Logger.h"
 
+#include <array>
 #include <iostream>
 #include <map>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -15,13 +17,15 @@ typedef long timeSecs;
 // this function parses the input string timeString and returns how many seconds are in the specified time-window
 inline timeSecs parseTime(std::string const &timeString) {
   // map of time-units and the amount of seconds for a single time-unit
-  std::map<std::string, int> timeUnits = {{"year", 60 * 60 * 24 * 365},
-                                          {"month", 60 * 60 * 24 * 30},
-                                          {"week", 60 * 60 * 24 * 7},
-                                          {"day", 60 * 60 * 24},
-                                          {"hour", 60 * 60}};
+  std::map<std::string, timeSecs> timeUnits = {{"year", 60 * 60 * 24 * 365},
+                                               {"month", 60 * 60 * 24 * 30},
+                                               {"week", 60 * 60 * 24 * 7},
+                                               {"day", 60 * 60 * 24},
+                                               {"hour", 60 * 60},
+                                               {"minute", 60},
+                                               {"second", 1}};
   // map for input times
-  std::map<std::string, int> givenTimes;
+  std::map<std::string, timeSecs> givenTimes;
   // vector for splitted input timeString
   std::vector<std::string> splitString;
 
@@ -47,15 +51,24 @@ inline timeSecs parseTime(std::string const &timeString) {
   // convert the timeString to secs using the timeUnits map and the split timeString
   std::string currentTimeUnit;
   std::string timeValue;
+  // With a machine, where int is 32bit bit, the maximum number that can be converted is: 2147483647 (10 digits).
+  const std::regex reg("^[0-9]{1,9}$");  // only integer 1 to 9 digits
+
   for (int i = 1; i < splitString.size(); i = i + 2) {
     // check if current element from splitString is in timeUnits
     if (timeUnits.count(splitString[i]) != 0) {
       // add the value to secs
       timeValue = splitString[i - 1];
       currentTimeUnit = splitString[i];
-      secs += timeUnits[currentTimeUnit] * stoi(timeValue);
-      // remove the used time-unit so that constructs like 2 years 1 year are impossible in the input string
-      timeUnits.erase(currentTimeUnit);
+      if (std::regex_match(timeValue, reg)) {
+        // Do what you want (process convert)
+        secs += timeUnits[currentTimeUnit] * std::stoi(timeValue);
+        // remove the used time-unit so that constructs like 2 years 1 year are impossible in the input string
+        timeUnits.erase(currentTimeUnit);
+      } else {
+        Logger::instance().error("timeparse.h: Wrong format for timeValue: '" + timeValue + "'! Exiting.");
+        exit(1);
+      }
     } else {
       Logger::instance().error(
           "timeparse.h: Wrong format! You either used a non-existing time-unit or used a time-unit multiple times in "
@@ -73,22 +86,25 @@ inline std::string parseTime(timeSecs const secs) {
     Logger::instance().error("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
     exit(1);
   }
-  // hour is the smallest timeUnit
-  if (secs < 60 * 60) {
-    return "0 hours";
+  // second is the smallest timeUnit
+  if (secs < 1) {
+    return "0 second";  // set to zero instead of 1 to allow for runs with no time steps (input to output runs)
   }
-  std::map<std::string, int> timeUnits = {{"year", 60 * 60 * 24 * 365},
-                                          {"month", 60 * 60 * 24 * 30},
-                                          {"week", 60 * 60 * 24 * 7},
-                                          {"day", 60 * 60 * 24},
-                                          {"hour", 60 * 60}};
-  // this vector is used to impose an order on the map.
-  std::vector<std::string> timeUnitStrings = {"year", "month", "week", "day", "hour"};
+  std::map<std::string, timeSecs> timeUnits = {{"year", 60 * 60 * 24 * 365},
+                                               {"month", 60 * 60 * 24 * 30},
+                                               {"week", 60 * 60 * 24 * 7},
+                                               {"day", 60 * 60 * 24},
+                                               {"hour", 60 * 60},
+                                               {"minute", 60},
+                                               {"second", 1}};
+
+  // this array is used to impose an order on the map.
+  std::array<std::string, 7> timeUnitStrings = {"year", "month", "week", "day", "hour", "minute", "second"};
   std::string timeString = "";
   timeSecs secsToBeDistributed = secs;
   std::string currentTimeUnit;
   for (std::string const &i : timeUnitStrings) {
-    int timeValue = (int)(secsToBeDistributed / timeUnits[i]);
+    timeSecs timeValue = (timeSecs)(secsToBeDistributed / timeUnits[i]);
     if (timeValue == 0) {
       continue;
     } else {
