@@ -26,25 +26,25 @@ void SolutionHandler::defineSolution() {
    */
 
   file->defineScalar("time", true);
-  file->addAttributeToVariable("time", "unit", "seconds since 01-01-01 00:00:00");
+  file->addAttributeToVariable("time", "units", "seconds since 01-01-01 00:00:00");
   file->addAttributeToVariable("time", "standard_name", "time");
   file->addAttributeToVariable("time", "calendar", "365_day");
   file->addAttributeToVariable("time", "axis", "T");
 
   file->defineVectorX("x");
-  file->addAttributeToVariable("x", "unit", "m");
+  file->addAttributeToVariable("x", "units", "m");
   file->addAttributeToVariable("x", "standard_name", "projection_x_coordinate");
   file->addAttributeToVariable("x", "long_name", "X-coordinate in Cartesian system");
   file->addAttributeToVariable("x", "axis", "X");
 
   file->defineVectorY("y");
-  file->addAttributeToVariable("y", "unit", "m");
+  file->addAttributeToVariable("y", "units", "m");
   file->addAttributeToVariable("y", "standard_name", "projection_y_coordinate");
   file->addAttributeToVariable("y", "long_name", "Y-coordinate in Cartesian system");
   file->addAttributeToVariable("y", "axis", "Y");
 
   file->defineGrid("bnd_mask");  // in the python version the noflow_mask was stored, here we store the bnd
-  file->addAttributeToVariable("bnd_mask", "unit", "1");
+  file->addAttributeToVariable("bnd_mask", "units", "1");
   file->addAttributeToVariable("bnd_mask", "flag_meanings",
                                "COMPUTE_FLAG DIRICHLET_FLAG NOFLOW_FLAG DIRICHLET_LAKE_FLAG");
   // todo add list of flag values as: bnd_mask:flag_values = 0, 1, 2, 3 ;
@@ -56,12 +56,12 @@ void SolutionHandler::defineSolution() {
    * state variables
    */
   file->defineGrid("head", UNLIMITED);
-  file->addAttributeToVariable("head", "unit", "m");
+  file->addAttributeToVariable("head", "units", "m");
   file->addAttributeToVariable("head", "standard_name", "hydraulic_head");
   file->addAttributeToVariable("head", "long_name", "hydraulic head");
 
   file->defineGrid("transmissivity", UNLIMITED);
-  file->addAttributeToVariable("transmissivity", "unit", "m2 s-1");
+  file->addAttributeToVariable("transmissivity", "units", "m2 s-1");
   file->addAttributeToVariable("transmissivity", "standard_name", "hydraulic_transmissivity");
   file->addAttributeToVariable("transmissivity", "long_name", "hydraulic transmissivity");
 
@@ -76,19 +76,19 @@ void SolutionHandler::defineSolution() {
      * channel evolution
      */
     file->defineGrid("a_melt", UNLIMITED);
-    file->addAttributeToVariable("a_melt", "unit", "m2 s-2");
+    file->addAttributeToVariable("a_melt", "units", "m2 s-2");
     file->addAttributeToVariable("a_melt", "standard_name", "a_melt");
     file->addAttributeToVariable("a_melt", "long_name", "dT/dt due to channel wall melt");
     file->addAttributeToVariable("a_melt", "doc", "dT/dt = a_melt + a_creep + a_cavity");
 
     file->defineGrid("a_creep", UNLIMITED);
-    file->addAttributeToVariable("a_creep", "unit", "m2 s-2");
+    file->addAttributeToVariable("a_creep", "units", "m2 s-2");
     file->addAttributeToVariable("a_creep", "standard_name", "a_creep");
     file->addAttributeToVariable("a_creep", "long_name", "dT/dt due to creep opening");
     file->addAttributeToVariable("a_creep", "doc", "dT/dt = a_melt + a_creep + a_cavity");
 
     file->defineGrid("a_cavity", UNLIMITED);
-    file->addAttributeToVariable("a_cavity", "unit", "m2 s-2");
+    file->addAttributeToVariable("a_cavity", "units", "m2 s-2");
     file->addAttributeToVariable("a_cavity", "standard_name", "a_creep");
     file->addAttributeToVariable("a_cavity", "long_name", "dT/dt due to cavity opening");
     file->addAttributeToVariable("a_cavity", "doc", "dT/dt = a_melt + a_creep + a_cavity");
@@ -97,13 +97,13 @@ void SolutionHandler::defineSolution() {
      * diagnostics
      */
     file->defineGrid("peffective", UNLIMITED);  // could be derived from head and geometry in post-processing
-    file->addAttributeToVariable("peffective", "unit", "Pa");
+    file->addAttributeToVariable("peffective", "units", "Pa");
     file->addAttributeToVariable("peffective", "standard_name", "effective_pressure");
     file->addAttributeToVariable("peffective", "long_name", "effective pressure");
     file->addAttributeToVariable("peffective", "doc", "effective pressure at the aquifer surface");
 
     file->defineGrid("flux", UNLIMITED);  // could be derived from head and geometry in post-processing
-    file->addAttributeToVariable("flux", "unit", "m2 s-1");
+    file->addAttributeToVariable("flux", "units", "m2 s-1");
     file->addAttributeToVariable("flux", "standard_name", "flux");
     file->addAttributeToVariable("flux", "long_name", "flux");
     file->addAttributeToVariable("flux", "doc", "flux = T * |grad(head)|");
@@ -114,22 +114,22 @@ void SolutionHandler::defineSolution() {
      * geometry
      */
     file->defineGrid("usurf");  // upper surface
-    file->addAttributeToVariable("usurf", "unit", "m");
+    file->addAttributeToVariable("usurf", "units", "m");
     file->addAttributeToVariable("usurf", "standard_name", "land_ice_surface_elevation");
     file->addAttributeToVariable("usurf", "long_name", "land ice surface elevation");
 
     file->defineGrid("topg");  // sometimes called bedrock
-    file->addAttributeToVariable("topg", "unit", "m");
+    file->addAttributeToVariable("topg", "units", "m");
     file->addAttributeToVariable("topg", "standard_name", "land_ice_bed_elevation");
     file->addAttributeToVariable("topg", "long_name", "land_ice_bed_elevation");
 
     file->defineGrid("thk");
-    file->addAttributeToVariable("thk", "unit", "m");
+    file->addAttributeToVariable("thk", "units", "m");
     file->addAttributeToVariable("thk", "standard_name", "land_ice_thickness");
     file->addAttributeToVariable("thk", "long_name", "land ice thickness");
 
     file->defineGrid("pice");  // direct input from ice sheet model or computed from geometry
-    file->addAttributeToVariable("pice", "unit", "Pa");
+    file->addAttributeToVariable("pice", "units", "Pa");
     file->addAttributeToVariable("pice", "standard_name", "land_ice_pressure");
     file->addAttributeToVariable("pice", "long_name", "land ice pressure");
 
@@ -137,7 +137,7 @@ void SolutionHandler::defineSolution() {
      * diganostics
      */
     file->defineGrid("pwater");  // direct input from ice sheet model or computed from geometry
-    file->addAttributeToVariable("pwater", "unit", "Pa");
+    file->addAttributeToVariable("pwater", "units", "Pa");
     file->addAttributeToVariable("pwater", "standard_name", "water_pressure");
     file->addAttributeToVariable("pwater", "long_name", "water pressure");
   }
