@@ -14,6 +14,13 @@
 namespace CUAS {
 
 typedef long timeSecs;
+
+struct Time {
+  std::vector<timeSecs> timeSteps;
+  std::string units;     // --> "seconds since 01-01-01 00:00:00"
+  std::string calendar;  // --> "365_day"
+};
+
 // this function parses the input string timeString and returns how many seconds are in the specified time-window
 inline timeSecs parseTime(std::string const &timeString) {
   // map of time-units and the amount of seconds for a single time-unit
