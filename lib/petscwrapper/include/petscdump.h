@@ -50,7 +50,7 @@ inline void dump(PETScGrid const &grid, bool showGhostCells = true) {
   }
 }
 
-inline void dump(PETScMat &mat, bool showGlobal = true) {
+inline void dump(PETScMatrix &mat, bool showGlobal = true) {
   // mat.assemble();
   if (showGlobal) {
     MatView(mat.getRaw(), PETSC_VIEWER_STDOUT_WORLD);
@@ -59,6 +59,6 @@ inline void dump(PETScMat &mat, bool showGlobal = true) {
   }
 }
 
-inline void dump(PETScVec &vec) { VecView(vec.getRaw(), PETSC_VIEWER_STDOUT_WORLD); }
+inline void dump(PETScVector &vec) { VecView(vec.getRaw(), PETSC_VIEWER_STDOUT_WORLD); }
 
 #endif
