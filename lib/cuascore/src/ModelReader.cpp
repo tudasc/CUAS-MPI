@@ -11,7 +11,6 @@ std::unique_ptr<CUAS::CUASModel> ModelReader::fillModelFromNetcdf() {
   file->read("x", model.xAxis);
   file->read("y", model.yAxis);
 
-  file->read("usurf", *model.usurf);
   file->read("topg", *model.topg);
   file->read("thk", *model.thk);
   file->read("bnd_mask", *model.bndMask);

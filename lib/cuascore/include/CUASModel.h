@@ -21,7 +21,6 @@ class CUASModel {
   int const Ncols, Nrows;  // TODO equivalent xAxis.size() and yAxis.size()
   PetscScalar dx, dy;
   std::vector<PetscScalar> xAxis, yAxis;
-  std::unique_ptr<PETScGrid> usurf;
   std::unique_ptr<PETScGrid> topg;
   std::unique_ptr<PETScGrid> thk;
   std::unique_ptr<PETScGrid> bndMask;

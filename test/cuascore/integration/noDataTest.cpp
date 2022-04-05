@@ -41,25 +41,24 @@ TEST(noDataTest, compareModelToPython) {
   std::array<std::array<PetscScalar, NX>, NY> bmelt;
   bmelt.fill(ones);
 
-  PETScGrid usurfPy(NX, NY);
   PETScGrid topgPy(NX, NY);
   PETScGrid thkPy(NX, NY);
   PETScGrid p_icePy(NX, NY);
   PETScGrid bndPy(NX, NY);
   PETScGrid QPy(NX, NY);
   {
-    auto usurfPy2d = usurfPy.getWriteHandle();
+    auto thkPy2d = thkPy.getWriteHandle();
     auto topgPy2d = topgPy.getWriteHandle();
     auto p_icePy2d = p_icePy.getWriteHandle();
     auto bndPy2d = bndPy.getWriteHandle();
     auto QPy2d = QPy.getWriteHandle();
 
-    int cornerX = usurfPy.getCornerX();
-    int cornerY = usurfPy.getCornerY();
+    int cornerX = thkPy.getCornerX();
+    int cornerY = thkPy.getCornerY();
     // fill up py grids to compare with mpi
-    for (int i = 0; i < usurfPy.getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < usurfPy.getLocalNumOfCols(); ++j) {
-        usurfPy2d(i, j) = usurf[cornerY + i][cornerX + j];
+    for (int i = 0; i < thkPy.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < thkPy.getLocalNumOfCols(); ++j) {
+        thkPy2d(i, j) = thk[cornerY + i][cornerX + j];
         topgPy2d(i, j) = topg[cornerY + i][cornerX + j];
         p_icePy2d(i, j) = p_ice[cornerY + i][cornerX + j];
         bndPy2d(i, j) = bnd_mask[cornerY + i][cornerX + j];
@@ -68,18 +67,11 @@ TEST(noDataTest, compareModelToPython) {
     }
   }
 
-  auto &usurfPy2d = usurfPy.getReadHandle();
+  auto &thkPy2d = thkPy.getReadHandle();
   auto &topgPy2d = topgPy.getReadHandle();
   auto &p_icePy2d = p_icePy.getReadHandle();
   auto &bndPy2d = bndPy.getReadHandle();
   auto &QPy2d = QPy.getReadHandle();
-
-  auto &usurfGlob = model.usurf->getReadHandle();
-  for (int i = 0; i < model.usurf->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < model.usurf->getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(usurfGlob(i, j), usurfPy2d(i, j));
-    }
-  }
 
   auto &topgGlob = model.topg->getReadHandle();
   for (int i = 0; i < model.topg->getLocalNumOfRows(); ++i) {
@@ -88,10 +80,10 @@ TEST(noDataTest, compareModelToPython) {
     }
   }
 
-  // thk is the same as usurf
   auto &thkGlob = model.thk->getReadHandle();
   for (int i = 0; i < model.thk->getLocalNumOfRows(); ++i) {
     for (int j = 0; j < model.thk->getLocalNumOfCols(); ++j) {
+      ASSERT_EQ(thkGlob(i, j), thkPy2d(i, j));
     }
   }
 
@@ -160,8 +152,8 @@ TEST(noDataTest, solverComparison) {
 
   auto &uGRH = solver.u->getReadHandle();
   auto &u_nGRH = solver.u_n->getReadHandle();
-  for (int i = 0; i < model.usurf->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < model.usurf->getLocalNumOfCols(); ++j) {
+  for (int i = 0; i < solver.u->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < solver.u->getLocalNumOfCols(); ++j) {
       ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6);
       ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6);
     }

@@ -10,7 +10,6 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   xAxis.resize(Ncols);
   yAxis.resize(Nrows);
 
-  usurf = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   topg = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   thk = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
