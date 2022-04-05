@@ -51,7 +51,7 @@ inline timeSecs parseTime(std::string const &timeString) {
   // check if the size is a multiple of 2. This has to be the case as there is always a quantifyer (integer) with the
   // time unit
   if (splitString.size() % 2 != 0) {
-    Logger::instance().error("timeparse.h: Wrong format of input string. Needs to be multiple of 2. Exiting.");
+    CUAS_ERROR("timeparse.h: Wrong format of input string. Needs to be multiple of 2. Exiting.");
     exit(1);
   }
 
@@ -73,11 +73,11 @@ inline timeSecs parseTime(std::string const &timeString) {
         // remove the used time-unit so that constructs like 2 years 1 year are impossible in the input string
         timeUnits.erase(currentTimeUnit);
       } else {
-        Logger::instance().error("timeparse.h: Wrong format for timeValue: '" + timeValue + "'! Exiting.");
+        CUAS_ERROR("timeparse.h: Wrong format for timeValue: '" + timeValue + "'! Exiting.");
         exit(1);
       }
     } else {
-      Logger::instance().error(
+      CUAS_ERROR(
           "timeparse.h: Wrong format! You either used a non-existing time-unit or used a time-unit multiple times in "
           "the input string! Exiting.");
       exit(1);
@@ -90,7 +90,7 @@ inline timeSecs parseTime(std::string const &timeString) {
 inline std::string parseTime(timeSecs const secs) {
   // secs < 0 is invalid input
   if (secs < 0) {
-    Logger::instance().error("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
+    CUAS_ERROR("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
     exit(1);
   }
   // second is the smallest timeUnit

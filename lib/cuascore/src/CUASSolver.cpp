@@ -88,7 +88,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   } else if (args->initialHead == "topg") {
     u_n->copy(*model->topg);
   } else {
-    Logger::instance().error("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero or topg. Exiting.");
+    CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero or topg. Exiting.");
     exit(1);
   }
 
@@ -154,7 +154,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   }
 
   if (args->verbose) {
-    Logger::instance().info("Starting CUASSolver");
+    CUAS_INFO_RANK0("Starting CUASSolver");
   }
 
   for (int timeStepIndex = 1; timeStepIndex < timeSteps.size(); ++timeStepIndex) {
@@ -214,7 +214,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   // end
   if (rank == 0) {
     t = clock() - t;
-    Logger::instance().info("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC);
+    CUAS_INFO_RANK0("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC);
   }
 }
 

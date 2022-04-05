@@ -4,6 +4,11 @@
 
 #include "gtest/gtest.h"
 
+#include "petsc.h"
+
+int mpiRank;
+int mpiSize;
+
 TEST(timeparseTest, parse10y1m2w15d5h) {
   std::string inputTime = "10 years 1 month 2 weeks 15 days 5 hours";
   CUAS::timeSecs secs = CUAS::parseTime(inputTime);
@@ -88,4 +93,14 @@ TEST(timeparseReverseTest, lessThan1second) {
   CUAS::timeSecs secs = 0;
   std::string timeString = CUAS::parseTime(secs);
   ASSERT_EQ(timeString, "0 second");
+}
+
+int main(int argc, char *argv[]) {
+  ::testing::InitGoogleTest(&argc, argv);
+  PetscInitialize(&argc, &argv, nullptr, nullptr);
+  MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
+  MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
+  int result = RUN_ALL_TESTS();
+  PetscFinalize();
+  return result;
 }

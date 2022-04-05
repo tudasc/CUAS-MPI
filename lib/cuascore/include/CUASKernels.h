@@ -18,7 +18,7 @@ namespace CUAS {
 inline void head2pressure(PETScGrid &result, PETScGrid const &head, PETScGrid const &bedElevation,
                           PetscScalar const seaLevel = 0.0) {
   if (!result.isCompatible(head) || !result.isCompatible(bedElevation)) {
-    Logger::instance().error("CUASKernels.h: head2pressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: head2pressure was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -42,7 +42,7 @@ inline void head2pressure(PETScGrid &result, PETScGrid const &head, PETScGrid co
 inline void pressure2head(PETScGrid &result, PETScGrid const &pressure, PETScGrid const &bedElevation,
                           PetscScalar const seaLevel = 0.0) {
   if (!result.isCompatible(pressure) || !result.isCompatible(bedElevation)) {
-    Logger::instance().error("CUASKernels.h: pressure2head was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: pressure2head was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -65,7 +65,7 @@ inline void pressure2head(PETScGrid &result, PETScGrid const &pressure, PETScGri
  */
 inline void overburdenPressure(PETScGrid &result, PETScGrid const &thk) {
   if (!result.isCompatible(thk)) {
-    Logger::instance().error("CUASKernels.h: overburdenPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: overburdenPressure was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -84,7 +84,7 @@ inline void overburdenPressure(PETScGrid &result, PETScGrid const &thk) {
  */
 inline void cavityOpenB(PETScGrid &result, PetscScalar const beta, PetscScalar const v_b, PETScGrid const &K) {
   if (!result.isCompatible(K)) {
-    Logger::instance().error("CUASKernels.h: cavityOpenB was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: cavityOpenB was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -105,7 +105,7 @@ inline void computeMelt(PETScGrid &melt, PetscScalar const r, PetscScalar const 
                         PETScGrid const &T, PETScGrid const &K, PETScGrid const &gradh2, PetscScalar const rho_i,
                         PetscScalar const L, PetscScalar const bt) {
   if (!melt.isCompatible(T) || !melt.isCompatible(T) || !melt.isCompatible(K) || !melt.isCompatible(gradh2)) {
-    Logger::instance().error("CUASKernels.h: computeMelt was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: computeMelt was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -128,7 +128,7 @@ inline void computeMelt(PETScGrid &melt, PetscScalar const r, PetscScalar const 
  */
 inline void binaryDilation(PETScGrid &output, PETScGrid const &input) {
   if (!output.isCompatible(input)) {
-    Logger::instance().error("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -165,7 +165,7 @@ inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid 
                              PetscScalar const unconfSmooth, PetscScalar const bt) {
   if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(u_n) || !Teff.isCompatible(T_n) ||
       !Teff.isCompatible(topg) || !Teff.isCompatible(K) || !Teff.isCompatible(Sp)) {
-    Logger::instance().error("CUASKernels.h: enableUnconfined was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: enableUnconfined was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -201,7 +201,7 @@ inline void enableUnconfined(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid 
 
 inline void calculateTeffPowTexp(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScGrid const &T, PetscScalar const Texp) {
   if (!Teff.isCompatible(TeffPowTexp) || !Teff.isCompatible(T)) {
-    Logger::instance().error("CUASKernels.h: calculateTeffPowTexp was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: calculateTeffPowTexp was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -219,7 +219,7 @@ inline void calculateTeffPowTexp(PETScGrid &Teff, PETScGrid &TeffPowTexp, PETScG
 
 inline void calculateSeValues(PETScGrid &Se, PETScGrid const &Sp, PETScGrid const &S) {  // extra scope for handles
   if (!Se.isCompatible(Sp) || !Se.isCompatible(S)) {
-    Logger::instance().error("CUASKernels.h: calculateSeValues was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: calculateSeValues was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -235,7 +235,7 @@ inline void calculateSeValues(PETScGrid &Se, PETScGrid const &Sp, PETScGrid cons
 
 inline void convolveStar11411(PETScGrid &melt, PETScGrid &result) {
   if (!melt.isCompatible(result)) {
-    Logger::instance().error("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
@@ -279,7 +279,7 @@ inline void doChannels(PETScGrid &melt, PETScGrid &creep, PETScGrid const &u_n, 
                        PetscScalar const tMax, PetscScalar const bt, PetscScalar const dx, PetscScalar const dt_secs,
                        bool doMelt = true, bool doCreep = true, bool doCavity = true) {
   if (!melt.isCompatible(creep) || !melt.isCompatible(u_n)) {
-    Logger::instance().error("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 

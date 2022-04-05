@@ -26,13 +26,13 @@ add_executable(test-CUASArgs
         CUASArgsTest.cpp
         )
 target_link_libraries(test-CUASArgs cuascore)
-target_link_libraries(test-CUASArgs gtest_main)
+target_link_libraries(test-CUASArgs gtest)
 
 add_executable(test-timeparse
         timeparseTest.cpp
         )
 target_link_libraries(test-timeparse cuascore)
-target_link_libraries(test-timeparse gtest_main)
+target_link_libraries(test-timeparse gtest)
 
 add_executable(test-forcing
         forcingTest.cpp

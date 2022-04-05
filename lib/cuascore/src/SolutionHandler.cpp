@@ -12,8 +12,7 @@ SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY
   } else if (outputSize == "large") {
     osize = OutputSize::LARGE;
   } else {
-    Logger::instance().error("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize +
-                             "Exiting.");
+    CUAS_ERROR("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize + "Exiting.");
     exit(1);
   }
 
