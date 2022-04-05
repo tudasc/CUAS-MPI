@@ -113,10 +113,6 @@ void SolutionHandler::defineSolution() {
     /*
      * geometry
      */
-    file->defineGrid("usurf");  // upper surface
-    file->addAttributeToVariable("usurf", "units", "m");
-    file->addAttributeToVariable("usurf", "standard_name", "land_ice_surface_elevation");
-    file->addAttributeToVariable("usurf", "long_name", "land ice surface elevation");
 
     file->defineGrid("topg");  // sometimes called bedrock
     file->addAttributeToVariable("topg", "units", "m");
@@ -153,7 +149,6 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->write("bnd_mask", *model.bndMask, nextSolution);
 
   if (osize >= OutputSize::LARGE) {
-    file->write("usurf", *model.usurf, nextSolution);
     file->write("topg", *model.topg, nextSolution);
     file->write("thk", *model.thk, nextSolution);
     file->write("pice", *model.pIce, nextSolution);

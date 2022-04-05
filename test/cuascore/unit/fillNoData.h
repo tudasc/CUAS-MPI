@@ -21,12 +21,10 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   }
 
   {
-    auto usurf2d = model.usurf->getWriteHandle();
     auto thk2d = model.thk->getWriteHandle();
-    auto const cornerX = model.usurf->getCornerX();
-    for (int j = 0; j < model.usurf->getLocalNumOfRows(); ++j) {
-      for (int i = 0; i < model.usurf->getLocalNumOfCols(); ++i) {
-        usurf2d(j, i) = 2000.0 - (cornerX + i) * 100;
+    auto const cornerX = model.thk->getCornerX();
+    for (int j = 0; j < model.thk->getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < model.thk->getLocalNumOfCols(); ++i) {
         thk2d(j, i) = 2000.0 - (cornerX + i) * 100;
       }
     }

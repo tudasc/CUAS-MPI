@@ -32,66 +32,30 @@ TEST(fillNoDataTest, fillNoData) {
   ASSERT_EQ(model->yAxis[1], 1000.0);
   ASSERT_EQ(model->yAxis[7], 7000.0);
 
-  ASSERT_TRUE(model->usurf->isCompatible(*model->topg));
-  ASSERT_TRUE(model->usurf->isCompatible(*model->thk));
-  ASSERT_TRUE(model->usurf->isCompatible(*model->bndMask));
-  ASSERT_TRUE(model->usurf->isCompatible(model->Q->getCurrentQ()));
-  ASSERT_TRUE(model->usurf->isCompatible(*model->pIce));
+  ASSERT_TRUE(model->thk->isCompatible(*model->topg));
+  ASSERT_TRUE(model->thk->isCompatible(*model->bndMask));
+  ASSERT_TRUE(model->thk->isCompatible(model->Q->getCurrentQ()));
+  ASSERT_TRUE(model->thk->isCompatible(*model->pIce));
 
-  ASSERT_EQ(model->usurf->getTotalNumOfRows(), 10);
-  ASSERT_EQ(model->usurf->getTotalNumOfCols(), 20);
-  ASSERT_EQ(model->usurf->getTotalGhostNumOfRows(), 12);
-  ASSERT_EQ(model->usurf->getTotalGhostNumOfCols(), 22);
+  ASSERT_EQ(model->thk->getTotalNumOfRows(), 10);
+  ASSERT_EQ(model->thk->getTotalNumOfCols(), 20);
+  ASSERT_EQ(model->thk->getTotalGhostNumOfRows(), 12);
+  ASSERT_EQ(model->thk->getTotalGhostNumOfCols(), 22);
   if (mpiRank == 0) {
-    ASSERT_EQ(model->usurf->getLocalNumOfRows(), 5);
-    ASSERT_EQ(model->usurf->getLocalNumOfCols(), 7);
-    ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 7);
-    ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 9);
+    ASSERT_EQ(model->thk->getLocalNumOfRows(), 5);
+    ASSERT_EQ(model->thk->getLocalNumOfCols(), 7);
+    ASSERT_EQ(model->thk->getLocalGhostNumOfRows(), 7);
+    ASSERT_EQ(model->thk->getLocalGhostNumOfCols(), 9);
   } else if (mpiRank == 1) {
-    ASSERT_EQ(model->usurf->getLocalNumOfRows(), 5);
-    ASSERT_EQ(model->usurf->getLocalNumOfCols(), 7);
-    ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 7);
-    ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 9);
+    ASSERT_EQ(model->thk->getLocalNumOfRows(), 5);
+    ASSERT_EQ(model->thk->getLocalNumOfCols(), 7);
+    ASSERT_EQ(model->thk->getLocalGhostNumOfRows(), 7);
+    ASSERT_EQ(model->thk->getLocalGhostNumOfCols(), 9);
   } else if (mpiRank == 5) {
-    ASSERT_EQ(model->usurf->getLocalNumOfRows(), 5);
-    ASSERT_EQ(model->usurf->getLocalNumOfCols(), 6);
-    ASSERT_EQ(model->usurf->getLocalGhostNumOfRows(), 7);
-    ASSERT_EQ(model->usurf->getLocalGhostNumOfCols(), 8);
-  }
-
-  {
-    auto &usurfHandle = model->usurf->getReadHandle();
-    if (mpiRank == 0) {
-      ASSERT_EQ(usurfHandle(0, 0, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(0, 1, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(0, 2, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(1, 0, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(1, 1, GHOSTED), 2000);
-      ASSERT_EQ(usurfHandle(1, 2, GHOSTED), 1900);
-      ASSERT_EQ(usurfHandle(2, 0, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(2, 1, GHOSTED), 2000);
-      ASSERT_EQ(usurfHandle(2, 2, GHOSTED), 1900);
-    } else if (mpiRank == 1) {
-      ASSERT_EQ(usurfHandle(0, 0, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(0, 1, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(0, 2, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(1, 0, GHOSTED), 1400);
-      ASSERT_EQ(usurfHandle(1, 1, GHOSTED), 1300);
-      ASSERT_EQ(usurfHandle(1, 2, GHOSTED), 1200);
-      ASSERT_EQ(usurfHandle(2, 0, GHOSTED), 1400);
-      ASSERT_EQ(usurfHandle(2, 1, GHOSTED), 1300);
-      ASSERT_EQ(usurfHandle(2, 2, GHOSTED), 1200);
-    } else if (mpiRank == 5) {
-      ASSERT_EQ(usurfHandle(3, 5, GHOSTED), 200);
-      ASSERT_EQ(usurfHandle(3, 6, GHOSTED), 100);
-      ASSERT_EQ(usurfHandle(3, 7, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(4, 5, GHOSTED), 200);
-      ASSERT_EQ(usurfHandle(4, 6, GHOSTED), 100);
-      ASSERT_EQ(usurfHandle(4, 7, GHOSTED), 0);
-      ASSERT_EQ(usurfHandle(5, 5, GHOSTED), 200);
-      ASSERT_EQ(usurfHandle(5, 6, GHOSTED), 100);
-      ASSERT_EQ(usurfHandle(5, 7, GHOSTED), 0);
-    }
+    ASSERT_EQ(model->thk->getLocalNumOfRows(), 5);
+    ASSERT_EQ(model->thk->getLocalNumOfCols(), 6);
+    ASSERT_EQ(model->thk->getLocalGhostNumOfRows(), 7);
+    ASSERT_EQ(model->thk->getLocalGhostNumOfCols(), 8);
   }
 
   {
