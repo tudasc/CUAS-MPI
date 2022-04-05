@@ -23,28 +23,26 @@ void CUASModel::init() {
   dx = xAxis[1] - xAxis[0];
   dy = yAxis[1] - yAxis[0];
   if (dx != dy) {
-    Logger::instance().error("CUASModel.cpp: init(): dx and dy are not equal. Exiting.");
+    CUAS_ERROR("CUASModel.cpp: init(): dx and dy are not equal. Exiting.");
     exit(1);
   }
 
   // the check if dy == 0 is just for readability. The previous implies that if dx == 0 -> dy == 0
   if (dx == 0 || dy == 0) {
-    Logger::instance().error("CUASModel.cpp: init(): dx and dy are zero. Exiting.");
+    CUAS_ERROR("CUASModel.cpp: init(): dx and dy are zero. Exiting.");
     exit(1);
   }
 
   for (int i = 0; i < xAxis.size() - 1; ++i) {
     if (std::fabs(xAxis[i + 1] - xAxis[i] - dx) > std::numeric_limits<double>::epsilon()) {
-      Logger::instance().error(
-          "CUASModel.cpp: init(): The values of xAxis are not evenly spaced across all time steps. Exiting.");
+      CUAS_ERROR("CUASModel.cpp: init(): The values of xAxis are not evenly spaced across all time steps. Exiting.");
       exit(1);
     }
   }
 
   for (int i = 0; i < yAxis.size() - 1; ++i) {
     if (std::fabs(yAxis[i + 1] - yAxis[i] - dy) > std::numeric_limits<double>::epsilon()) {
-      Logger::instance().error(
-          "CUASModel.cpp: init(): The values of yAxis are not evenly spaced across all time steps. Exiting.");
+      CUAS_ERROR("CUASModel.cpp: init(): The values of yAxis are not evenly spaced across all time steps. Exiting.");
       exit(1);
     }
   }

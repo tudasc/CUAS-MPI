@@ -18,12 +18,11 @@ class TimeForcing : public Forcing {
                        std::vector<int> const &time_forcing, bool const loopForcing)
       : time_forcing(time_forcing), loopForcing(loopForcing) {
     if (time_forcing.size() != forcing.size()) {
-      Logger::instance().error("TimeForcing.h: time_forcing and forcing sizes are not compatible. Exiting.");
+      CUAS_ERROR("TimeForcing.h: time_forcing and forcing sizes are not compatible. Exiting.");
       exit(1);
     }
     if (time_forcing.size() < 2) {
-      Logger::instance().error(
-          "TimeForcing.h: time_forcing is smaller than 2. Did you want to use ConstantForcing? Exiting.");
+      CUAS_ERROR("TimeForcing.h: time_forcing is smaller than 2. Did you want to use ConstantForcing? Exiting.");
       exit(1);
     }
     currQ = std::make_unique<PETScGrid>(forcing[0]->getTotalNumOfCols(), forcing[0]->getTotalNumOfRows());
@@ -35,21 +34,21 @@ class TimeForcing : public Forcing {
 
   virtual PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override {
     if (currTime < 0) {
-      Logger::instance().error("TimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.");
+      CUAS_ERROR("TimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.");
       exit(1);
     }
 
     if (loopForcing) {
       currTime = std::fmod(currTime, time_forcing.back());
     } else if (currTime >= time_forcing.back()) {
-      Logger::instance().warn(
+      CUAS_WARN(
           "TimeForcing.h: getCurrentQ was called with currTime >= time_forcing.back(). Using last Q of forcingStack. "
           "Consider using --loopForcing argument.");
       return *forcingStack.back();
     }
 
     if (currTime <= time_forcing.front()) {
-      Logger::instance().warn(
+      CUAS_WARN(
           "TimeForcing.h: getCurrentQ was called with currTime <= time_forcing.front(). Using first Q of "
           "forcingStack.");
       return *forcingStack.front();

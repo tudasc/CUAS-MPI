@@ -122,7 +122,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   // by using explicit positional arguments for input and output this should not happen
   if (result.count("positional")) {
-    Logger::instance().error("CUASArgs.cpp: parseArgs(): Only two positional arguments allowed. Exiting.");
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): Only two positional arguments allowed. Exiting.");
     exit(1);
   }
 
@@ -164,8 +164,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   evaluateDoChannels(args, doChannels, selectedChannels);
 
   if (args.verbose) {
-    Logger::instance().info("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
-                            result["output"].as<std::string>());
+    CUAS_INFO_RANK0("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
+                    result["output"].as<std::string>());
   }
 }
 

@@ -2,6 +2,11 @@
 
 #include "gtest/gtest.h"
 
+#include "petsc.h"
+
+int mpiRank;
+int mpiSize;
+
 TEST(CUASArgs, allOpts) {
   int argc = 21;
   char arg0[] = "test";
@@ -157,4 +162,14 @@ TEST(CUASArgs, selectiveChannels) {
       ASSERT_EQ(args.doCavity, false);
     }
   }
+}
+
+int main(int argc, char *argv[]) {
+  ::testing::InitGoogleTest(&argc, argv);
+  PetscInitialize(&argc, &argv, nullptr, nullptr);
+  MPI_Comm_size(PETSC_COMM_WORLD, &mpiSize);
+  MPI_Comm_rank(PETSC_COMM_WORLD, &mpiRank);
+  int result = RUN_ALL_TESTS();
+  PetscFinalize();
+  return result;
 }

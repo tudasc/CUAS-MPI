@@ -47,13 +47,13 @@ class PETScGrid {
     PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
       if (ghosted) {
         if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
-          Logger::instance().error("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
+          CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
           exit(1);
         }
         return grid->valuesGhosted[i][j];
       } else {
         if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
-          Logger::instance().error("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
+          CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
           exit(1);
         }
         return grid->values[i][j];
@@ -76,7 +76,7 @@ class PETScGrid {
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
-        Logger::instance().error("PETScGrid.h: WriteHandle: Access out of range. Exiting.");
+        CUAS_ERROR("PETScGrid.h: WriteHandle: Access out of range. Exiting.");
         exit(1);
       }
       return grid->values[i][j];
@@ -97,7 +97,7 @@ class PETScGrid {
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
-        Logger::instance().error("PETScGrid.h: WriteHandleGhost: Access out of range. Exiting.");
+        CUAS_ERROR("PETScGrid.h: WriteHandleGhost: Access out of range. Exiting.");
         exit(1);
       }
       return grid->valuesGhosted[i][j];
