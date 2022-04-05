@@ -8,7 +8,6 @@ int mpiRank;
 int mpiSize;
 
 TEST(CUASArgs, allOpts) {
-  int argc = 21;
   char arg0[] = "test";
   char arg1[] = "--Tmax=7";
   char arg2[] = "--Tmin=3";
@@ -34,6 +33,8 @@ TEST(CUASArgs, allOpts) {
 
   char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9, arg10,
                   arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20};
+  int argc = sizeof(argv) / sizeof(argv[0]);
+
   CUAS::CUASArgs args;
   CUAS::parseArgs(argc, argv, args);
 
@@ -64,8 +65,8 @@ TEST(CUASArgs, allOpts) {
 }
 
 TEST(CUASArgs, selectiveChannels) {
-  int argc = 3;
-  char *argv[3];
+  constexpr int argc = 3;
+  char *argv[argc];
   char arg0[] = "test";
   argv[0] = arg0;
 
