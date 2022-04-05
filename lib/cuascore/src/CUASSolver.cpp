@@ -184,7 +184,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt, theta, *u_n, currentQ,
                  *dirichletValues, *model->bndMask);
     // solve the equation A*sol = b
-    PETScSolver::solve(A, b, *sol);
+    PETScSolver::solve(A, b, *sol, args->verboseSolver);
 
     u->setGlobalVecColMajor(*sol);
 
