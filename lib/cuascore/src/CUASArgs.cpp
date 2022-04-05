@@ -20,6 +20,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        "Print help")
       ("v,verbose",
        "Verbose output. Disables Progressbar")
+      ("verboseSolver",
+       "Verbose Solver output.")
       ("version",
        "Show version information")
       ("x,Tmax",
@@ -154,6 +156,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.version = result["version"].as<bool>();
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
+  args.verboseSolver = result["verboseSolver"].as<bool>();
   args.input = result["input"].as<std::string>();
   args.output = result["output"].as<std::string>();
   args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')

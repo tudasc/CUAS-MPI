@@ -9,6 +9,7 @@ int mpiSize;
 
 #define MPI_SIZE 4
 #define VEC_SIZE 4
+#define VERBOSE true
 
 TEST(PetscSolverTest, solve) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
@@ -25,7 +26,7 @@ TEST(PetscSolverTest, solve) {
   b->setValue(mpiRank, mpiRank);
   b->assemble();
 
-  PETScSolver::solve(*A, *b, *s);
+  PETScSolver::solve(*A, *b, *s, VERBOSE);
 
   PetscScalar v;
   int p[] = {mpiRank};

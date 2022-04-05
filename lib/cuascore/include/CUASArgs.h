@@ -39,6 +39,7 @@ struct CUASArgs {
   bool version;
   std::string seaLevelForcing;
   bool verbose;
+  bool verboseSolver;
   std::string input;
   std::string output;
   std::string outputSize;
