@@ -151,10 +151,10 @@ TEST(noDataTest, solverComparisonDirect) {
   auto &uPyRH = uPy.getReadHandle();
   auto &u_nPyRH = u_nPy.getReadHandle();
 
-  auto &uGRH = solver.u->getReadHandle();
-  auto &u_nGRH = solver.u_n->getReadHandle();
-  for (int i = 0; i < solver.u->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < solver.u->getLocalNumOfCols(); ++j) {
+  auto &uGRH = solver.nextHead->getReadHandle();
+  auto &u_nGRH = solver.currHead->getReadHandle();
+  for (int i = 0; i < solver.nextHead->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < solver.nextHead->getLocalNumOfCols(); ++j) {
       ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;
       ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;  // obsolete
     }
@@ -200,10 +200,10 @@ TEST(noDataTest, solverComparison) {
   auto &uPyRH = uPy.getReadHandle();
   auto &u_nPyRH = u_nPy.getReadHandle();
 
-  auto &uGRH = solver.u->getReadHandle();
-  auto &u_nGRH = solver.u_n->getReadHandle();
-  for (int i = 0; i < solver.u->getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < solver.u->getLocalNumOfCols(); ++j) {
+  auto &uGRH = solver.nextHead->getReadHandle();
+  auto &u_nGRH = solver.currHead->getReadHandle();
+  for (int i = 0; i < solver.nextHead->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < solver.nextHead->getLocalNumOfCols(); ++j) {
       ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6);
       ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6);
     }

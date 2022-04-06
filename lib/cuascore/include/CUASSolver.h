@@ -17,13 +17,13 @@ class CUASSolver {
     int numOfCols = model->Ncols;
     int numOfRows = model->Nrows;
 
-    u = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    u_n = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     S = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     Sp = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     K = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    T = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    T_n = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
@@ -37,16 +37,16 @@ class CUASSolver {
   void setup();
 
  public:
-  std::unique_ptr<PETScGrid> u;    // unknown u at new time level
-  std::unique_ptr<PETScGrid> u_n;  // u at the previous time level
+  std::unique_ptr<PETScGrid> nextHead;  // unknown head at new time level
+  std::unique_ptr<PETScGrid> currHead;  // head at the current time level
   std::unique_ptr<PETScVector> sol;
 
  private:
   std::unique_ptr<PETScGrid> S;
   std::unique_ptr<PETScGrid> Sp;
   std::unique_ptr<PETScGrid> K;
-  std::unique_ptr<PETScGrid> T;
-  std::unique_ptr<PETScGrid> T_n;
+  std::unique_ptr<PETScGrid> nextTransmissivity;
+  std::unique_ptr<PETScGrid> currTransmissivity;
   std::unique_ptr<PETScGrid> gradMask;
   std::unique_ptr<PETScGrid> dirichletValues;
 
