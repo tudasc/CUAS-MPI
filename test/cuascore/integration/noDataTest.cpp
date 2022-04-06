@@ -111,6 +111,56 @@ TEST(noDataTest, compareModelToPython) {
   }
 }
 
+TEST(noDataTest, solverComparisonDirect) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+  auto pmodel = fillNoData();
+  auto &model = *pmodel;
+  model.init();
+
+  CUAS::CUASArgs args;
+  CUAS::parseArgs(m_argc, m_argv, args);
+
+  CUAS::CUASSolver solver(&model, &args);
+  solver.setup();
+
+  // auto n = 7300;
+  auto n = 73;  // as T is const., we would only need a few time steps to pass
+  CUAS::timeSecs dt_secs = 43200;
+  CUAS::timeSecs totaltime_secs = dt_secs * n;
+
+  auto timeSteps = CUAS::getTimeStepArray(0, totaltime_secs, dt_secs);
+
+  solver.solve(timeSteps);
+
+  PETScGrid uPy(NX, NY);
+  PETScGrid u_nPy(NX, NY);
+  {
+    auto uPyH = uPy.getWriteHandle();
+    auto u_nPyH = u_nPy.getWriteHandle();
+
+    int cornerX = uPy.getCornerX();
+    int cornerY = uPy.getCornerY();
+    for (int i = 0; i < uPy.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < uPy.getLocalNumOfCols(); ++j) {
+        uPyH(i, j) = u[cornerY + i][cornerX + j];
+        u_nPyH(i, j) = u_n[cornerY + i][cornerX + j];
+      }
+    }
+  }
+
+  auto &uPyRH = uPy.getReadHandle();
+  auto &u_nPyRH = u_nPy.getReadHandle();
+
+  auto &uGRH = solver.u->getReadHandle();
+  auto &u_nGRH = solver.u_n->getReadHandle();
+  for (int i = 0; i < solver.u->getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < solver.u->getLocalNumOfCols(); ++j) {
+      ASSERT_NEAR(uGRH(i, j), uPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;
+      ASSERT_NEAR(u_nGRH(i, j), u_nPyRH(i, j), 0.6) << "at i=" << i << ", j=" << j;  // obsolete
+    }
+  }
+}
+
 TEST(noDataTest, solverComparison) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
   auto pmodel = fillNoData();

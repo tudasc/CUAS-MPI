@@ -24,6 +24,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        "Verbose output. Disables Progressbar")
       ("verboseSolver",
        "Verbose Solver output.")
+      ("directSolver",
+       "Set PETSc options for MUMPS+PARMETIS. ")
       ("version",
        "Show version information")
       ("x,Tmax",
@@ -163,6 +165,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
   args.verboseSolver = result["verboseSolver"].as<bool>();
+  args.directSolver = result["directSolver"].as<bool>();
   args.input = result["input"].as<std::string>();
   args.output = result["output"].as<std::string>();
   args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')
