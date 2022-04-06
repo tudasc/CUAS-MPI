@@ -7,6 +7,8 @@ add_library(cuascore
   src/NetCDFFile.cpp
   src/SolutionHandler.cpp
   src/ModelReader.cpp
+  src/utilities.cpp
+  src/version.cpp
 )
 
 target_include_directories(cuascore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
