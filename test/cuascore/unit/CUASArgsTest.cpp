@@ -31,9 +31,10 @@ TEST(CUASArgs, allOpts) {
   char arg19[] = "--verbose";
   char arg20[] = "--timeStepFile='timesteps.nc'";
   char arg21[] = "--verboseSolver";
+  char arg22[] = "--directSolver";
 
-  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,  arg10,
-                  arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21};
+  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,  arg10, arg11,
+                  arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22};
   int argc = sizeof(argv) / sizeof(argv[0]);
 
   CUAS::CUASArgs args;
@@ -41,6 +42,7 @@ TEST(CUASArgs, allOpts) {
 
   ASSERT_EQ(args.verbose, true);
   ASSERT_EQ(args.verboseSolver, true);
+  ASSERT_EQ(args.directSolver, true);
   ASSERT_EQ(args.Tmax, 7);
   ASSERT_EQ(args.Tmin, 3);
   ASSERT_EQ(args.totaltime, "'4 Weeks'");

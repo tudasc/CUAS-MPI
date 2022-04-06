@@ -186,7 +186,8 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   // ignore (std::string) tempResults,
   // ignore (bool) version,
   file->addGlobalAttribute("seaLevelForcing", args.seaLevelForcing);
-  // ignore (bool) verbose,
+  // ignore (bool) verbose and (bool) verboseSolver,
+  file->addGlobalAttribute("directSolver", args.directSolver);
   file->addGlobalAttribute("input", args.input);
   file->addGlobalAttribute("output", args.output);
   file->addGlobalAttribute("outputSize", args.outputSize);
