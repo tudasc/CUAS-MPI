@@ -24,6 +24,25 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
     }
     time.timeSteps = CUAS::getTimeStepArray(0, CUAS::parseTime(args.totaltime), CUAS::parseTime(args.dt));
   }
+
+  if (args.verbose) {
+    CUAS_INFO_RANK0("Number of time steps = {}", time.timeSteps.size() - 1);
+  }
+}
+
+// store at least initial conditions and the final results
+// unless saveEvery is negative --> no output
+std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args, CUAS::Time const &time,
+                                                            CUAS::CUASModel const &model) {
+  if (args.saveEvery < 0)
+    return nullptr;
+
+  if (args.saveEvery == 0) {
+    CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size());
+    args.saveEvery = time.timeSteps.size();
+  }
+
+  return std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
 }
 
 int main(int argc, char *argv[]) {
@@ -41,13 +60,7 @@ int main(int argc, char *argv[]) {
     CUAS::Time time;
     setupTime(time, args);
 
-    std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
-    if (args.saveEvery > 0) {
-      solutionHandler =
-          std::make_unique<CUAS::SolutionHandler>(args.output, model->Ncols, model->Nrows, args.outputSize);
-    } else {
-      solutionHandler = nullptr;
-    }
+    std::unique_ptr<CUAS::SolutionHandler> solutionHandler = setupSolutionHandler(args, time, *model);
 
     if (solutionHandler != nullptr) {
       if (!time.units.empty()) {
