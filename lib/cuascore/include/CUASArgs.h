@@ -36,7 +36,6 @@ struct CUASArgs {
   PetscScalar cavityBeta;
   std::string initialHead;
   std::string tempResults;
-  bool version;
   std::string seaLevelForcing;
   bool verbose;
   bool verboseSolver;

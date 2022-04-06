@@ -1,5 +1,7 @@
 #include "CUASArgs.h"
 
+#include "utilities.h"
+
 #include "Logger.h"
 
 #include "cxxopts.hpp"
@@ -122,6 +124,11 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
     exit(0);
   }
 
+  if (result.count("version")) {
+    std::cout << CUAS::version() << std::endl;
+    exit(0);
+  }
+
   // by using explicit positional arguments for input and output this should not happen
   if (result.count("positional")) {
     CUAS_ERROR("CUASArgs.cpp: parseArgs(): Only two positional arguments allowed. Exiting.");
@@ -153,7 +160,6 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.cavityBeta = result["cavityBeta"].as<PetscScalar>();
   args.initialHead = result["initialHead"].as<std::string>();
   args.tempResults = result["tempResults"].as<std::string>();
-  args.version = result["version"].as<bool>();
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
   args.verboseSolver = result["verboseSolver"].as<bool>();

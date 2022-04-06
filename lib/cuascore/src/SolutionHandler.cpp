@@ -1,5 +1,7 @@
 #include "SolutionHandler.h"
 
+#include "utilities.h"  // for CUAS::version
+
 namespace CUAS {
 
 SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize) {
@@ -188,6 +190,9 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("input", args.input);
   file->addGlobalAttribute("output", args.output);
   file->addGlobalAttribute("outputSize", args.outputSize);
+
+  // compile time CUASConstants
+  file->addGlobalAttribute("version", CUAS::version());
 
   // store initial conditions if needed
   storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, melt, creep, cavity);
