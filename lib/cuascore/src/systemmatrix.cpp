@@ -19,7 +19,7 @@ void systemmatrix(PETScMatrix &A, PETScVector &b, int const Nx, int const Ny, PE
   auto cornerY = hydraulicStorativity.getCornerY();
   auto cornerXGhost = hydraulicStorativity.getCornerXGhost();
   auto cornerYGhost = hydraulicStorativity.getCornerYGhost();
-  // note: T and u_n are taken local, because we potentially need to access ghost-cells
+  // note: transmissivity and head are taken local, because we potentially need to access ghost-cells
   auto &mask = bndMask.getReadHandle();
   auto &values = dirichletValues.getReadHandle();
   auto &storativity = hydraulicStorativity.getReadHandle();
@@ -42,13 +42,13 @@ void systemmatrix(PETScMatrix &A, PETScVector &b, int const Nx, int const Ny, PE
     currJ = j + cornerX;
     for (int i = 0; i < numOfRows; ++i) {
       currI = i + cornerY;
-      // needed for T and u_n in order to use LocalArray rather than GlobalArray
+      // needed for transmissivity and head in order to use LocalArray rather than GlobalArray
       ghostI = i + (cornerY - cornerYGhost);
       ghostJ = j + (cornerX - cornerXGhost);
       if (mask(i, j) != (PetscScalar)COMPUTE_FLAG) {
         // is filling the Mat with setValue performant?
         p = m(currI, currJ, Nx);
-        A.setValue(p, p, 1);
+        A.setValue(p, p, 1.0);
         b.setValue(p, values(i, j));
       } else {
         S_P = storativity(i, j);
@@ -61,7 +61,7 @@ void systemmatrix(PETScMatrix &A, PETScVector &b, int const Nx, int const Ny, PE
         A_S = -theta * dt / S_P * d_S;
         A_W = -theta * dt / S_P * d_W;
         A_E = -theta * dt / S_P * d_E;
-        A_P = 1 - theta * dt / S_P * d_P;
+        A_P = 1.0 - theta * dt / S_P * d_P;
         p = m(currI, currJ, Nx);
         // fill A matrix
         // might be beneficial to set those values together using MatSetValues,
@@ -78,7 +78,7 @@ void systemmatrix(PETScMatrix &A, PETScVector &b, int const Nx, int const Ny, PE
         A.setValue(p, m(currI, currJ + 1, Nx), A_N);
         // fill b
         PetscScalar value = head(ghostI, ghostJ, GHOSTED) +
-                            (1 - theta) * dt / S_P *
+                            (1.0 - theta) * dt / S_P *
                                 (d_N * head(ghostI, ghostJ + 1, GHOSTED) + d_S * head(ghostI, ghostJ - 1, GHOSTED) +
                                  d_P * head(ghostI, ghostJ, GHOSTED) + d_W * head(ghostI - 1, ghostJ, GHOSTED) +
                                  d_E * head(ghostI + 1, ghostJ, GHOSTED)) +

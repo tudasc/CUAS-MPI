@@ -21,16 +21,16 @@ void CUASSolver::setup() {
 
   auto bt = args->layerThickness;
 
-  T->setConst(0.2);
+  nextTransmissivity->setConst(0.2);
 
   S->setConst(Ss * bt * args->Ssmulti);
 
   auto K_arr = K->getWriteHandle();
-  auto T_arr = T->getWriteHandle();
+  auto T_arr = nextTransmissivity->getWriteHandle();
   auto &mask = model->bndMask->getReadHandle();
 
-  auto rows = T->getLocalNumOfRows();
-  auto cols = T->getLocalNumOfCols();
+  auto rows = nextTransmissivity->getLocalNumOfRows();
+  auto cols = nextTransmissivity->getLocalNumOfCols();
 
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
@@ -44,7 +44,7 @@ void CUASSolver::setup() {
   // needed for function call later on
   T_arr.setValues();
 
-  T_n->copy(*T);
+  currTransmissivity->copy(*nextTransmissivity);
 
   // local noFlowMask
   {
@@ -100,17 +100,17 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   PETScVector b(model->Nrows * model->Ncols);
 
   if (args->initialHead == "zero") {
-    u_n->setZero();
+    currHead->setZero();
   } else if (args->initialHead == "Nzero") {
-    pressure2head(*u_n, *model->pIce, *model->topg, 0.0);
+    pressure2head(*currHead, *model->pIce, *model->topg, 0.0);
   } else if (args->initialHead == "topg") {
-    u_n->copy(*model->topg);
+    currHead->copy(*model->topg);
   } else {
     CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero or topg. Exiting.");
     exit(1);
   }
 
-  // TODO: restart needs to read T_n, u_n
+  // TODO: restart needs to read currTransmissivity (T_n), currHead (u_n)
   //  if(args->restart){
   //    if(args->verbose){
   //      std::cout << "Read restart from file " << args->restart << std::endl;
@@ -120,12 +120,12 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
 
   // after restart apply checks and set values consistent to cuas mask
   {
-    auto trans = T_n->getWriteHandle();
-    auto head = u_n->getWriteHandle();
+    auto trans = currTransmissivity->getWriteHandle();
+    auto head = currHead->getWriteHandle();
     auto &mask = model->bndMask->getReadHandle();
 
-    auto rows = T_n->getLocalNumOfRows();
-    auto cols = T_n->getLocalNumOfCols();
+    auto rows = currTransmissivity->getLocalNumOfRows();
+    auto cols = currTransmissivity->getLocalNumOfCols();
 
     for (int i = 0; i < rows; ++i) {
       for (int j = 0; j < cols; ++j) {
@@ -140,7 +140,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       }
     }
   }
-  dirichletValues->copy(*u_n);  // store initial values as dirichlet values for this run
+  dirichletValues->copy(*currHead);  // store initial values as dirichlet values for this run
 
   // TODO!! solution init (part of saving to netcdf, see original-python main: 272-274)
   // melt, creep and Q are supposed to be part of the solution class.
@@ -163,12 +163,12 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   PETScGrid Se(Sp->getTotalNumOfCols(), Sp->getTotalNumOfRows());
   int size = model->Ncols * model->Nrows;
   PETScMatrix A(size, size);
-  PETScGrid Teff(T->getTotalNumOfCols(), T->getTotalNumOfRows());
-  PETScGrid TeffPowTexp(T->getTotalNumOfCols(), T->getTotalNumOfRows());
+  PETScGrid Teff(nextTransmissivity->getTotalNumOfCols(), nextTransmissivity->getTotalNumOfRows());
+  PETScGrid TeffPowTexp(nextTransmissivity->getTotalNumOfCols(), nextTransmissivity->getTotalNumOfRows());
 
   // initial condition
   if (solutionHandler != nullptr) {
-    solutionHandler->storeInitialSetup(*u, *T, *model, melt, creep, cavity, *args);
+    solutionHandler->storeInitialSetup(*nextHead, *nextTransmissivity, *model, melt, creep, cavity, *args);
   }
 
   if (args->verbose) {
@@ -190,42 +190,43 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     // copying T to Teff is done inside if and else
     // enable_unconfied
     if (!args->disableUnconfined) {
-      enableUnconfined(Teff, TeffPowTexp, *Sp, *T_n, *K, *model->topg, *u_n, args->Texp, args->unconfSmooth,
-                       args->layerThickness);
+      enableUnconfined(Teff, TeffPowTexp, *Sp, *currTransmissivity, *K, *model->topg, *currHead, args->Texp,
+                       args->unconfSmooth, args->layerThickness);
     } else {
       Sp->setZero();
-      calculateTeffPowTexp(Teff, TeffPowTexp, *T, args->Texp);
+      calculateTeffPowTexp(Teff, TeffPowTexp, *nextTransmissivity, args->Texp);
     }
 
     calculateSeValues(Se, *Sp, *S);
 
-    systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt, theta, *u_n, currentQ,
+    systemmatrix(A, b, model->Nrows, model->Ncols, Se, TeffPowTexp, model->dx, dt, theta, *currHead, currentQ,
                  *dirichletValues, *model->bndMask);
     // solve the equation A*sol = b
     PETScSolver::solve(A, b, *sol, args->verboseSolver && !args->directSolver);
 
-    u->setGlobalVecColMajor(*sol);
+    nextHead->setGlobalVecColMajor(*sol);
 
     if (args->doAllChannels) {
-      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *model->bndMask, cavity,
-                 args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
-                 args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt);
+      doChannels(melt, creep, *currHead, *gradMask, *nextTransmissivity, *currTransmissivity, *model->pIce,
+                 *model->topg, *K, *model->bndMask, cavity, args->flowConstant, args->Texp, args->roughnessFactor,
+                 args->noSmoothMelt, args->cavityBeta, args->basalVelocityIce, args->Tmin, args->Tmax,
+                 args->layerThickness, model->dx, dt);
     } else if (args->doAnyChannel) {
-      doChannels(melt, creep, *u_n, *gradMask, *T, *T_n, *model->pIce, *model->topg, *K, *model->bndMask, cavity,
-                 args->flowConstant, args->Texp, args->roughnessFactor, args->noSmoothMelt, args->cavityBeta,
-                 args->basalVelocityIce, args->Tmin, args->Tmax, args->layerThickness, model->dx, dt, args->doMelt,
-                 args->doCreep, args->doCavity);
+      doChannels(melt, creep, *currHead, *gradMask, *nextTransmissivity, *currTransmissivity, *model->pIce,
+                 *model->topg, *K, *model->bndMask, cavity, args->flowConstant, args->Texp, args->roughnessFactor,
+                 args->noSmoothMelt, args->cavityBeta, args->basalVelocityIce, args->Tmin, args->Tmax,
+                 args->layerThickness, model->dx, dt, args->doMelt, args->doCreep, args->doCavity);
     } else {
       noChannels(melt, creep, cavity);
     }
 
     // switch pointers
-    u_n.swap(u);
-    T_n.swap(T);
+    currHead.swap(nextHead);
+    currTransmissivity.swap(nextTransmissivity);
 
     if (solutionHandler != nullptr &&
         ((timeStepIndex % args->saveEvery == 0) || (timeStepIndex == timeSteps.size() - 1))) {
-      solutionHandler->storeSolution(currTime, *u, *T, *model, melt, creep, cavity);
+      solutionHandler->storeSolution(currTime, *nextHead, *nextTransmissivity, *model, melt, creep, cavity);
     }
   }
 
