@@ -12,6 +12,8 @@
 
 #include <cmath>
 #include <memory>
+#include <stdexcept>
+#include <string>
 
 namespace CUAS {
 
@@ -45,6 +47,31 @@ void CUASSolver::setup() {
   T_arr.setValues();
 
   currTransmissivity->copy(*nextTransmissivity);
+
+  //
+  // initialize the head
+  //
+  if (args->initialHead == "zero") {
+    currHead->setZero();
+  } else if (args->initialHead == "Nzero") {
+    pressure2head(*currHead, *model->pIce, *model->topg, 0.0);
+  } else if (args->initialHead == "topg") {
+    currHead->copy(*model->topg);
+  } else {
+    try {
+      auto initialHeadValue = (PetscScalar)std::stod(args->initialHead);
+      currHead->setConst(initialHeadValue);
+    } catch (std::invalid_argument const &ex) {
+      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead invalid_argument: '" + args->initialHead + "'. Exiting.");
+      exit(1);
+    } catch (std::out_of_range const &ex) {
+      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead out_of_range: '" + args->initialHead + "'. Exiting.");
+      exit(1);
+    } catch (...) {
+      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero, topg or valid number. Exiting.");
+      exit(1);
+    }
+  }
 
   // local noFlowMask
   {
@@ -98,17 +125,6 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   const int theta = 1;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
 
   PETScVector b(model->Nrows * model->Ncols);
-
-  if (args->initialHead == "zero") {
-    currHead->setZero();
-  } else if (args->initialHead == "Nzero") {
-    pressure2head(*currHead, *model->pIce, *model->topg, 0.0);
-  } else if (args->initialHead == "topg") {
-    currHead->copy(*model->topg);
-  } else {
-    CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero or topg. Exiting.");
-    exit(1);
-  }
 
   // TODO: restart needs to read currTransmissivity (T_n), currHead (u_n)
   //  if(args->restart){

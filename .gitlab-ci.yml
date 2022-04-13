@@ -86,6 +86,7 @@ test-cuascore:
     - mpirun -n 3 --timeout 60 ./test-NetCDFFile
     - mpirun -n 4 --timeout 60 ./test-NetCDFFile
     - mpirun -n 4 --timeout 60 ./test-SolutionHandler
+    - mpirun -n 4 --timeout 10 ./test-initialHead
     #- ./test-ModelReader
 
 test-cuas:

@@ -1,6 +1,6 @@
 add_executable(test-systemmatrix
         systemmatrixTest.cpp
-)
+        )
 target_link_libraries(test-systemmatrix cuascore)
 target_link_libraries(test-systemmatrix gtest)
 
@@ -58,6 +58,12 @@ add_executable(test-SolutionHandler
 target_link_libraries(test-SolutionHandler cuascore)
 target_link_libraries(test-SolutionHandler gtest)
 
+add_executable(test-initialHead
+        initialHeadTest.cpp
+        )
+target_link_libraries(test-initialHead cuascore)
+target_link_libraries(test-initialHead gtest)
+
 install(TARGETS test-systemmatrix DESTINATION test/cuascore/unit)
 install(TARGETS test-CUASKernels DESTINATION test/cuascore/unit)
 install(TARGETS test-specialgradient DESTINATION test/cuascore/unit)
@@ -68,4 +74,5 @@ install(TARGETS test-forcing DESTINATION test/cuascore/unit)
 install(TARGETS test-NetCDFFile DESTINATION test/cuascore/unit)
 install(TARGETS test-ModelReader DESTINATION test/cuascore/unit)
 install(TARGETS test-SolutionHandler DESTINATION test/cuascore/unit)
+install(TARGETS test-initialHead DESTINATION test/cuascore/unit)
 
