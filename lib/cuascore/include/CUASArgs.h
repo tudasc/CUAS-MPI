@@ -27,6 +27,7 @@ struct CUASArgs {
   PetscScalar layerThickness;
   PetscScalar unconfSmooth;
   std::string restart;
+  bool restartNoneZeroInitialGuess;
   PetscScalar Ssmulti;
   PetscScalar Sy;
   PetscScalar Texp;

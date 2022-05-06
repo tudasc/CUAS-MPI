@@ -13,10 +13,7 @@ namespace CUAS {
 class CUASSolver {
  public:
   explicit CUASSolver(CUASModel *model, CUASArgs const *const args, CUAS::SolutionHandler *solutionHandler = nullptr)
-      : model(model), args(args), solutionHandler(solutionHandler) {
-    int numOfCols = model->Ncols;
-    int numOfRows = model->Nrows;
-
+      : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
     nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
     S = std::make_unique<PETScGrid>(numOfCols, numOfRows);
@@ -39,14 +36,16 @@ class CUASSolver {
  public:
   std::unique_ptr<PETScGrid> nextHead;  // unknown head at new time level
   std::unique_ptr<PETScGrid> currHead;  // head at the current time level
+  std::unique_ptr<PETScGrid> nextTransmissivity;
+  std::unique_ptr<PETScGrid> currTransmissivity;
   std::unique_ptr<PETScVector> sol;
 
  private:
+  int const numOfCols;
+  int const numOfRows;
   std::unique_ptr<PETScGrid> S;
   std::unique_ptr<PETScGrid> Sp;
   std::unique_ptr<PETScGrid> K;
-  std::unique_ptr<PETScGrid> nextTransmissivity;
-  std::unique_ptr<PETScGrid> currTransmissivity;
   std::unique_ptr<PETScGrid> gradMask;
   std::unique_ptr<PETScGrid> dirichletValues;
 
