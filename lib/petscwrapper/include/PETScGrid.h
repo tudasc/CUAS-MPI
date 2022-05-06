@@ -140,6 +140,28 @@ class PETScGrid {
   // zeroes each entry of grid
   void setZero() { setConst(0); }
 
+  void applyOffset(PetscScalar offset) {
+    auto fWrite = getWriteHandle();
+    auto rows = getLocalNumOfRows();
+    auto cols = getLocalNumOfCols();
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        fWrite(i, j) = fWrite(i, j) + offset;
+      }
+    }
+  }
+
+  void applyMultiplier(PetscScalar multiplier) {
+    auto fWrite = getWriteHandle();
+    auto rows = getLocalNumOfRows();
+    auto cols = getLocalNumOfCols();
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
+        fWrite(i, j) = fWrite(i, j) * multiplier;
+      }
+    }
+  }
+
   // copys the content of one grid to another
   void copy(PETScGrid const &input);
 

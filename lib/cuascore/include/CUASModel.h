@@ -25,7 +25,6 @@ class CUASModel {
   std::unique_ptr<PETScGrid> thk;
   std::unique_ptr<PETScGrid> bndMask;
   std::unique_ptr<PETScGrid> pIce;
-  std::unique_ptr<PETScGrid> bmelt;
   std::unique_ptr<Forcing> Q;
 
   void init();

@@ -44,7 +44,7 @@ TEST(fillMatrixTest, randomValues) {
     }
   }
   // using SPY here because the dumped Q was from currentQ after applying forcing
-  auto forcing = std::make_unique<CUAS::ConstantForcing>(QGrid, SPY);
+  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::ConstantForcing>(QGrid);
   CUAS::systemmatrix(MatA, VecB, NY, NX, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrentQ(),
                      dirichValGrid, bndMaskGrid);
 

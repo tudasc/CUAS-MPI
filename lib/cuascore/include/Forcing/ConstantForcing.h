@@ -1,32 +1,33 @@
 #ifndef CUAS_CONSTANTFORCING_H
 #define CUAS_CONSTANTFORCING_H
 
-#include "CUASConstants.h"
 #include "Forcing.h"
+
+#include "CUASConstants.h"
 
 namespace CUAS {
 
 class ConstantForcing : public Forcing {
  public:
-  explicit ConstantForcing(PETScGrid const &m_forcing, PetscScalar const supplyMultiplier)
+  explicit ConstantForcing(PETScGrid const &m_forcing, PetscScalar const multiplier = 1.0,
+                           PetscScalar const offset = 0.0)
       : forcing(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows()) {
-    // TODO this copy is not necessary we can read the data of m_forcing in the loop
     forcing.copy(m_forcing);
 
-    auto fWrite = forcing.getWriteHandle();
-    for (int i = 0; i < forcing.getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < forcing.getLocalNumOfCols(); ++j) {
-        fWrite(i, j) = fWrite(i, j) / SPY * supplyMultiplier;
-      }
-    }
+    applyMultiplier(multiplier);
+    applyOffset(offset);
   };
   ConstantForcing(ConstantForcing &) = delete;
   ConstantForcing(ConstantForcing &&) = delete;
 
-  virtual PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override { return forcing; }
+  PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override { return forcing; }
 
  private:
   PETScGrid forcing;
+
+  void applyMultiplier(PetscScalar multiplier) override { forcing.applyMultiplier(multiplier); }
+
+  void applyOffset(PetscScalar offset) override { forcing.applyOffset(offset); }
 };
 
 }  // namespace CUAS

@@ -3,7 +3,11 @@
 
 #include "CUASModel.h"
 #include "CUASSolver.h"
+#include "Forcing/ConstantForcing.h"
+#include "Forcing/TimeForcing.h"
 #include "NetCDFFile.h"
+
+#include <memory>
 
 // example usage:
 // create a model reader
@@ -24,7 +28,16 @@ class ModelReader {
   std::unique_ptr<CUAS::CUASModel> fillModelFromNetcdf();
   static void restartFromFile(CUAS::CUASSolver &solver, std::string const &restartFile,
                               bool restartNoneZeroInitialGuess);
+  static std::unique_ptr<CUAS::TimeForcing> getTimeForcing(std::string const &timeForcingFileName,
+                                                           std::string const &fieldName, PetscScalar multiplier = 1.0,
+                                                           PetscScalar offset = 0.0, bool loopForcing = false);
+  static std::unique_ptr<CUAS::ConstantForcing> getConstantForcing(std::string const &timeForcingFileName,
+                                                                   std::string const &fieldName,
+                                                                   PetscScalar multiplier = 1.0,
+                                                                   PetscScalar offset = 0.0);
+  static bool isTimeDependentField(std::string const &timeForcingFileName, std::string const &fieldName);
 };
+
 }  // namespace CUAS
 
 #endif

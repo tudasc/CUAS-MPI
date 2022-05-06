@@ -15,7 +15,6 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   Q = nullptr;
   pIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  bmelt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 }
 
 // call init before using Model but after thk has been set

@@ -55,7 +55,7 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   // TODO bmelt vs Q
   PETScGrid bmelt(NODATA_COLS, NODATA_ROWS);
   bmelt.setConst(1);
-  model.Q = std::make_unique<CUAS::ConstantForcing>(bmelt, 1);
+  model.Q = std::make_unique<CUAS::ConstantForcing>(bmelt, 1.0 / SPY);
 
   return pmodel;
 }

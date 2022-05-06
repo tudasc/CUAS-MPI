@@ -3,6 +3,8 @@
 
 #include "Forcing.h"
 
+#include "timeparse.h"
+
 #include "Logger.h"
 
 #include <algorithm>
@@ -14,57 +16,63 @@ namespace CUAS {
 
 class TimeForcing : public Forcing {
  public:
-  explicit TimeForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, PetscScalar const supplyMultiplier,
-                       std::vector<int> const &time_forcing, bool const loopForcing)
-      : time_forcing(time_forcing), loopForcing(loopForcing) {
-    if (time_forcing.size() != forcing.size()) {
-      CUAS_ERROR("TimeForcing.h: time_forcing and forcing sizes are not compatible. Exiting.");
+  explicit TimeForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, std::vector<timeSecs> const &time,
+                       PetscScalar const multiplier = 1.0, PetscScalar const offset = 0.0,
+                       bool const loopForcing = false)
+      : time(time), loopForcing(loopForcing) {
+    if (time.size() != forcing.size()) {
+      CUAS_ERROR("TimeForcing.h: time and forcing sizes are not compatible. Exiting.")
       exit(1);
     }
-    if (time_forcing.size() < 2) {
-      CUAS_ERROR("TimeForcing.h: time_forcing is smaller than 2. Did you want to use ConstantForcing? Exiting.");
+    if (time.size() < 2) {
+      CUAS_ERROR("TimeForcing.h: time is smaller than 2. Did you want to use ConstantForcing? Exiting.")
       exit(1);
     }
     currQ = std::make_unique<PETScGrid>(forcing[0]->getTotalNumOfCols(), forcing[0]->getTotalNumOfRows());
     std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
-    setup(supplyMultiplier);
+
+    if (multiplier != 1.0) {
+      applyMultiplier(multiplier);
+    }
+    if (offset != 0.0) {
+      applyOffset(offset);
+    }
   }
   TimeForcing(TimeForcing &) = delete;
   TimeForcing(TimeForcing &&) = delete;
 
-  virtual PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override {
+  PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override {
     if (currTime < 0) {
-      CUAS_ERROR("TimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.");
+      CUAS_ERROR("TimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.")
       exit(1);
     }
 
     if (loopForcing) {
-      currTime = std::fmod(currTime, time_forcing.back());
-    } else if (currTime >= time_forcing.back()) {
+      currTime = std::fmod(currTime, time.back());
+    } else if (currTime > time.back()) {
       CUAS_WARN(
-          "TimeForcing.h: getCurrentQ was called with currTime >= time_forcing.back(). Using last Q of forcingStack. "
-          "Consider using --loopForcing argument.");
+          "TimeForcing.h: getCurrentQ was called with currTime > time.back(). Using last Q of forcingStack. Consider "
+          "using --loopForcing argument.")
       return *forcingStack.back();
     }
 
-    if (currTime <= time_forcing.front()) {
-      CUAS_WARN(
-          "TimeForcing.h: getCurrentQ was called with currTime <= time_forcing.front(). Using first Q of "
-          "forcingStack.");
+    if (currTime < time.front()) {
+      CUAS_WARN("TimeForcing.h: getCurrentQ was called with currTime < time.front(). Using first Q of forcingStack.")
       return *forcingStack.front();
     }
 
-    // this requires currTime_forcing to be sorted
-    auto upperBound = std::upper_bound(time_forcing.begin(), time_forcing.end(), currTime) - time_forcing.begin();
+    // this requires time to be sorted
+    auto upperBound = std::upper_bound(time.begin(), time.end(), currTime) - time.begin();
     auto lowerBound = upperBound - 1;
 
-    if (time_forcing[lowerBound] == currTime) {
+    if (time[lowerBound] == currTime) {
       return *forcingStack[lowerBound];
     }
 
-    auto div = time_forcing[upperBound] - time_forcing[lowerBound];
-    auto fac1 = (currTime - time_forcing[lowerBound]) / div;
-    auto fac2 = (time_forcing[upperBound] - currTime) / div;
+    // compute weights for linear interpolation
+    auto diff = time[upperBound] - time[lowerBound];
+    auto wUpper = (currTime - time[lowerBound]) / diff;
+    auto wLower = (time[upperBound] - currTime) / diff;
 
     {
       auto fLower = forcingStack[lowerBound]->getReadHandle();
@@ -74,7 +82,7 @@ class TimeForcing : public Forcing {
       auto currQWrite = currQ->getWriteHandle();
       for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
-          currQWrite(i, j) = fUpper(i, j) * fac1 + fLower(i, j) * fac2;
+          currQWrite(i, j) = fUpper(i, j) * wUpper + fLower(i, j) * wLower;
         }
       }
     }
@@ -82,21 +90,20 @@ class TimeForcing : public Forcing {
   }
 
  private:
-  std::vector<int> const time_forcing;
+  std::vector<timeSecs> const time;
   std::vector<std::unique_ptr<PETScGrid>> forcingStack;
   bool const loopForcing;
   std::unique_ptr<PETScGrid> currQ;
 
-  void setup(PetscScalar supplyMultiplier) {
+  void applyMultiplier(PetscScalar multiplier) override {
     for (auto &forcing : forcingStack) {
-      auto fWrite = forcing->getWriteHandle();
-      auto rows = forcing->getLocalNumOfRows();
-      auto cols = forcing->getLocalNumOfCols();
-      for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < cols; ++j) {
-          fWrite(i, j) = fWrite(i, j) / SPY * supplyMultiplier;
-        }
-      }
+      forcing->applyMultiplier(multiplier);
+    }
+  }
+
+  void applyOffset(PetscScalar offset) override {
+    for (auto &forcing : forcingStack) {
+      forcing->applyOffset(offset);
     }
   }
 };

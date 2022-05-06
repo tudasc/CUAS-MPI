@@ -32,6 +32,7 @@ struct CUASArgs {
   PetscScalar Sy;
   PetscScalar Texp;
   bool noSmoothMelt;
+  std::string forcingFile;
   bool loopForcing;
   PetscScalar basalVelocityIce;
   PetscScalar cavityBeta;
