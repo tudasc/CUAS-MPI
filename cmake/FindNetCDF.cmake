@@ -37,7 +37,7 @@ find_library (NETCDF_LIBRARIES_C       NAMES netcdf
   HINTS ${NETCDF_DIR}/lib ${NETCDF_DIR}/lib64)
 mark_as_advanced(NETCDF_LIBRARIES_C)
 
-message(${NETCDF_LIBRARIES_C})
+message(STATUS "NETCDF_LIBRARIES_C ${NETCDF_LIBRARIES_C}")
 
 set (NetCDF_has_interfaces "YES") # will be set to NO if we're missing any interfaces
 set (NetCDF_libs "${NETCDF_LIBRARIES_C}")
@@ -73,8 +73,8 @@ find_package_handle_standard_args (NetCDF DEFAULT_MSG NETCDF_LIBRARIES_C NETCDF_
 
 mark_as_advanced (NETCDF_LIBRARIES NETCDF_INCLUDES)
 
-message("NETCDF_INCLUDES: ${NETCDF_INCLUDES}")
-message("NETCDF_LIBRARIES_C: ${NETCDF_LIBRARIES_C}")
+message(STATUS "NETCDF_INCLUDES: ${NETCDF_INCLUDES}")
+message(STATUS "NETCDF_LIBRARIES_C: ${NETCDF_LIBRARIES_C}")
 
 function(add_netcdf target)
   target_include_directories(${target} SYSTEM PUBLIC

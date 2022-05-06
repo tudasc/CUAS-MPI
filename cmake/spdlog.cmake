@@ -1,17 +1,17 @@
 include(ExternalProject)
-
 # Note, the spdlog library is header only.
-if(DEFINED SPDLOG_INCLUDE)
-  add_custom_target(spdlog
-          COMMAND echo "SPDLOG_INCLUDE predefined: ${SPDLOG_INCLUDE}, skipping rebuild")
+
+if(EXISTS ${SPDLOG_INCLUDE})
+  message(STATUS "SPDLOG_INCLUDE predefined, skipping rebuild")
+  add_custom_target(spdlog)
 else()
   # in lib/petscwrapper/include/Logger.h: #include "spdlog/spdlog.h"
-  find_path(SPDLOG_INCLUDE spdlog/spdlog.h)
-  if(SPDLOG_INCLUDE)
-    add_custom_target(spdlog
-            COMMAND echo "SPDLOG_INCLUDE found in: ${SPDLOG_INCLUDE}, skipping rebuild")
+  find_path(SPDLOG_INCLUDE spdlog/spdlog.h HINT ${CMAKE_CURRENT_SOURCE_DIR}/extern/spdlog/include)
+  if(EXISTS ${SPDLOG_INCLUDE})
+    message(STATUS "SPDLOG_INCLUDE found, skipping rebuild")
+    add_custom_target(spdlog)
   else()
-    message("SPDLOG library not found, download into extern during make")
+    message(STATUS "SPDLOG library not found, download into extern during make")
     ExternalProject_Add(spdlog
       SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/extern/spdlog
       GIT_REPOSITORY      "https://github.com/gabime/spdlog.git"
@@ -26,6 +26,8 @@ else()
   endif()
 endif()
 
+message(STATUS "SPDLOG_INCLUDE ${SPDLOG_INCLUDE}")
+
 function(add_spdlog target)
   add_dependencies(${target}
     spdlog
@@ -35,4 +37,3 @@ function(add_spdlog target)
     ${SPDLOG_INCLUDE}
   )
 endfunction()
-
