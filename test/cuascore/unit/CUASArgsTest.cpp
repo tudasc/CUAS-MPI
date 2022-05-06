@@ -32,10 +32,11 @@ TEST(CUASArgs, allOpts) {
   char arg20[] = "--timeStepFile='timesteps.nc'";
   char arg21[] = "--verboseSolver";
   char arg22[] = "--directSolver";
-  // char arg23[] = "--restartNoneZeroInitialGuess=false";
+  char arg23[] = "--forcingFile='timeforcing.nc'";
+  // char arg24[] = "--restartNoneZeroInitialGuess=false";
 
   char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,  arg10, arg11,
-                  arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22};
+                  arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23};
   int argc = sizeof(argv) / sizeof(argv[0]);
 
   CUAS::CUASArgs args;
@@ -68,6 +69,7 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.output, "'output.nc'");
   ASSERT_EQ(args.input, "'input.nc'");
   ASSERT_EQ(args.timeStepFile, "'timesteps.nc'");
+  ASSERT_EQ(args.forcingFile, "'timeforcing.nc'");
 }
 
 TEST(CUASArgs, selectiveChannels) {

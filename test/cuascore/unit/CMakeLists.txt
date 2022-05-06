@@ -64,6 +64,12 @@ add_executable(test-initialHead
 target_link_libraries(test-initialHead cuascore)
 target_link_libraries(test-initialHead gtest)
 
+add_executable(test-timeForcingNetcdf
+        TimeForcingFromNetcdfTest.cpp
+        )
+target_link_libraries(test-timeForcingNetcdf cuascore)
+target_link_libraries(test-timeForcingNetcdf gtest)
+
 install(TARGETS test-systemmatrix DESTINATION test/cuascore/unit)
 install(TARGETS test-CUASKernels DESTINATION test/cuascore/unit)
 install(TARGETS test-specialgradient DESTINATION test/cuascore/unit)
@@ -75,4 +81,5 @@ install(TARGETS test-NetCDFFile DESTINATION test/cuascore/unit)
 install(TARGETS test-ModelReader DESTINATION test/cuascore/unit)
 install(TARGETS test-SolutionHandler DESTINATION test/cuascore/unit)
 install(TARGETS test-initialHead DESTINATION test/cuascore/unit)
+install(TARGETS test-timeForcingNetcdf DESTINATION test/cuascore/unit)
 

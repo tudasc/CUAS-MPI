@@ -1,6 +1,7 @@
 #include "CUASConstants.h"
 #include "Forcing/ConstantForcing.h"
 #include "Forcing/TimeForcing.h"
+#include "timeparse.h"
 
 #include "gtest/gtest.h"
 
@@ -16,13 +17,13 @@ TEST(forcingTest, constant) {
   bmelt.setConst(1);
 
   auto supplyMultiplier = 1.2;
-  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::ConstantForcing>(bmelt, supplyMultiplier);
+  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::ConstantForcing>(bmelt, supplyMultiplier / SPY);
   // constant forcing: 0, empty vector, false
   auto &read = forcing->getCurrentQ().getReadHandle();
   auto &readBmelt = bmelt.getReadHandle();
   for (int i = 0; i < bmelt.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < bmelt.getLocalNumOfCols(); ++j) {
-      ASSERT_EQ(read(i, j), readBmelt(i, j) / SPY * supplyMultiplier);
+      ASSERT_DOUBLE_EQ(read(i, j), readBmelt(i, j) / SPY * supplyMultiplier);
     }
   }
 }
@@ -39,10 +40,10 @@ TEST(forcingTest, timeForcing) {
   qs[2]->setConst(5);
   qs[3]->setConst(11);
 
-  std::vector<int> time_forcing = {1, 2, 10, 15};
+  std::vector<CUAS::timeSecs> time_forcing = {1, 2, 10, 15};
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing =
-      std::make_unique<CUAS::TimeForcing>(qs, supplyMultiplier, time_forcing, false);
+      std::make_unique<CUAS::TimeForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, false);
 
   // check interpolation
   {
@@ -53,7 +54,7 @@ TEST(forcingTest, timeForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -65,7 +66,7 @@ TEST(forcingTest, timeForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -77,7 +78,7 @@ TEST(forcingTest, timeForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -88,7 +89,7 @@ TEST(forcingTest, timeForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -99,7 +100,7 @@ TEST(forcingTest, timeForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -110,7 +111,7 @@ TEST(forcingTest, timeForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -128,10 +129,10 @@ TEST(forcingTest, loopForcing) {
   qs[2]->setConst(5);
   qs[3]->setConst(11);
 
-  std::vector<int> time_forcing = {1, 2, 10, 15};
+  std::vector<CUAS::timeSecs> time_forcing = {1, 2, 10, 15};
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing =
-      std::make_unique<CUAS::TimeForcing>(qs, supplyMultiplier, time_forcing, true);
+      std::make_unique<CUAS::TimeForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, true);
 
   // check interpolation
   {
@@ -142,7 +143,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -154,7 +155,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -166,7 +167,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -177,7 +178,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -190,7 +191,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -200,7 +201,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }
@@ -211,7 +212,7 @@ TEST(forcingTest, loopForcing) {
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
-        ASSERT_EQ(read1(i, j), result);
+        ASSERT_DOUBLE_EQ(read1(i, j), result);
       }
     }
   }

@@ -8,6 +8,11 @@ namespace CUAS {
 class Forcing {
  public:
   virtual PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) = 0;
+  virtual ~Forcing() = default;
+
+ private:
+  virtual void applyMultiplier(PetscScalar multiplier) = 0;
+  virtual void applyOffset(PetscScalar offset) = 0;
 };
 
 }  // namespace CUAS

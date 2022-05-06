@@ -28,12 +28,6 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        "Set PETSc options for MUMPS+PARMETIS.")
       ("version",
        "Show version information")
-      ("x,Tmax",
-       "Maximum T to be allowed in the evolution.",
-       cxxopts::value<PetscScalar>()->default_value("20.0"))
-      ("i,Tmin",
-       "Minimum T to be allowed in the evolution.",
-       cxxopts::value<PetscScalar>()->default_value("0.0000001"))
       ("input", 
        "Netcdf input file.",
        cxxopts::value<std::string>()->default_value(""))
@@ -66,6 +60,12 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        cxxopts::value<std::string>()->default_value("noselected"))
       ("disableUnconfined",
        "Disable unconfined aquifer case.")
+      ("x,Tmax",
+       "Maximum T to be allowed in the evolution.",
+       cxxopts::value<PetscScalar>()->default_value("20.0"))
+      ("i,Tmin",
+       "Minimum T to be allowed in the evolution.",
+       cxxopts::value<PetscScalar>()->default_value("0.0000001"))
       ("flowConstant",
        "Ice Flow Constant A.",
        cxxopts::value<PetscScalar>()->default_value("5e-25"))
@@ -98,8 +98,6 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        cxxopts::value<PetscScalar>()->default_value("1"))
       ("noSmoothMelt",
        "Smooth melt term before computing change in T?")
-      ("loopForcing",
-       "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
       ("basalVelocityIce",
        "Basal velocity of the ice (m/s)",
        cxxopts::value<PetscScalar>()->default_value("1e-6"))
@@ -111,6 +109,11 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        cxxopts::value<std::string>()->default_value("Nzero"))
       ("tempResults",
        "Save temporary results to this file(s) to later restart from them.",
+       cxxopts::value<std::string>()->default_value(""))
+      ("loopForcing",
+       "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
+      ("forcingFile",
+       "forcing input file (netcdf)",
        cxxopts::value<std::string>()->default_value(""))
       ("seaLevelForcing",
        "Apply sea level forcing from netcdf scalar time series file.",
@@ -162,6 +165,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.Texp = result["Texp"].as<PetscScalar>();
   args.noSmoothMelt = result["noSmoothMelt"].as<bool>();
   args.loopForcing = result["loopForcing"].as<bool>();
+  args.forcingFile = result["forcingFile"].as<std::string>();
   args.basalVelocityIce = result["basalVelocityIce"].as<PetscScalar>();
   args.cavityBeta = result["cavityBeta"].as<PetscScalar>();
   args.initialHead = result["initialHead"].as<std::string>();
