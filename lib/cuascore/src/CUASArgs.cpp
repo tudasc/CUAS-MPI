@@ -25,7 +25,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("verboseSolver",
        "Verbose Solver output.")
       ("directSolver",
-       "Set PETSc options for MUMPS+PARMETIS. ")
+       "Set PETSc options for MUMPS+PARMETIS.")
       ("version",
        "Show version information")
       ("x,Tmax",
@@ -84,6 +84,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("restart",
        "Restart from this file.",
        cxxopts::value<std::string>()->default_value(""))
+      ("restartNoneZeroInitialGuess",
+       "sets solution vector during restart",
+       cxxopts::value<bool>()->default_value("true"))
       ("Ssmulti",
        "Multiplier for specific storage Ss.",
        cxxopts::value<PetscScalar>()->default_value("1.0"))
@@ -153,6 +156,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.layerThickness = result["layerThickness"].as<PetscScalar>();
   args.unconfSmooth = result["unconfSmooth"].as<PetscScalar>();
   args.restart = result["restart"].as<std::string>();
+  args.restartNoneZeroInitialGuess = result["restartNoneZeroInitialGuess"].as<bool>();
   args.Ssmulti = result["Ssmulti"].as<PetscScalar>();
   args.Sy = result["Sy"].as<PetscScalar>();
   args.Texp = result["Texp"].as<PetscScalar>();

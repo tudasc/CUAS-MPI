@@ -45,6 +45,10 @@ std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args
   return std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
 }
 
+void restartFromNetCDF(CUAS::CUASSolver &solver, std::string const &restartFile, bool restartNoneZeroInitialGuess) {
+  CUAS::ModelReader::restartFromFile(solver, restartFile, restartNoneZeroInitialGuess);
+}
+
 int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   {
@@ -73,6 +77,11 @@ int main(int argc, char *argv[]) {
 
     auto solver = std::make_unique<CUAS::CUASSolver>(model.get(), &args, solutionHandler.get());
     solver->setup();
+
+    if (!args.restart.empty()) {
+      restartFromNetCDF(*solver, args.restart, args.restartNoneZeroInitialGuess);
+    }
+
     solver->solve(time.timeSteps);
   }
   PetscFinalize();

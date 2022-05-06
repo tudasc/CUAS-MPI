@@ -2,6 +2,7 @@
 #define CUAS_MODEL_READER_H
 
 #include "CUASModel.h"
+#include "CUASSolver.h"
 #include "NetCDFFile.h"
 
 // example usage:
@@ -19,8 +20,10 @@ class ModelReader {
   std::unique_ptr<NetCDFFile> file;
 
  public:
-  ModelReader(std::string const &fileName);
+  explicit ModelReader(std::string const &fileName);
   std::unique_ptr<CUAS::CUASModel> fillModelFromNetcdf();
+  static void restartFromFile(CUAS::CUASSolver &solver, std::string const &restartFile,
+                              bool restartNoneZeroInitialGuess);
 };
 }  // namespace CUAS
 

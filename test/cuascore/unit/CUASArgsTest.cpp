@@ -32,6 +32,7 @@ TEST(CUASArgs, allOpts) {
   char arg20[] = "--timeStepFile='timesteps.nc'";
   char arg21[] = "--verboseSolver";
   char arg22[] = "--directSolver";
+  // char arg23[] = "--restartNoneZeroInitialGuess=false";
 
   char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,  arg10, arg11,
                   arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22};
@@ -61,6 +62,7 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.layerThickness, 1.334);
   ASSERT_EQ(args.unconfSmooth, 4.3);
   ASSERT_EQ(args.restart, "'restartFile.nc'");
+  ASSERT_EQ(args.restartNoneZeroInitialGuess, true);
   ASSERT_EQ(args.noSmoothMelt, true);
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
   ASSERT_EQ(args.output, "'output.nc'");
