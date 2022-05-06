@@ -51,7 +51,7 @@ include(ToolchainOptions)
 add_subdirectory(lib)
 add_subdirectory(tools)
 
-option(BUILD_TESTS "Build test programs" ON)
+option(BUILD_TESTS "enables building tests" OFF)
 
 if(BUILD_TESTS)
   add_subdirectory(test)
