@@ -55,10 +55,10 @@ test-petscwrapper:
     GIT_STRATEGY: none
   script:
     - cd install/test/petscwrapper/unit
-    - mpirun -n 5 --timeout 10 ./test-PETScVector
-    - mpirun -n 5 --timeout 10 ./test-PETScMatrix
-    - mpirun -n 4 --timeout 10 ./test-PETScSolver
-    - mpirun -n 4 --timeout 10 ./test-PETScGrid
+    - mpirun -n 5 --timeout 60 ./test-PETScVector
+    - mpirun -n 5 --timeout 60 ./test-PETScMatrix
+    - mpirun -n 4 --timeout 60 ./test-PETScSolver
+    - mpirun -n 4 --timeout 60 ./test-PETScGrid
 
 test-cuascore:
   stage: unit-test
@@ -69,21 +69,21 @@ test-cuascore:
     GIT_STRATEGY: none
   script:
     - cd install/test/cuascore/unit
-    - ./test-CUASArgs
-    - ./test-timeparse
-    - mpirun -n 9 --timeout 10 ./test-CUASKernels
-    - mpirun -n 6 --timeout 10 ./test-specialgradient
+    - mpirun -n 1 --timeout 60 ./test-CUASArgs
+    - mpirun -n 1 --timeout 60 ./test-timeparse
+    - mpirun -n 9 --timeout 60 ./test-CUASKernels
+    - mpirun -n 6 --timeout 60 ./test-specialgradient
     - mpirun -n 6 --timeout 60 ./test-forcing
-    - mpirun -n 1 --timeout 10 ./test-systemmatrix
+    - mpirun -n 1 --timeout 60 ./test-systemmatrix
     - mpirun -n 6 --timeout 60 ./test-fillNoData
     - mpirun -n 1 --timeout 60 ./test-NetCDFFile
     - mpirun -n 2 --timeout 60 ./test-NetCDFFile
     - mpirun -n 3 --timeout 60 ./test-NetCDFFile
     - mpirun -n 4 --timeout 60 ./test-NetCDFFile
     - mpirun -n 4 --timeout 60 ./test-SolutionHandler
-    - mpirun -n 4 --timeout 10 ./test-initialHead
-    - mpirun -n 1 --timeout 10 ./test-timeForcingNetcdf
-    #- ./test-ModelReader
+    - mpirun -n 4 --timeout 60 ./test-initialHead
+    #- mpirun -n 1 --timeout 60 ./test-ModelReader
+    #- mpirun -n 1 --timeout 60 ./test-timeForcingNetcdf
 
 test-cuas:
   stage: integration-test
