@@ -32,9 +32,9 @@ else()
     string(STRIP "${GIT_BRANCH}" GIT_BRANCH)
 endif()
 
-set(VERSION "const char* GIT_REV=\"${GIT_REV}${GIT_DIFF}\";
-const char* GIT_TAG=\"${GIT_TAG}\";
-const char* GIT_BRANCH=\"${GIT_BRANCH}\";")
+set(VERSION "const char *GIT_REV = \"${GIT_REV}${GIT_DIFF}\";
+const char *GIT_TAG = \"${GIT_TAG}\";
+const char *GIT_BRANCH = \"${GIT_BRANCH}\";")
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/lib/cuascore/src/version.cpp)
     file(READ ${PROJECT_SOURCE_DIR}/lib/cuascore/src/version.cpp VERSION_)
