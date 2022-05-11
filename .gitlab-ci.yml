@@ -8,6 +8,7 @@ stages:
   - install
   - unit-test
   - integration-test
+  - clang-format
 
 .lb-setup: &lb-setup
   - module load cmake
@@ -95,4 +96,15 @@ test-cuas:
   script:
     - cd install/test/cuascore/integration
     - mpirun -n 9 --timeout 60 ./test-noData
+
+run-clang-format:
+  stage: clang-format
+  tags:
+    - general
+  before_script:
+    - module load gcc llvm
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - ./utils/checkFormat.sh
 
