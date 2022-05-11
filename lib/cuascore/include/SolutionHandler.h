@@ -55,6 +55,8 @@ class SolutionHandler {
   void setTimeUnits(std::string const &s);
   void setCalendar(std::string const &s);
 
+  void storePETScOptions();
+
   ~SolutionHandler();
 };
 }  // namespace CUAS

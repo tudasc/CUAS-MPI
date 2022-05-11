@@ -2,6 +2,8 @@
 
 #include "utilities.h"  // for CUAS::version
 
+#include "petscutil.h"
+
 namespace CUAS {
 
 SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize) {
@@ -254,5 +256,12 @@ void SolutionHandler::setCalendar(std::string const &s) {
   file->addAttributeToVariable("time", "calendar", s);
 }
 
+void SolutionHandler::storePETScOptions() {
+  file->addGlobalAttribute("PETSC_OPTIONS", getPETScOptionsAll());
+  file->addGlobalAttribute("PETSC_OPTIONS_UNUSED", getPETScOptionsUnused());
+  file->addGlobalAttribute("PETSC_OPTIONS_USED", getPETScOptionsUsed());
+}
+
 SolutionHandler::~SolutionHandler() {}
+
 };  // namespace CUAS
