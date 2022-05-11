@@ -100,6 +100,11 @@ int main(int argc, char *argv[]) {
     }
 
     solver->solve(time.timeSteps);
+
+    // todo: store model run-time
+    if (solutionHandler) {
+      solutionHandler->storePETScOptions();
+    }
   }
   PetscFinalize();
   return 0;
