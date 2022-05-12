@@ -36,8 +36,8 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   // first col + first&last row -> NOFLOW_Flag
   // inside: 0
   // first set total boundary to NOFLOW_FLAG
-  model.bndMask->setGlobalBoundariesConst(NOFLOW_FLAG);
-  model.bndMask->setInnerBoundariesConst(NOFLOW_FLAG);
+  model.bndMask->setGhostBoundary(NOFLOW_FLAG);
+  model.bndMask->setRealBoundary(NOFLOW_FLAG);
   // second set last col, do not override corners
   if (model.bndMask->getCornerXGhost() + model.bndMask->getLocalGhostNumOfCols() ==
       model.bndMask->getTotalGhostNumOfCols() - 1) {
