@@ -2,17 +2,34 @@
 #define CUAS_PHYSICALCONSTANTS_H
 
 #include <cfloat>
+#include <netcdf.h>
 
 // Also a tiny value and NOFLOW value which are not really constants but here anyway
-#define TINY FLT_EPSILON
+#ifndef NOFLOW_VALUE
 #define NOFLOW_VALUE 1e-14  // value used to mimic noflow condition
-
-#define RHO_ICE 910
-#define RHO_WATER 1000
-#define LATENT_HEAT 334000
+#endif
+#ifndef TINY
+#define TINY 1.0e-20  // much smaller than NOFLOW_VALUE and consistent with CUAS-python version
+#endif
+#ifndef RHO_ICE
+#define RHO_ICE 910.0
+#endif
+#ifndef SPY
+#define SPY 31536000.0  //  365 day calendar used in lib/cuascore/include/timeparse.h
+#endif
+#ifndef RHO_WATER
+#define RHO_WATER 1000.0
+#endif
+#ifndef LATENT_HEAT
+#define LATENT_HEAT 334000.0
+#endif
+#ifndef GRAVITY
 #define GRAVITY 9.81
-#define SPY 3.154e7
-#define Ss 0.000982977696
+#endif
+
+#ifndef IOFILL
+#define IOFILL NC_FILL_DOUBLE
+#endif
 
 #define COMPUTE_FLAG 0          // active cuas grid point
 #define DIRICHLET_FLAG 1        // lateral boundary

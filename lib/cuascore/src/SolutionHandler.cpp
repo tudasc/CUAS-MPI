@@ -1,5 +1,6 @@
 #include "SolutionHandler.h"
 
+#include "CUASConstants.h"
 #include "utilities.h"  // for CUAS::version
 
 #include "petscutil.h"
@@ -15,6 +16,8 @@ SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY
     osize = OutputSize::NORMAL;
   } else if (outputSize == "large") {
     osize = OutputSize::LARGE;
+  } else if (outputSize == "xlarge" || outputSize == "x-large") {
+    osize = OutputSize::XLARGE;
   } else {
     CUAS_ERROR("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize + "Exiting.");
     exit(1);
@@ -72,9 +75,28 @@ void SolutionHandler::defineSolution() {
    * solver and convergence
    */
   file->defineScalar("eps_inf", UNLIMITED);
+  file->addAttributeToVariable("eps_inf", "units", "m s-1");
+  file->addAttributeToVariable("eps_inf", "standard_name", "head_change_rate");
+  file->addAttributeToVariable("eps_inf", "long_name",
+                               "rate of change in head inf-norm: eps_inf = max(|h^n-h^(n-1)|)/dt");
+
   file->defineScalar("Teps_inf", UNLIMITED);
+  file->addAttributeToVariable("Teps_inf", "units", "m2 s-2");
+  file->addAttributeToVariable("Teps_inf", "standard_name", "transmissivity_change_rate");
+  file->addAttributeToVariable("Teps_inf", "long_name",
+                               "rate of change in transmissivity inf-norm: eps_inf = max(|T^n-T^(n-1)|)/dt");
 
   if (osize >= OutputSize::NORMAL) {
+    file->defineGrid("topg", LIMITED);  // sometimes called bedrock
+    file->addAttributeToVariable("topg", "units", "m");
+    file->addAttributeToVariable("topg", "standard_name", "land_ice_bed_elevation");
+    file->addAttributeToVariable("topg", "long_name", "land_ice_bed_elevation");
+
+    file->defineGrid("watersource", UNLIMITED);
+    file->addAttributeToVariable("watersource", "units", "m s-1");
+    file->addAttributeToVariable("watersource", "standard_name", "water_source");
+    file->addAttributeToVariable("watersource", "long_name", "Water input into model");
+
     /*
      * channel evolution
      */
@@ -109,51 +131,55 @@ void SolutionHandler::defineSolution() {
     file->addAttributeToVariable("flux", "units", "m2 s-1");
     file->addAttributeToVariable("flux", "standard_name", "flux");
     file->addAttributeToVariable("flux", "long_name", "flux");
-    file->addAttributeToVariable("flux", "doc", "flux = T * |grad(head)|");
+    file->addAttributeToVariable("flux", "doc", "flux = T * |grad(head)|");  // fixme: use Texp
   }
 
   if (osize >= OutputSize::LARGE) {
-    /*
-     * geometry
-     */
-
-    file->defineGrid("topg");  // sometimes called bedrock
-    file->addAttributeToVariable("topg", "units", "m");
-    file->addAttributeToVariable("topg", "standard_name", "land_ice_bed_elevation");
-    file->addAttributeToVariable("topg", "long_name", "land_ice_bed_elevation");
-
     file->defineGrid("thk");
     file->addAttributeToVariable("thk", "units", "m");
     file->addAttributeToVariable("thk", "standard_name", "land_ice_thickness");
     file->addAttributeToVariable("thk", "long_name", "land ice thickness");
 
+    file->defineGrid("effective_transmissivity", UNLIMITED);
+    file->addAttributeToVariable("effective_transmissivity", "units", "m2 s-1");
+    file->addAttributeToVariable("effective_transmissivity", "standard_name", "effective_transmissivity");
+    file->addAttributeToVariable("effective_transmissivity", "long_name", "Effective layer transmissivity");
+
+    file->defineGrid("effective_storativity", UNLIMITED);
+    file->addAttributeToVariable("effective_storativity", "units", "1");
+    file->addAttributeToVariable("effective_storativity", "standard_name", "effective_storativity");
+    file->addAttributeToVariable("effective_storativity", "long_name", "Effective layer storativity");
+  }
+
+  if (osize >= OutputSize::XLARGE) {
     file->defineGrid("pice");  // direct input from ice sheet model or computed from geometry
     file->addAttributeToVariable("pice", "units", "Pa");
     file->addAttributeToVariable("pice", "standard_name", "land_ice_pressure");
     file->addAttributeToVariable("pice", "long_name", "land ice pressure");
-
-    /*
-     * diganostics
-     */
-    file->defineGrid("pwater");  // direct input from ice sheet model or computed from geometry
-    file->addAttributeToVariable("pwater", "units", "Pa");
-    file->addAttributeToVariable("pwater", "standard_name", "water_pressure");
-    file->addAttributeToVariable("pwater", "long_name", "water pressure");
   }
 }
 
 void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
-                                        CUASModel const &model, PETScGrid const &melt, PETScGrid const &creep,
-                                        PETScGrid const &cavity, CUASArgs const &args) {
+                                        CUASModel const &model, PETScGrid const &fluxMagnitude, PETScGrid const &melt,
+                                        PETScGrid const &creep, PETScGrid const &cavity,
+                                        PETScGrid const &effectivePressure, PETScGrid const &effectiveStorativity,
+                                        PETScGrid const &effectiveTransmissivity, PETScGrid const &waterSource,
+                                        CUASArgs const &args) {
   file->write("x", model.xAxis);
   file->write("y", model.yAxis);
 
   //
   file->write("bnd_mask", *model.bndMask, nextSolution);
 
-  if (osize >= OutputSize::LARGE) {
+  if (osize >= OutputSize::NORMAL) {
     file->write("topg", *model.topg, nextSolution);
+  }
+
+  if (osize >= OutputSize::LARGE) {
     file->write("thk", *model.thk, nextSolution);
+  }
+
+  if (osize >= OutputSize::XLARGE) {
     file->write("pice", *model.pIce, nextSolution);
   }
 
@@ -177,9 +203,8 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("layerThickness", args.layerThickness);
   file->addGlobalAttribute("unconfSmooth", args.unconfSmooth);
   file->addGlobalAttribute("restart", args.restart);
-  file->addGlobalAttribute("Ssmulti", args.Ssmulti);
-  file->addGlobalAttribute("Sy", args.Sy);
-  file->addGlobalAttribute("Texp", args.Texp);
+  file->addGlobalAttribute("specificStorage", args.specificStorage);
+  file->addGlobalAttribute("specificYield", args.specificYield);
   file->addGlobalAttribute("noSmoothMelt", args.noSmoothMelt);
   file->addGlobalAttribute("loopForcing", args.loopForcing);
   file->addGlobalAttribute("basalVelocityIce", args.basalVelocityIce);
@@ -196,47 +221,51 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
 
   // compile time CUASConstants
   file->addGlobalAttribute("version", CUAS::version());
+  file->addGlobalAttribute("TINY", TINY);
+  file->addGlobalAttribute("NOFLOW_VALUE", NOFLOW_VALUE);
+  file->addGlobalAttribute("RHO_ICE", RHO_ICE);
+  file->addGlobalAttribute("SPY", SPY);
 
   // store initial conditions if needed
-  storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, melt, creep, cavity);
+  storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, fluxMagnitude, melt, creep, cavity, effectivePressure,
+                effectiveStorativity, effectiveTransmissivity, waterSource);
 }
 
 void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hydraulicHead,
                                     PETScGrid const &hydraulicTransmissivity, CUASModel const &model,
-                                    PETScGrid const &melt, PETScGrid const &creep, PETScGrid const &cavity) {
+                                    PETScGrid const &fluxMagnitude, PETScGrid const &melt, PETScGrid const &creep,
+                                    PETScGrid const &cavity, PETScGrid const &effectivePressure,
+                                    PETScGrid const &effectiveStorativity, PETScGrid const &effectiveTransmissivity,
+                                    PETScGrid const &waterSource, PetscScalar eps_inf, PetscScalar Teps_inf) {
   // write scalars
   file->write("time", currTime, nextSolution);
 
   // TODO make eps_inf and Teps_inf available for storage
-  PetscScalar dummy(-9999.0);
-  file->write("eps_inf", dummy, nextSolution);
-  file->write("Teps_inf", dummy, nextSolution);
+  file->write("eps_inf", eps_inf, nextSolution);
+  file->write("Teps_inf", Teps_inf, nextSolution);
 
   // write grids
   file->write("head", hydraulicHead, nextSolution);
   file->write("transmissivity", hydraulicTransmissivity, nextSolution);
 
-  PETScGrid pwater(hydraulicHead.getTotalNumOfCols(), hydraulicHead.getTotalNumOfRows());
-  pwater.setZero();
-
   if (osize >= OutputSize::NORMAL) {
     file->write("a_melt", melt, nextSolution);
     file->write("a_creep", creep, nextSolution);
     file->write("a_cavity", cavity, nextSolution);
-
-    // todo update effective pressure based on current hydraulicHead
-    PETScGrid peff(hydraulicHead.getTotalNumOfCols(), hydraulicHead.getTotalNumOfRows());
-    peff.setZero();
-    file->write("peffective", peff, nextSolution);
-
-    // todo update flux based on current hydraulicHead and hydraulicTransmissivity
-    PETScGrid flux(hydraulicHead.getTotalNumOfCols(), hydraulicHead.getTotalNumOfRows());
-    flux.setZero();
-    file->write("flux", flux, nextSolution);
+    file->write("peffective", effectivePressure, nextSolution);
+    file->write("watersource", waterSource, nextSolution);
+    file->write("flux", fluxMagnitude, nextSolution);
   }
 
   if (osize >= OutputSize::LARGE) {
-    file->write("pwater", pwater, nextSolution);
+    file->write("effective_transmissivity", effectiveTransmissivity, nextSolution);
+    file->write("effective_storativity", effectiveStorativity, nextSolution);
+  }
+
+  if (osize >= OutputSize::XLARGE) {
+    // we would need #include "CUASKernels.h", args.layerThickness and headToPressure() for water pressure
+    // output
+    // todo: add other fields
   }
 
   // Write everything to the file
@@ -260,6 +289,21 @@ void SolutionHandler::storePETScOptions() {
   file->addGlobalAttribute("PETSC_OPTIONS", getPETScOptionsAll());
   file->addGlobalAttribute("PETSC_OPTIONS_UNUSED", getPETScOptionsUnused());
   file->addGlobalAttribute("PETSC_OPTIONS_USED", getPETScOptionsUsed());
+}
+
+OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) const {
+  if (timeStepIndex == 0) {
+    return OutputReason::INITIAL;
+  }
+  if (saveEvery > 0) {  // avoid division by zero in modulo operation
+    if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == numberOfTimeSteps - 1)) {
+      return OutputReason::NORMAL;
+    } else {
+      return OutputReason::NONE;
+    }
+  } else {
+    return OutputReason::NONE;
+  }
 }
 
 SolutionHandler::~SolutionHandler() {}

@@ -47,6 +47,7 @@ void CUASModel::init() {
   }
 
   // pIce = thk * RHO_ICE * GRAVITY (python)
+  // ensure that
   auto &thk2d = thk->getReadHandle();
   auto pIce2d = pIce->getWriteHandleGhost();
   for (int j = 0; j < thk->getLocalGhostNumOfRows(); ++j) {
@@ -54,6 +55,14 @@ void CUASModel::init() {
       pIce2d(j, i) = thk2d(j, i, GHOSTED) * RHO_ICE * GRAVITY;
     }
   }
+
+  // outer (ghost) boundary is no-flow (Neumann BC)
+  bndMask->setGhostBoundary((PetscScalar)NOFLOW_FLAG);
+
+  // cuas grid nodes are not allowed to be active (compute) at the margin
+  // This could be removed later, if cuas-python is obsolete, or we only
+  // require that the outer (ghost) nodes are no-flow in cuas-mpi.
+  bndMask->findAndReplaceRealBoundary((PetscScalar)COMPUTE_FLAG, (PetscScalar)NOFLOW_FLAG);
 }
 
 }  // namespace CUAS

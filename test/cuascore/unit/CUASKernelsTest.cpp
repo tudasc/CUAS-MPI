@@ -2,6 +2,11 @@
 
 #include "PETScGrid.h"
 
+//#define TESTS_DUMP_NETCDF
+#ifdef TESTS_DUMP_NETCDF
+#include "NetCDFFile.h"
+#endif
+
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -13,14 +18,15 @@ int mpiSize;
 #define GRID_SIZE_X 18
 #define GRID_SIZE_Y 8
 
-TEST(CUASKernelsTest, head2pressure) {
+TEST(CUASKernelsTest, headToPressure) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   PETScGrid pressure(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid bedElevation(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid head(GRID_SIZE_Y, GRID_SIZE_X);
 
-  PetscScalar seaLevel = 33.5;
+  // Todo: update test to ensure 0 <= level <= waterLayerThickness
+  PetscScalar level = 33.5;
 
   // setup
   {
@@ -29,15 +35,15 @@ TEST(CUASKernelsTest, head2pressure) {
     auto head2d = head.getWriteHandle();
     for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
-        pressure2d(j, i) = seaLevel * mpiRank - 2.3;
-        bedElevation2d(j, i) = seaLevel * seaLevel - 31.3;
+        pressure2d(j, i) = level * mpiRank - 2.3;
+        bedElevation2d(j, i) = level * level - 31.3;
         head2d(j, i) = mpiRank * j + (i * 35);
       }
     }
   }
 
-  // run head2pressure
-  CUAS::head2pressure(pressure, head, bedElevation, seaLevel);
+  // run headToPressure
+  CUAS::headToPressure(pressure, head, bedElevation, level);
 
   // check
   {
@@ -47,26 +53,26 @@ TEST(CUASKernelsTest, head2pressure) {
     // TODO: check ghost cells
     for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
-        double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
         // check result
-        ASSERT_EQ(pressure2d(j, i), RHO_WATER * GRAVITY * (head2d(j, i) - effective_bed_elevation));
+        ASSERT_EQ(pressure2d(j, i), RHO_WATER * GRAVITY * (head2d(j, i) - bedElevation2d(j, i) - level));
 
         // check for sideeffects
-        ASSERT_EQ(bedElevation2d(j, i), seaLevel * seaLevel - 31.3);
+        ASSERT_EQ(bedElevation2d(j, i), level * level - 31.3);
         ASSERT_EQ(head2d(j, i), mpiRank * j + (i * 35));
       }
     }
   }
 }
 
-TEST(CUASKernelsTest, pressure2head) {
+TEST(CUASKernelsTest, pressureToHead) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   PETScGrid pressure(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid bedElevation(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid head(GRID_SIZE_Y, GRID_SIZE_X);
 
-  PetscScalar seaLevel = 33.5;
+  // Todo: update test to reflect changes in cuas-python
+  PetscScalar seaLevel = 0.0;  // was 33.5
 
   // setup
   {
@@ -82,8 +88,8 @@ TEST(CUASKernelsTest, pressure2head) {
     }
   }
 
-  // run pressure2head
-  CUAS::pressure2head(head, pressure, bedElevation, seaLevel);
+  // run pressureToHead
+  CUAS::pressureToHead(head, pressure, bedElevation);
 
   // check
   {
@@ -95,7 +101,7 @@ TEST(CUASKernelsTest, pressure2head) {
       for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
         double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
         // check result
-        ASSERT_EQ(head2d(j, i), pressure2d(j, i) / (RHO_WATER * GRAVITY) + effective_bed_elevation);
+        ASSERT_EQ(head2d(j, i), pressure2d(j, i) / (RHO_WATER * GRAVITY) + bedElevation2d(j, i));
 
         // check for sideeffects
         ASSERT_EQ(bedElevation2d(j, i), seaLevel * seaLevel - 31.3);
@@ -145,56 +151,55 @@ TEST(CUASKernelsTest, overburdenPressure) {
   }
 }
 
-TEST(CUASKernelsTest, cavityOpenB) {
+TEST(CUASKernelsTest, computeCavityOpening) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  PETScGrid K(GRID_SIZE_Y, GRID_SIZE_X);
+  PETScGrid basalVelocity(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid result(GRID_SIZE_Y, GRID_SIZE_X);
 
   PetscScalar beta = 33.5;
-  PetscScalar v_b = 17.5;
+  PetscScalar K = 17.5;
 
   // setup
   {
-    auto K2d = K.getWriteHandle();
-    for (int j = 0; j < K.getLocalNumOfRows(); ++j) {
-      for (int i = 0; i < K.getLocalNumOfCols(); ++i) {
-        K2d(j, i) = mpiRank * j + (i * 35);
+    auto vb = basalVelocity.getWriteHandle();
+    for (int j = 0; j < basalVelocity.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < basalVelocity.getLocalNumOfCols(); ++i) {
+        vb(j, i) = mpiRank * j + (i * 35);
       }
     }
   }
 
-  // run pressure2head
-  CUAS::cavityOpenB(result, beta, v_b, K);
+  // run pressureToHead
+  CUAS::computeCavityOpening(result, beta, K, basalVelocity);
 
   // check
   {
-    auto &K2d = K.getReadHandle();
+    auto &vb = basalVelocity.getReadHandle();
     auto &result2d = result.getReadHandle();
     // TODO: check ghost cells
-    for (int j = 0; j < K.getLocalNumOfRows(); ++j) {
-      for (int i = 0; i < K.getLocalNumOfCols(); ++i) {
+    for (int j = 0; j < basalVelocity.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < basalVelocity.getLocalNumOfCols(); ++i) {
         // check result
-        ASSERT_EQ(result2d(j, i), beta * v_b * K2d(j, i));
+        ASSERT_EQ(result2d(j, i), beta * K * vb(j, i));
 
         // check for sideeffects
-        ASSERT_EQ(K2d(j, i), mpiRank * j + (i * 35));
+        ASSERT_EQ(vb(j, i), mpiRank * j + (i * 35));
       }
     }
   }
 }
 
-TEST(CUASKernelsTest, computeMelt) {
+TEST(CUASKernelsTest, computeMeltOpening) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   PETScGrid result(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid T(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid gradh2(GRID_SIZE_X, GRID_SIZE_Y);
 
   PetscScalar r = 1.0;
   PetscScalar bt = 0.1;
-
+  PetscScalar K = 10;
   // init T values
   auto T2d = T.getWriteHandle();
   PetscScalar *Tarr[GRID_SIZE_Y];
@@ -211,23 +216,6 @@ TEST(CUASKernelsTest, computeMelt) {
     }
   }
   T2d.setValues();
-
-  // init K values
-  auto K2d = K.getWriteHandle();
-
-  PetscScalar *Karr[GRID_SIZE_Y];
-  PetscScalar KarrValues[GRID_SIZE_X] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    Karr[i] = KarrValues;
-  }
-
-  for (int i = 0; i < K.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < K.getLocalNumOfCols(); ++j) {
-      K2d(i, j) = Karr[T.getCornerY() + i][T.getCornerX() + j];
-    }
-  }
-  K2d.setValues();
 
   // init gradh2
   auto grad2d = gradh2.getWriteHandle();
@@ -252,7 +240,7 @@ TEST(CUASKernelsTest, computeMelt) {
   }
   grad2d.setValues();
 
-  CUAS::computeMelt(result, r, GRAVITY, RHO_WATER, T, K, gradh2, RHO_ICE, LATENT_HEAT, bt);
+  CUAS::computeMeltOpening(result, r, K, T, gradh2);
 
   auto res2d = result.getReadHandle();
 
@@ -352,221 +340,86 @@ TEST(CUASKernelsTest, binaryDilation) {
   }
 }
 
-TEST(CUASKernelsTest, enableUnconfined) {
+TEST(CUASKernelsTest, getFluxMagnitude) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  PETScGrid Teff(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid TeffPowTexp(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid T_n(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid Sp(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid u_n(GRID_SIZE_X, GRID_SIZE_Y);
-  PetscScalar bt = 0.1;
-  PetscScalar unconfSmooth = 0.0;
-  PetscScalar Texp = 1;
-
-  // init Teff
-  auto Teff2d = Teff.getWriteHandle();
-  PetscScalar *TeffArr[GRID_SIZE_Y];
-  PetscScalar TeffArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                                            0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    TeffArr[i] = TeffArrValues;
-  }
-  for (int i = 0; i < Teff.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < Teff.getLocalNumOfCols(); ++j) {
-      Teff2d(i, j) = TeffArr[Teff.getCornerY() + i][Teff.getCornerX() + j];
-    }
-  }
-  Teff2d.setValues();
-
-  // init T_n
-  auto T_n2d = T_n.getWriteHandle();
-
-  PetscScalar *T_nArr[GRID_SIZE_Y];
-  PetscScalar T_nArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                                           0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    T_nArr[i] = T_nArrValues;
-  }
-
-  for (int i = 0; i < T_n.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < T_n.getLocalNumOfCols(); ++j) {
-      T_n2d(i, j) = T_nArr[T_n.getCornerY() + i][T_n.getCornerX() + j];
-    }
-  }
-  T_n2d.setValues();
-
-  // topg is zero
-
-  // init K
-  auto K2d = K.getWriteHandle();
-
-  PetscScalar *Karr[GRID_SIZE_Y];
-  PetscScalar KarrValues[GRID_SIZE_X] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    Karr[i] = KarrValues;
-  }
-
-  for (int i = 0; i < K.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < K.getLocalNumOfCols(); ++j) {
-      K2d(i, j) = Karr[K.getCornerY() + i][K.getCornerX() + j];
-    }
-  }
-  K2d.setValues();
-
-  // Sp is zero
-
-  // init u_n
-  auto u_n2d = u_n.getWriteHandleGhost();
-  PetscScalar *u_nArr[GRID_SIZE_Y + 2];
-  PetscScalar u_nArrValues[GRID_SIZE_X + 2] = {1820, 1729, 1638, 1547, 1456, 1365, 1274, 1183, 1092, 1001,
-                                               910,  819,  728,  637,  546,  455,  364,  273,  182,  91};
-  for (int i = 0; i < (GRID_SIZE_Y + 2); ++i) {
-    u_nArr[i] = u_nArrValues;
-  }
-
-  for (int i = 0; i < u_n.getLocalGhostNumOfRows(); ++i) {
-    for (int j = 0; j < u_n.getLocalGhostNumOfCols(); ++j) {
-      u_n2d(i, j) = u_nArr[u_n.getCornerY() + i][u_n.getCornerX() + j];
-    }
-  }
-  u_n2d.setValues();
-
-  CUAS::enableUnconfined(Teff, TeffPowTexp, Sp, T_n, K, topg, u_n, Texp, unconfSmooth, bt);
-
-  // check results
-  auto resTeff2d = Teff.getReadHandle();
-  PetscScalar *resTeffArr[GRID_SIZE_Y];
-  PetscScalar resTeffArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                                               0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    resTeffArr[i] = resTeffArrValues;
-  }
-
-  for (int i = 0; i < Teff.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < Teff.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(resTeff2d(i, j), resTeffArr[Teff.getCornerY() + i][Teff.getCornerX() + j]);
-    }
-  }
-}
-
-TEST(CUASKernelsTest, calculateTeffPowTexp) {
-  ASSERT_EQ(mpiSize, MPI_SIZE);
-
-  PETScGrid Teff(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid TeffPowTexp(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid TeffPowTexpRes(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid T(GRID_SIZE_X, GRID_SIZE_Y);
-  // In NoData Texp is 1 but for testing puposes 3 has been chosen
-  PetscScalar Texp = 3;
+  PETScGrid head(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid flux(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid flux_analytical(GRID_SIZE_X, GRID_SIZE_Y);
 
-  // init T
-  auto T2d = T.getWriteHandle();
-  PetscScalar *Tarr[GRID_SIZE_Y];
-  PetscScalar TarrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                                         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+  PETScGrid gradHeadSquared(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid gradMask(GRID_SIZE_X, GRID_SIZE_Y);
 
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    Tarr[i] = TarrValues;
-  }
+  constexpr PetscScalar Tconst = 0.2;
+  constexpr PetscScalar dx = 1.0;
 
-  for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
-      T2d(i, j) = Tarr[T.getCornerY() + i][T.getCornerX() + j];
+  // initialize fields
+  T.setConst(Tconst);
+  flux.setConst(-9999.0);
+
+  gradMask.setConst(0.0);
+  gradMask.setRealBoundary(1.0);
+
+  // init head
+  {
+    auto cornerX = head.getCornerX();
+    auto cornerY = head.getCornerY();
+    auto h = head.getWriteHandle();
+    auto f = flux_analytical.getWriteHandle();
+    auto gradh2 = gradHeadSquared.getWriteHandle();
+    auto &gmask = gradMask.getReadHandle();
+    for (int j = 0; j < head.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < head.getLocalNumOfCols(); ++i) {
+        if (gmask(j, i) == 1.0) {  // gradMask has inverted meaning
+          f(j, i) = 0.0;
+        } else {
+          const PetscScalar x = (cornerX + i) * dx;
+          const PetscScalar y = (cornerY + j) * dx;
+          h(j, i) = x * x + y * y;
+          // analytical solution:  flux = T^exp * |grad h|
+          gradh2(j, i) = 4.0 * (x * x + y * y);
+          f(j, i) = Tconst * PetscSqrtScalar(gradh2(j, i));
+        }
+      }
     }
   }
-  T2d.setValues();
 
-  CUAS::calculateTeffPowTexp(Teff, TeffPowTexp, T, Texp);
+  CUAS::getFluxMagnitude(flux, gradHeadSquared, T);
 
-  // init TeffPowTexpRes
-  PetscScalar *TeffPowTexpResArr[GRID_SIZE_Y];
-  PetscScalar TeffPowTexpResArrValues[GRID_SIZE_X] = {0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008,
-                                                      0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008, 0.008};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    TeffPowTexpResArr[i] = TeffPowTexpResArrValues;
-  }
+#ifdef TESTS_DUMP_NETCDF
+  // Gets information about the currently running test.
+  // Do NOT delete the returned object - it's managed by the UnitTest class.
+  const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+  auto filename = std::string(test_info->test_suite_name())
+                      .append(std::string("_-_"))
+                      .append(std::string(test_info->name()))
+                      .append(std::string(".nc"));
+  CUAS::NetCDFFile file(filename, GRID_SIZE_X, GRID_SIZE_Y);
+  file.defineGrid("T", LIMITED);
+  file.defineGrid("head", LIMITED);
+  file.defineGrid("gradMask", LIMITED);
+  file.defineGrid("flux", LIMITED);
+  file.defineGrid("flux_analytical", LIMITED);
+  file.write("T", T, 0);
+  file.write("head", head, 0);
+  file.write("gradMask", gradMask, 0);
+  file.write("flux", flux, 0);
+  file.write("flux_analytical", flux_analytical, 0);
+#endif
 
   // compare results
-  auto TeffPowOfFunction = TeffPowTexp.getReadHandle();
-  for (int i = 0; i < TeffPowTexp.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < TeffPowTexp.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(TeffPowOfFunction(i, j),
-                       TeffPowTexpResArr[TeffPowTexp.getCornerY() + i][TeffPowTexp.getCornerX() + j]);
-    }
-  }
-}
 
-TEST(CUASKernelsTest, calculateSeValues) {
-  ASSERT_EQ(mpiSize, MPI_SIZE);
-
-  PETScGrid S(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid Se(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid Sp(GRID_SIZE_X, GRID_SIZE_Y);
-
-  // init S
-  auto S2d = S.getWriteHandle();
-  PetscScalar *Sarr[GRID_SIZE_Y];
-  PetscScalar SarrValues[GRID_SIZE_X];
-  for (int i = 0; i < GRID_SIZE_X; ++i) {
-    SarrValues[i] = 0.0000982977696;
-  }
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    Sarr[i] = SarrValues;
-  }
-
-  for (int i = 0; i < S.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < S.getLocalNumOfCols(); ++j) {
-      S2d(i, j) = Sarr[S.getCornerY() + i][S.getCornerX() + j];
-    }
-  }
-  S2d.setValues();
-
-  // init Sp
-  auto Sp2d = Sp.getWriteHandle();
-  PetscScalar *SpArr[GRID_SIZE_Y];
-  PetscScalar SpArrValues[GRID_SIZE_X];
-  for (int i = 0; i < GRID_SIZE_X; ++i) {
-    SpArrValues[i] = i;
-  }
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    SpArr[i] = SpArrValues;
-  }
-
-  for (int i = 0; i < Sp.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < Sp.getLocalNumOfCols(); ++j) {
-      Sp2d(i, j) = SpArr[Sp.getCornerY() + i][Sp.getCornerX() + j];
-    }
-  }
-  Sp2d.setValues();
-
-  CUAS::calculateSeValues(Se, Sp, S);
-
-  // compare results
-  PetscScalar *SeArr[GRID_SIZE_Y];
-  PetscScalar SeValues[GRID_SIZE_X];
-
-  for (int i = 0; i < GRID_SIZE_X; ++i) {
-    SeValues[i] = (0.0000982977696) + i;
-  }
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    SeArr[i] = SeValues;
-  }
-
-  auto Se2d = Se.getReadHandle();
-  for (int i = 0; i < Se.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < Se.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(Se2d(i, j), SeArr[Se.getCornerY() + i][Se.getCornerX() + j]);
+  auto &f = flux.getReadHandle();
+  auto &f_analytical = flux.getReadHandle();
+  auto &gmask = gradMask.getReadHandle();
+  for (int j = 0; j < flux.getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < flux.getLocalNumOfCols(); ++i) {
+      if (gmask(j, i) == 1.0) {  // gradMask has inverted meaning
+        EXPECT_DOUBLE_EQ(f(j, i), 0.0);
+      } else {
+        EXPECT_DOUBLE_EQ(f(j, i), f_analytical(j, i));
+      }
     }
   }
 }
@@ -574,100 +427,54 @@ TEST(CUASKernelsTest, calculateSeValues) {
 TEST(CUASKernelsTest, doChannels) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  PETScGrid u_n(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid hydraulicHead(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid melt(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid creep(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid cavity(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid gradMask(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid T(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid T_n(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid pIce(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid K(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid basalVelocityIce(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid rateFactorIce(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid bndMask(GRID_SIZE_X, GRID_SIZE_Y);
-  PETScGrid cavityOpening(GRID_SIZE_X, GRID_SIZE_Y);
-  // init args
-  PetscScalar flowConstant = 5e-25;
-  PetscScalar roughnessFactor = 1.0;
-  PetscScalar Texp = 1;
-  PetscScalar noSmoothMelt = false;
-  PetscScalar cavityBeta = 0.0005;
-  PetscScalar basalVelocityIce = 1e-06;
-  PetscScalar bt = 0.1;
-  PetscScalar dx = 1000.0;
-  PetscScalar dtSecs = 43200;
-  PetscScalar Tmin = 1e-07;
-  PetscScalar Tmax = 20.0;
-  bool doMelt = true;
-  bool doCreep = true;
-  bool doCavity = true;
+  PETScGrid effectivePressure(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid icePressure(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid gradientHeadSquared(GRID_SIZE_X, GRID_SIZE_Y);
 
-  // init u_n
-  auto u_n2d = u_n.getWriteHandleGhost();
-  PetscScalar *u_nArr[GRID_SIZE_Y + 2];
-  PetscScalar u_nArrValues[GRID_SIZE_X + 2] = {1820, 1729, 1638, 1547, 1456, 1365, 1274, 1183, 1092, 1001,
-                                               910,  819,  728,  637,  546,  455,  364,  273,  182,  91};
+  // init args
+  constexpr PetscScalar roughnessFactor = 1.0;
+  constexpr PetscScalar noSmoothMelt = false;
+  constexpr PetscScalar cavityBeta = 0.0005;
+  constexpr PetscScalar layerThickness = 0.1;
+  constexpr PetscScalar dx = 1000.0;
+  constexpr PetscScalar dtSecs = 43200;
+  constexpr PetscScalar Tmin = 1e-07;
+  constexpr PetscScalar Tmax = 20.0;
+  constexpr PetscScalar K = 10.0;
+
+  basalVelocityIce.setConst(1e-06);
+  rateFactorIce.setConst(5e-25);
+
+  // init hydraulicHead
+  auto head = hydraulicHead.getWriteHandleGhost();
+  PetscScalar *h_Arr[GRID_SIZE_Y + 2];
+  PetscScalar h_ArrValues[GRID_SIZE_X + 2] = {1820, 1729, 1638, 1547, 1456, 1365, 1274, 1183, 1092, 1001,
+                                              910,  819,  728,  637,  546,  455,  364,  273,  182,  91};
   for (int i = 0; i < GRID_SIZE_Y + 2; ++i) {
-    u_nArr[i] = u_nArrValues;
+    h_Arr[i] = h_ArrValues;
   }
 
-  for (int i = 0; i < u_n.getLocalGhostNumOfRows(); ++i) {
-    for (int j = 0; j < u_n.getLocalGhostNumOfCols(); ++j) {
-      u_n2d(i, j) = u_nArr[u_n.getCornerY() + i][u_n.getCornerX() + j];
+  for (int i = 0; i < hydraulicHead.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < hydraulicHead.getLocalGhostNumOfCols(); ++j) {
+      head(i, j) = h_Arr[hydraulicHead.getCornerY() + i][hydraulicHead.getCornerX() + j];
     }
   }
-  u_n2d.setValues();
+  head.setValues();
 
   // init T values
-  auto T2d = T.getWriteHandle();
-  PetscScalar *Tarr[GRID_SIZE_Y];
-  PetscScalar TarrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                                         0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    Tarr[i] = TarrValues;
-  }
-
-  for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
-      T2d(i, j) = Tarr[T.getCornerY() + i][T.getCornerX() + j];
-    }
-  }
-  T2d.setValues();
-
-  // init T_n
-  auto T_n2d = T_n.getWriteHandle();
-
-  PetscScalar *T_nArr[GRID_SIZE_Y];
-  PetscScalar T_nArrValues[GRID_SIZE_X] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
-                                           0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    T_nArr[i] = T_nArrValues;
-  }
-
-  for (int i = 0; i < T_n.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < T_n.getLocalNumOfCols(); ++j) {
-      T_n2d(i, j) = T_nArr[T_n.getCornerY() + i][T_n.getCornerX() + j];
-    }
-  }
-  T_n2d.setValues();
-
-  // init K values
-  auto K2d = K.getWriteHandle();
-
-  PetscScalar *Karr[GRID_SIZE_Y];
-  PetscScalar KarrValues[GRID_SIZE_X] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
-
-  for (int i = 0; i < GRID_SIZE_Y; ++i) {
-    Karr[i] = KarrValues;
-  }
-
-  for (int i = 0; i < K.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < K.getLocalNumOfCols(); ++j) {
-      K2d(i, j) = Karr[K.getCornerY() + i][K.getCornerX() + j];
-    }
-  }
-  K2d.setValues();
+  T.setConst(0.2);
+  T_n.setConst(0.2);
 
   // init noFlowMask
   auto mask = bndMask.getWriteHandleGhost();
@@ -697,18 +504,13 @@ TEST(CUASKernelsTest, doChannels) {
   }
   mask.setValues();
 
-  // set cavityOpening to zero
-  cavityOpening.setZero();
-
   // init gradmask
   auto gradMask2d = gradMask.getWriteHandleGhost();
-
   PetscScalar *gradMaskArr[GRID_SIZE_Y + 2];
   PetscScalar gradMaskBeginningEnd[GRID_SIZE_X + 2];
   for (int i = 0; i < GRID_SIZE_X + 2; ++i) {
     gradMaskBeginningEnd[i] = 1;
   }
-
   PetscScalar gradMaskMiddle[GRID_SIZE_X + 2];
   gradMaskMiddle[0] = 1;
   gradMaskMiddle[1] = 1;
@@ -732,7 +534,7 @@ TEST(CUASKernelsTest, doChannels) {
   gradMask2d.setValues();
 
   // init p_ice
-  auto pIce2d = pIce.getWriteHandleGhost();
+  auto pIce2d = icePressure.getWriteHandleGhost();
   PetscScalar *pIceArr[GRID_SIZE_Y + 2];
   PetscScalar pIceArrValues[GRID_SIZE_X + 2] = {17854200, 16961490, 16068780, 15176070, 14283360, 13390650, 12497940,
                                                 11605230, 10712520, 9819810,  8927100,  8034390,  7141680,  6248970,
@@ -741,21 +543,60 @@ TEST(CUASKernelsTest, doChannels) {
     pIceArr[i] = pIceArrValues;
   }
 
-  for (int i = 0; i < pIce.getLocalGhostNumOfRows(); ++i) {
-    for (int j = 0; j < pIce.getLocalGhostNumOfCols(); ++j) {
-      pIce2d(i, j) = pIceArr[pIce.getCornerY() + i][pIce.getCornerX() + j];
+  for (int i = 0; i < icePressure.getLocalGhostNumOfRows(); ++i) {
+    for (int j = 0; j < icePressure.getLocalGhostNumOfCols(); ++j) {
+      pIce2d(i, j) = pIceArr[icePressure.getCornerY() + i][icePressure.getCornerX() + j];
     }
   }
   pIce2d.setValues();
 
-  // topg is zero
-  topg.setZero();
+  topg.setZero();  // topg is zero in this setup
+  creep.setZero();
+  melt.setZero();
+  cavity.setZero();
 
-  CUAS::doChannels(melt, creep, u_n, gradMask, T, T_n, pIce, topg, K, bndMask, cavityOpening, flowConstant, Texp,
-                   roughnessFactor, noSmoothMelt, cavityBeta, basalVelocityIce, Tmin, Tmax, bt, dx, dtSecs, doMelt,
-                   doCreep, doCavity);
+  CUAS::headToEffectivePressure(effectivePressure, hydraulicHead, topg, icePressure, layerThickness);
+  CUAS::computeCreepOpening(creep, rateFactorIce, effectivePressure, T_n);  // was creep closure in previous versions
 
-  // compare results
+  CUAS::getGradHeadSQR(gradientHeadSquared, hydraulicHead, dx, gradMask);
+  CUAS::computeMeltOpening(melt, roughnessFactor, K, T_n, gradientHeadSquared);
+  if (!noSmoothMelt) {
+    PETScGrid tmp(melt.getTotalNumOfCols(), melt.getTotalNumOfRows());
+    CUAS::convolveStar11411(melt, tmp);
+    melt.copy(tmp);
+  }
+
+  CUAS::computeCavityOpening(cavity, cavityBeta, K, basalVelocityIce);
+
+  // update
+  CUAS::doChannels(T, T_n, creep, melt, cavity, bndMask, Tmin, Tmax, dtSecs);
+
+  // Gets information about the currently running test.
+  // Do NOT delete the returned object - it's managed by the UnitTest class.
+  const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+  auto filename = std::string(test_info->test_suite_name())
+                      .append(std::string("_-_"))
+                      .append(std::string(test_info->name()))
+                      .append(std::string(".nc"));
+#ifdef TESTS_DUMP_NETCDF
+  CUAS::NetCDFFile file(filename, GRID_SIZE_X, GRID_SIZE_Y);
+  file.defineGrid("creep", LIMITED);
+  file.defineGrid("melt", UNLIMITED);
+  file.defineGrid("cavity", UNLIMITED);
+  file.defineGrid("bndMask", LIMITED);
+  file.defineGrid("T", LIMITED);
+  file.defineGrid("T_n", LIMITED);
+  file.write("creep", creep, 0);
+  file.write("melt", melt, 0);
+  file.write("cavity", cavity, 0);
+  file.write("bndMask", bndMask, 0);
+  file.write("T", T, 0);
+  file.write("T_n", T_n, 0);
+#endif
+
+  //
+  // melt opening
+  //
   PetscScalar *meltArr[GRID_SIZE_Y];
   PetscScalar meltFirstRow[GRID_SIZE_X] = {0,
                                            0.00000006681961077844312,
@@ -801,46 +642,56 @@ TEST(CUASKernelsTest, doChannels) {
   meltArr[GRID_SIZE_Y - 2] = meltSecondRow;
   meltArr[GRID_SIZE_Y - 1] = meltFirstRow;
 
+  // tkleiner (22.02.2022): fails as we compute melt opening using the gradMask
   auto melt2d = melt.getReadHandle();
   for (int i = 0; i < melt.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < melt.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(melt2d(i, j), meltArr[melt.getCornerY() + i][melt.getCornerX() + j]);
+      EXPECT_DOUBLE_EQ(melt2d(i, j), meltArr[melt.getCornerY() + i][melt.getCornerX() + j])
+          << "at i=" << i << ", j=" << j;
     }
   }
 
+  //
+  // creep opening
+  //
   PetscScalar *creepArr[GRID_SIZE_Y];
   PetscScalar creepValues[GRID_SIZE_X];
   for (int i = 0; i < GRID_SIZE_X; ++i) {
-    creepValues[i] = 0.0000000000000000069931566;
+    creepValues[i] = -0.0000000000000000069931566;  // we now have creep opening instead of creep closure
   }
 
   for (int i = 0; i < GRID_SIZE_Y; ++i) {
     creepArr[i] = creepValues;
   }
 
+  // tkleiner (22.02.2022): ok, as we compute creep opening everywhere without using the bndMask
   auto creep2d = creep.getReadHandle();
   for (int i = 0; i < creep.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < creep.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(creep2d(i, j), creepArr[creep.getCornerY() + i][creep.getCornerX() + j]);
+      EXPECT_DOUBLE_EQ(creep2d(i, j), creepArr[creep.getCornerY() + i][creep.getCornerX() + j])
+          << "at i=" << i << ", j=" << j;
     }
   }
 
   PetscScalar *cavityArr[GRID_SIZE_Y];
   PetscScalar cavityMiddleRow[GRID_SIZE_X];
   for (int i = 0; i < GRID_SIZE_X; ++i) {
-    cavityMiddleRow[i] = 0.000000005;
+    cavityMiddleRow[i] = 0.000000005;  //
   }
 
   for (int i = 0; i < GRID_SIZE_Y; ++i) {
     cavityArr[i] = cavityMiddleRow;
   }
 
-  auto cavity2d = cavityOpening.getReadHandle();
-  for (int i = 0; i < cavityOpening.getLocalNumOfRows(); ++i) {
-    for (int j = 0; j < cavityOpening.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(cavity2d(i, j), cavityArr[cavityOpening.getCornerY() + i][cavityOpening.getCornerX() + j]);
+  // tkleiner (22.02.2022): ok, as we compute cavity opening everywhere without using the bndMask
+  auto cavity2d = cavity.getReadHandle();
+  for (int i = 0; i < cavity.getLocalNumOfRows(); ++i) {
+    for (int j = 0; j < cavity.getLocalNumOfCols(); ++j) {
+      EXPECT_DOUBLE_EQ(cavity2d(i, j), cavityArr[cavity.getCornerY() + i][cavity.getCornerX() + j])
+          << "at i=" << i << ", j=" << j;
     }
   }
+
   // check updated T
   PetscScalar *updatedTArr[GRID_SIZE_Y];
   PetscScalar updatedTFirstRow[GRID_SIZE_X] = {
@@ -872,13 +723,11 @@ TEST(CUASKernelsTest, doChannels) {
   auto updatedTGlobal = T.getReadHandle();
   for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
-      EXPECT_DOUBLE_EQ(updatedTGlobal(i, j), updatedTArr[T.getCornerY() + i][T.getCornerX() + j]);
+      EXPECT_DOUBLE_EQ(updatedTGlobal(i, j), updatedTArr[T.getCornerY() + i][T.getCornerX() + j])
+          << "at i=" << i << ", j=" << j;
     }
   }
 }
-
-// noChannels just sets both passed grids to zero
-// TEST(CUASKernelsTest, noChannels) { ASSERT_EQ(mpiSize, MPI_SIZE); }
 
 TEST(CUASKernelsTest, convolve) {
   ASSERT_EQ(mpiSize, MPI_SIZE);

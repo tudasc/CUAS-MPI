@@ -28,7 +28,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        "Set PETSc options for MUMPS+PARMETIS.")
       ("version",
        "Show version information")
-      ("input", 
+      ("input",
        "Netcdf input file.",
        cxxopts::value<std::string>()->default_value(""))
       ("output",
@@ -66,6 +66,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("i,Tmin",
        "Minimum T to be allowed in the evolution.",
        cxxopts::value<PetscScalar>()->default_value("0.0000001"))
+      ("Tinit",
+       "Inital T to be used in the evolution.",
+       cxxopts::value<PetscScalar>()->default_value("0.2"))
       ("flowConstant",
        "Ice Flow Constant A.",
        cxxopts::value<PetscScalar>()->default_value("5e-25"))
@@ -87,15 +90,12 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("restartNoneZeroInitialGuess",
        "sets solution vector during restart",
        cxxopts::value<bool>()->default_value("true"))
-      ("Ssmulti",
-       "Multiplier for specific storage Ss.",
-       cxxopts::value<PetscScalar>()->default_value("1.0"))
-      ("Sy",
-       "Specific yield for unconfined.",
+      ("specificStorage",
+       "Specific storage, Ss (unit: m-1)",
+       cxxopts::value<PetscScalar>()->default_value("0.0000982977696"))
+      ("specificYield",
+       "Specific yield, Sy (unit: 1)",
        cxxopts::value<PetscScalar>()->default_value("0.4"))
-      ("Texp",
-       "Exponent of T.",
-       cxxopts::value<PetscScalar>()->default_value("1"))
       ("noSmoothMelt",
        "Smooth melt term before computing change in T?")
       ("basalVelocityIce",
@@ -107,9 +107,6 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("initialHead",
        "Initial value for head. Nzero means that head is set such that effective pressure N is zero.",
        cxxopts::value<std::string>()->default_value("Nzero"))
-      ("tempResults",
-       "Save temporary results to this file(s) to later restart from them.",
-       cxxopts::value<std::string>()->default_value(""))
       ("loopForcing",
        "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
       ("forcingFile",
@@ -145,6 +142,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   args.Tmax = result["Tmax"].as<PetscScalar>();
   args.Tmin = result["Tmin"].as<PetscScalar>();
+  args.Tinit = result["Tinit"].as<PetscScalar>();
 
   // need to be parsed
   args.totaltime = result["totaltime"].as<std::string>();
@@ -160,16 +158,14 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.unconfSmooth = result["unconfSmooth"].as<PetscScalar>();
   args.restart = result["restart"].as<std::string>();
   args.restartNoneZeroInitialGuess = result["restartNoneZeroInitialGuess"].as<bool>();
-  args.Ssmulti = result["Ssmulti"].as<PetscScalar>();
-  args.Sy = result["Sy"].as<PetscScalar>();
-  args.Texp = result["Texp"].as<PetscScalar>();
+  args.specificStorage = result["specificStorage"].as<PetscScalar>();
+  args.specificYield = result["specificYield"].as<PetscScalar>();
   args.noSmoothMelt = result["noSmoothMelt"].as<bool>();
   args.loopForcing = result["loopForcing"].as<bool>();
   args.forcingFile = result["forcingFile"].as<std::string>();
   args.basalVelocityIce = result["basalVelocityIce"].as<PetscScalar>();
   args.cavityBeta = result["cavityBeta"].as<PetscScalar>();
   args.initialHead = result["initialHead"].as<std::string>();
-  args.tempResults = result["tempResults"].as<std::string>();
   args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
   args.verbose = result["verbose"].as<bool>();
   args.verboseSolver = result["verboseSolver"].as<bool>();

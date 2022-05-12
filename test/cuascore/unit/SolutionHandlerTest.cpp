@@ -18,6 +18,8 @@ TEST(SolutionHandlerTest, storeInitialSetup) {
   PETScGrid melt(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid creep(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid cavity(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid temp(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid flux(GRID_SIZE_X, GRID_SIZE_Y);
   CUAS::CUASModel model(GRID_SIZE_X, GRID_SIZE_Y);
   CUAS::SolutionHandler handler("SolutionHandlerSaveInitalSetup.nc", GRID_SIZE_X, GRID_SIZE_Y, "normal");
 
@@ -28,7 +30,7 @@ TEST(SolutionHandlerTest, storeInitialSetup) {
   CUAS::CUASArgs args;
   CUAS::parseArgs(argc, argv, args);
 
-  handler.storeInitialSetup(u, T, model, melt, creep, cavity, args);
+  handler.storeInitialSetup(u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp, args);
 }
 
 TEST(SolutionHandlerTest, storeSolution) {
@@ -37,12 +39,14 @@ TEST(SolutionHandlerTest, storeSolution) {
   PETScGrid melt(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid creep(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid cavity(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid temp(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid flux(GRID_SIZE_X, GRID_SIZE_Y);
   CUAS::CUASModel model(GRID_SIZE_X, GRID_SIZE_Y);
 
   CUAS::SolutionHandler handler("SolutionHandlerSaveSolution.nc", GRID_SIZE_X, GRID_SIZE_Y, "normal");
-  handler.storeSolution(10, u, T, model, melt, creep, cavity);
-  handler.storeSolution(15, u, T, model, melt, creep, cavity);
-  handler.storeSolution(20, u, T, model, melt, creep, cavity);
+  handler.storeSolution(10, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
+  handler.storeSolution(15, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
+  handler.storeSolution(20, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
 }
 
 TEST(SolutionHandlerTest, storeSolutionOutputSize) {
@@ -51,19 +55,25 @@ TEST(SolutionHandlerTest, storeSolutionOutputSize) {
   PETScGrid melt(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid creep(GRID_SIZE_X, GRID_SIZE_Y);
   PETScGrid cavity(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid temp(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid flux(GRID_SIZE_X, GRID_SIZE_Y);
   CUAS::CUASModel model(GRID_SIZE_X, GRID_SIZE_Y);
 
   {
     CUAS::SolutionHandler handler("SolutionHandlerSaveSolutionSmall.nc", GRID_SIZE_X, GRID_SIZE_Y, "small");
-    handler.storeSolution(10, u, T, model, melt, creep, cavity);
+    handler.storeSolution(10, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
   }
   {
     CUAS::SolutionHandler handler("SolutionHandlerSaveSolutionNormal.nc", GRID_SIZE_X, GRID_SIZE_Y, "normal");
-    handler.storeSolution(10, u, T, model, melt, creep, cavity);
+    handler.storeSolution(10, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
   }
   {
     CUAS::SolutionHandler handler("SolutionHandlerSaveSolutionLarge.nc", GRID_SIZE_X, GRID_SIZE_Y, "large");
-    handler.storeSolution(10, u, T, model, melt, creep, cavity);
+    handler.storeSolution(10, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
+  }
+  {
+    CUAS::SolutionHandler handler("SolutionHandlerSaveSolutionXLarge.nc", GRID_SIZE_X, GRID_SIZE_Y, "xlarge");
+    handler.storeSolution(10, u, T, model, flux, melt, creep, cavity, temp, temp, temp, temp);
   }
 }
 
