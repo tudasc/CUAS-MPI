@@ -373,6 +373,276 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
   }
 }
 
+TEST(PETScGridTest, setGhostBoundary) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = 7;
+  const int rows = 5;
+
+  PETScGrid grid(cols, rows);
+  grid.setGhostBoundary(5);
+
+  {
+    auto &gridHandle = grid.getReadHandle();
+
+    // check unchanged
+    for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+        ASSERT_EQ(gridHandle(i, j), 0.0) << "(row(i): " << i << ", col(j): " << j << ")";
+      }
+    }
+
+    // check boundary
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0 || grid.getCornerXGhost() == -1 && j == 0 ||
+            grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1 &&
+                i == grid.getLocalGhostNumOfRows() - 1 ||
+            grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1 &&
+                j == grid.getLocalGhostNumOfCols() - 1) {
+          ASSERT_EQ(gridHandle(i, j, GHOSTED), 5.0) << "(row(i): " << i << ", col(j): " << j << ")";
+        }
+      }
+    }
+  }
+}
+
+TEST(PETScGridTest, findAndReplaceGhostBoundary) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = 7;
+  const int rows = 5;
+
+  PETScGrid grid(cols, rows);
+  grid.setGhostBoundary(5);
+
+  // set some values 3
+  {
+    auto gridHandle = grid.getWriteHandleGhost();
+    auto startJ = (grid.getCornerXGhost() == -1) ? 1 : 0;
+    auto endJ = (grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1)
+                    ? grid.getLocalGhostNumOfCols() - 1
+                    : grid.getLocalGhostNumOfCols();
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = startJ; j < endJ; ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0) {
+          gridHandle(i, j) = 3;
+        }
+      }
+    }
+  }
+
+  grid.findAndReplaceGhostBoundary(5, 7);
+
+  {
+    auto &gridHandle = grid.getReadHandle();
+
+    // check unchanged
+    for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+        ASSERT_EQ(gridHandle(i, j), 0.0) << "(row(i): " << i << ", col(j): " << j << ")";
+      }
+    }
+    auto startJ = (grid.getCornerXGhost() == -1) ? 1 : 0;
+    auto endJ = (grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1)
+                    ? grid.getLocalGhostNumOfCols() - 1
+                    : grid.getLocalGhostNumOfCols();
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = startJ; j < endJ; ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0)
+          ASSERT_EQ(gridHandle(i, j, GHOSTED), 3.0) << "(row(i): " << i << ", col(j): " << j << ")";
+      }
+    }
+
+    // check boundary
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
+        if (grid.getCornerXGhost() == -1 && j == 0 ||
+            grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1 &&
+                i == grid.getLocalGhostNumOfRows() - 1 ||
+            grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1 &&
+                j == grid.getLocalGhostNumOfCols() - 1) {
+          ASSERT_EQ(gridHandle(i, j, GHOSTED), 7.0) << "(row(i): " << i << ", col(j): " << j << ")";
+        }
+      }
+    }
+  }
+}
+
+TEST(PETScGridTest, setRealBoundary) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = 7;
+  const int rows = 5;
+
+  PETScGrid grid(cols, rows);
+  grid.setRealBoundary(5);
+
+  {
+    auto &gridHandle = grid.getReadHandle();
+
+    // check unchanged
+    auto startI = (grid.getCornerYGhost() == -1) ? 1 : 0;
+    auto startJ = (grid.getCornerXGhost() == -1) ? 1 : 0;
+    auto endI = (grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1)
+                    ? grid.getLocalNumOfRows() - 1
+                    : grid.getLocalNumOfRows();
+    auto endJ = (grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1)
+                    ? grid.getLocalNumOfCols() - 1
+                    : grid.getLocalNumOfCols();
+    for (int i = startI; i < endI; ++i) {
+      for (int j = startJ; j < endJ; ++j) {
+        ASSERT_EQ(gridHandle(i, j), 0.0) << "(row(i): " << i << ", col(j): " << j << ")";
+      }
+    }
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0 || grid.getCornerXGhost() == -1 && j == 0 ||
+            grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1 &&
+                i == grid.getLocalGhostNumOfRows() - 1 ||
+            grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1 &&
+                j == grid.getLocalGhostNumOfCols() - 1) {
+          ASSERT_EQ(gridHandle(i, j, GHOSTED), 0.0) << "(row(i): " << i << ", col(j): " << j << ")";
+        }
+      }
+    }
+
+    // check changed inner boundary ring
+    for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0 || grid.getCornerXGhost() == -1 && j == 0 ||
+            grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1 &&
+                i == grid.getLocalNumOfRows() - 1 ||
+            grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1 &&
+                j == grid.getLocalNumOfCols() - 1) {
+          ASSERT_EQ(gridHandle(i, j), 5.0) << "(row(i): " << i << ", col(j): " << j << ")";
+        }
+      }
+    }
+  }
+}
+
+TEST(PETScGridTest, findAndReplaceRealBoundary) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = 7;
+  const int rows = 5;
+
+  PETScGrid grid(cols, rows);
+  grid.setRealBoundary(5);
+
+  // set some values 3
+  {
+    auto gridHandle = grid.getWriteHandle();
+    auto startJ = (grid.getCornerXGhost() == -1) ? 1 : 0;
+    auto endJ = (grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1)
+                    ? grid.getLocalNumOfCols() - 1
+                    : grid.getLocalNumOfCols();
+    for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+      for (int j = startJ; j < endJ; ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0) {
+          gridHandle(i, j) = 3;
+        }
+      }
+    }
+  }
+
+  grid.findAndReplaceRealBoundary(5, 7);
+
+  {
+    auto &gridHandle = grid.getReadHandle();
+
+    // check unchanged
+    auto startI = (grid.getCornerYGhost() == -1) ? 1 : 0;
+    auto startJ = (grid.getCornerXGhost() == -1) ? 1 : 0;
+    auto endI = (grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1)
+                    ? grid.getLocalNumOfRows() - 1
+                    : grid.getLocalNumOfRows();
+    auto endJ = (grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1)
+                    ? grid.getLocalNumOfCols() - 1
+                    : grid.getLocalNumOfCols();
+    for (int i = startI; i < endI; ++i) {
+      for (int j = startJ; j < endJ; ++j) {
+        ASSERT_EQ(gridHandle(i, j), 0.0) << "(row(i): " << i << ", col(j): " << j << ")";
+      }
+    }
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalGhostNumOfCols(); ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0 || grid.getCornerXGhost() == -1 && j == 0 ||
+            grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1 &&
+                i == grid.getLocalGhostNumOfRows() - 1 ||
+            grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1 &&
+                j == grid.getLocalGhostNumOfCols() - 1) {
+          ASSERT_EQ(gridHandle(i, j, GHOSTED), 0.0) << "(row(i): " << i << ", col(j): " << j << ")";
+        }
+      }
+    }
+    for (int i = 0; i < grid.getLocalGhostNumOfRows(); ++i) {
+      for (int j = startJ; j < endJ; ++j) {
+        if (grid.getCornerYGhost() == -1 && i == 0)
+          ASSERT_EQ(gridHandle(i, j), 3.0) << "(row(i): " << i << ", col(j): " << j << ")";
+      }
+    }
+
+    // check changed inner boundary ring
+    for (int i = 0; i < grid.getLocalNumOfRows(); ++i) {
+      for (int j = 0; j < grid.getLocalNumOfCols(); ++j) {
+        if (grid.getCornerXGhost() == -1 && j == 0 ||
+            grid.getCornerYGhost() + grid.getLocalGhostNumOfRows() == grid.getTotalGhostNumOfRows() - 1 &&
+                i == grid.getLocalNumOfRows() - 1 ||
+            grid.getCornerXGhost() + grid.getLocalGhostNumOfCols() == grid.getTotalGhostNumOfCols() - 1 &&
+                j == grid.getLocalNumOfCols() - 1) {
+          ASSERT_EQ(gridHandle(i, j), 7.0) << "(row(i): " << i << ", col(j): " << j << ")";
+        }
+      }
+    }
+  }
+}
+
+TEST(PETScGridTest, getMaxAbsDiff) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = 5;
+  const int rows = 3;
+
+  PETScGrid grid1(cols, rows);
+  PETScGrid grid2(cols, rows);
+  {
+    auto grid1Handle = grid1.getWriteHandle();
+    auto grid2Handle = grid2.getWriteHandle();
+    for (int j = 0; j < grid1.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < grid1.getLocalNumOfCols(); ++i) {
+        grid1Handle(j, i) = (i + 1) * (j + 1) * (-1 * mpiRank - 1);
+        grid2Handle(j, i) = (i - j) * 10;
+      }
+    }
+  }
+
+  auto maxAbsDiff = grid1.getMaxAbsDiff(grid2);
+  ASSERT_EQ(maxAbsDiff, 29.0);
+
+  maxAbsDiff = grid2.getMaxAbsDiff(grid1);
+  ASSERT_EQ(maxAbsDiff, 29.0);
+
+  maxAbsDiff = grid1.getMaxAbsDiff(grid1);
+  ASSERT_EQ(maxAbsDiff, 0.0);
+
+  maxAbsDiff = grid2.getMaxAbsDiff(grid2);
+  ASSERT_EQ(maxAbsDiff, 0.0);
+
+  // check if both grids have not changed
+  {
+    auto &grid1Handle = grid1.getReadHandle();
+    auto &grid2Handle = grid2.getReadHandle();
+    for (int j = 0; j < grid1.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < grid1.getLocalNumOfCols(); ++i) {
+        ASSERT_EQ(grid1Handle(j, i), (i + 1) * (j + 1) * (-1 * mpiRank - 1));
+        ASSERT_EQ(grid2Handle(j, i), (i - j) * 10);
+      }
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
   PetscInitialize(&argc, &argv, nullptr, nullptr);

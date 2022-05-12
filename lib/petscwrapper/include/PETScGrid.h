@@ -41,27 +41,27 @@ class PETScGrid {
    * if ghosted: GhostValues are being read aswell.
    */
   struct ReadHandle {
-    PETScGrid const *grid;
+    PETScGrid const *const grid;
     explicit ReadHandle(PETScGrid const *grid) : grid(grid){};
 
     PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
       if (ghosted) {
         if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
-          CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
+          CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.")
           exit(1);
         }
         return grid->valuesGhosted[i][j];
       } else {
         if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
-          CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.");
+          CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.")
           exit(1);
         }
         return grid->values[i][j];
       }
     };
 
-    PetscScalar const *const *const getRaw() const { return grid->values; }
-    PetscScalar const *const *const getRawGhosted() const { return grid->valuesGhosted; }
+    PetscScalar const *const *getRaw() const { return grid->values; }
+    PetscScalar const *const *getRawGhosted() const { return grid->valuesGhosted; }
   };
 
   /*
@@ -71,12 +71,12 @@ class PETScGrid {
    * Using WriteHandle you can not write to ghost-cells.
    */
   struct WriteHandle {
-    PETScGrid *grid;
+    PETScGrid *const grid;
     explicit WriteHandle(PETScGrid *grid) : grid(grid){};
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
-        CUAS_ERROR("PETScGrid.h: WriteHandle: Access out of range. Exiting.");
+        CUAS_ERROR("PETScGrid.h: WriteHandle: Access out of range. Exiting.")
         exit(1);
       }
       return grid->values[i][j];
@@ -88,16 +88,16 @@ class PETScGrid {
 
     ~WriteHandle() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); }
 
-    PetscScalar *const *const getRaw() { return grid->values; }
+    PetscScalar *const *getRaw() { return grid->values; }
   };
 
   struct WriteHandleGhost {
-    PETScGrid *grid;
+    PETScGrid *const grid;
     explicit WriteHandleGhost(PETScGrid *grid) : grid(grid){};
 
     PetscScalar &operator()(int i, int j) {
       if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
-        CUAS_ERROR("PETScGrid.h: WriteHandleGhost: Access out of range. Exiting.");
+        CUAS_ERROR("PETScGrid.h: WriteHandleGhost: Access out of range. Exiting.")
         exit(1);
       }
       return grid->valuesGhosted[i][j];
@@ -109,7 +109,7 @@ class PETScGrid {
 
     ~WriteHandleGhost() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); }
 
-    PetscScalar *const *const getRaw() { return grid->valuesGhosted; }
+    PetscScalar *const *getRaw() { return grid->valuesGhosted; }
   };
 
   // creates a Grid of numOfCols times numOfRows,
@@ -125,14 +125,8 @@ class PETScGrid {
 
   WriteHandleGhost getWriteHandleGhost() { return WriteHandleGhost(this); }
 
-  // sets the outer boundaries (ghost-cells) of the grid
-  void setGlobalBoundariesConst(PetscScalar value);
-  void setInnerBoundariesConst(PetscScalar value);
-
-  // sets the grids values from globalVec using the column major layout
-  void setGlobalVecColMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
-  // sets the grids values from globalVec using the column major layout
-  void setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
+  // max(abs(this - sub))
+  PetscScalar getMaxAbsDiff(PETScGrid const &sub) const;
 
   // sets each entry of grid to value
   void setConst(PetscScalar value);
@@ -175,6 +169,17 @@ class PETScGrid {
       return false;
   }
 
+  // sets the outer boundaries (ghost-cells) of the grid
+  void setGhostBoundary(PetscScalar value);
+  void setRealBoundary(PetscScalar value);
+  void findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar newValue);
+  void findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar newValue);
+
+  // sets the grids values from globalVec using the column major layout
+  void setGlobalVecColMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
+  // sets the grids values from globalVec using the column major layout
+  void setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
+
   // int countNonZero() const;
 
   /* getter */
@@ -206,7 +211,7 @@ class PETScGrid {
   PetscScalar **values;
   PetscScalar **valuesGhosted;
 
-  ReadHandle readHandle;
+  const ReadHandle readHandle;
 
   const int totalNumOfCols;
   const int totalNumOfRows;
@@ -226,26 +231,26 @@ class PETScGrid {
   // you MUST call restoreLocal2dArr afterwards!
   // returns a 2d Array of the processes share of data
   // including ghostcells of neighbour processes
-  PetscScalar **getAsLocal2dArr();
+  // PetscScalar **getAsLocal2dArr();
 
   // indices: from 0 to LocalNumOfCols
   // you MUST call setAsGlobal2dArr or restoreGlobal2dArr afterwards!
   // returns a 2d Array of the processes share of data
-  PetscScalar **getAsGlobal2dArr();
+  // PetscScalar **getAsGlobal2dArr();
 
   // call getAsGlobal2dArr before; parameter: the changed return values.
   // sets the whole grid to given 2d values that have been obtained
   // using getAsGlobal2dArr()
-  void setAsGlobal2dArr(PetscScalar **values);
+  // void setAsGlobal2dArr(PetscScalar **values);
 
   // setting local arrays is not possible because of
   // possible race conditions when writing in ghost-cells.
   // restores the values from getAsLocal2dArr()
-  void restoreLocal2dArr(PetscScalar **values);
+  // void restoreLocal2dArr(PetscScalar **values);
 
   // use only if you do not want to change values.
   // restores the values from getAsGlobal2dArr()
-  void restoreGlobal2dArr(PetscScalar **values);
+  // void restoreGlobal2dArr(PetscScalar **values);
 };
 
 #endif

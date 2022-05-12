@@ -22,44 +22,118 @@ PETScGrid::PETScGrid(int numOfCols, int numOfRows, PetscScalar boundaryValue)
   VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
   VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &valuesGhosted);
 
-  setGlobalBoundariesConst(boundaryValue);
+  setGhostBoundary(boundaryValue);
 }
 
-void PETScGrid::setGlobalBoundariesConst(PetscScalar value) {
-  // TODO use WriteHandleGhost
-  // we write to ghost-cells here
-  PetscScalar **local2d;
-  VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &local2d);
+PETScGrid::~PETScGrid() {
+  VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
+  VecRestoreArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &valuesGhosted);
+  VecDestroy(&local);
+  VecDestroy(&global);
+  DMDestroy(&dm);
+}
 
+PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
+  if (!isCompatible(sub)) {
+    CUAS_ERROR("PETScGrid.cpp: copy: input is not compatible. Exiting.")
+    exit(1);
+  }
+
+  PetscScalar result = 0.0;
+
+  // TODO this implementation uses PETSc functions and is easy to understand,
+  //  but it is probably slower than the manual implmentation below
+  Vec diff;
+  DMCreateGlobalVector(dm, &diff);
+  VecCopy(global, diff);
+  VecAXPY(diff, -1, sub.global);
+  VecAbs(diff);
+  VecMax(diff, PETSC_NULL, &result);
+  VecDestroy(&diff);
+
+  /*auto &minuend = getReadHandle();
+  auto &subtrahend = sub.getReadHandle();
+  for (int j = 0; j < getLocalNumOfRows(); ++j) {
+    for (int i = 0; i < getLocalNumOfCols(); ++i) {
+      auto absDiff = std::abs(minuend(j, i) - subtrahend(j, i));
+      result = std::max(absDiff, result);
+    }
+  }
+
+  MPI_Allreduce(&result, &result, 1, MPI_DOUBLE, MPI_MAX, PETSC_COMM_WORLD);*/
+
+  return result;
+}
+
+void PETScGrid::setConst(PetscScalar value) {
+  VecSet(local, value);
+  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
+}
+
+void PETScGrid::copy(PETScGrid const &input) {
+  if (!isCompatible(input)) {
+    CUAS_ERROR("PETScGrid.cpp: copy: input is not compatible. Exiting.")
+    exit(1);
+  }
+
+  VecCopy(input.local, local);
+  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
+}
+
+void PETScGrid::setGhostBoundary(PetscScalar value) {
+  auto handle = getWriteHandleGhost();
   for (int i = 0; i < localGhostNumOfRows; ++i) {
     for (int j = 0; j < localGhostNumOfCols; ++j) {
       if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
           cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
           cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
-        local2d[i][j] = value;
+        handle(i, j) = value;
       }
     }
   }
-  VecRestoreArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &local2d);
-  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
 }
 
-void PETScGrid::setInnerBoundariesConst(PetscScalar value) {
-  // TODO use WriteHandle
-  PetscScalar **global2d;
-  VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &global2d);
-
+void PETScGrid::setRealBoundary(PetscScalar value) {
+  auto handle = getWriteHandle();
   for (int i = 0; i < localNumOfRows; ++i) {
     for (int j = 0; j < localNumOfCols; ++j) {
       if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
           cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
           cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
-        global2d[i][j] = value;
+        handle(i, j) = value;
       }
     }
   }
-  VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &global2d);
-  DMGlobalToLocal(dm, global, INSERT_VALUES, local);
+}
+
+void PETScGrid::findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar newValue) {
+  auto handle = getWriteHandleGhost();
+  for (int i = 0; i < localGhostNumOfRows; ++i) {
+    for (int j = 0; j < localGhostNumOfCols; ++j) {
+      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
+          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
+          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
+        if (handle(i, j) == oldValue) {
+          handle(i, j) = newValue;
+        }
+      }
+    }
+  }
+}
+
+void PETScGrid::findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar newValue) {
+  auto handle = getWriteHandle();
+  for (int i = 0; i < localNumOfRows; ++i) {
+    for (int j = 0; j < localNumOfCols; ++j) {
+      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
+          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
+          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
+        if (handle(i, j) == oldValue) {
+          handle(i, j) = newValue;
+        }
+      }
+    }
+  }
 }
 
 void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
@@ -68,7 +142,7 @@ void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
 
   if (ghosted) {
     if (globalVec.getSize() != totalGhostNumOfCols * totalGhostNumOfRows) {
-      CUAS_ERROR("PETScGrid.cpp: setGlobalVecColMajor(): sizes do not fit! Exiting.");
+      CUAS_ERROR("PETScGrid.cpp: setGlobalVecColMajor(): sizes do not fit! Exiting.")
       exit(1);
     }
 
@@ -96,7 +170,7 @@ void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
 
   } else {
     if (globalVec.getSize() != totalNumOfCols * totalNumOfRows) {
-      CUAS_ERROR("PETScGrid.cpp: setGlobalVecColMajor(): sizes do not fit! Exiting.");
+      CUAS_ERROR("PETScGrid.cpp: setGlobalVecColMajor(): sizes do not fit! Exiting.")
       exit(1);
     }
 
@@ -130,7 +204,7 @@ void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
 
   if (ghosted) {
     if (globalVec.getSize() != totalGhostNumOfCols * totalGhostNumOfRows) {
-      CUAS_ERROR("PETScGrid.cpp: setGlobalVecRowMajor(): sizes do not fit! Exiting.");
+      CUAS_ERROR("PETScGrid.cpp: setGlobalVecRowMajor(): sizes do not fit! Exiting.")
       exit(1);
     }
 
@@ -158,7 +232,7 @@ void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
 
   } else {
     if (globalVec.getSize() != totalNumOfCols * totalNumOfRows) {
-      CUAS_ERROR("PETScGrid.cpp: setGlobalVecRowMajor(): sizes do not fit! Exiting.");
+      CUAS_ERROR("PETScGrid.cpp: setGlobalVecRowMajor(): sizes do not fit! Exiting.")
       exit(1);
     }
 
@@ -186,45 +260,30 @@ void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
   }
 }
 
-PetscScalar **PETScGrid::getAsLocal2dArr() {
+/*PetscScalar **PETScGrid::getAsLocal2dArr() {
   PetscScalar **values;
   VecGetArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &values);
   return values;
-}
+}*/
 
-void PETScGrid::restoreLocal2dArr(PetscScalar **values) {
+/*void PETScGrid::restoreLocal2dArr(PetscScalar **values) {
   VecRestoreArray2d(local, localGhostNumOfRows, localGhostNumOfCols, 0, 0, &values);
-}
+}*/
 
-PetscScalar **PETScGrid::getAsGlobal2dArr() {
+/*PetscScalar **PETScGrid::getAsGlobal2dArr() {
   PetscScalar **values;
   VecGetArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
   return values;
-}
+}*/
 
-void PETScGrid::restoreGlobal2dArr(PetscScalar **values) {
+/*void PETScGrid::restoreGlobal2dArr(PetscScalar **values) {
   VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
-}
+}*/
 
-void PETScGrid::setAsGlobal2dArr(PetscScalar **globalValues) {
+/*void PETScGrid::setAsGlobal2dArr(PetscScalar **globalValues) {
   VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &globalValues);
   DMGlobalToLocal(dm, global, INSERT_VALUES, local);
-}
-
-void PETScGrid::setConst(PetscScalar value) {
-  VecSet(local, value);
-  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
-}
-
-void PETScGrid::copy(PETScGrid const &input) {
-  if (!isCompatible(input)) {
-    CUAS_ERROR("PETScGrid.cpp: copy: input is not compatible. Exiting.");
-    exit(1);
-  }
-
-  VecCopy(input.local, local);
-  DMLocalToGlobal(dm, local, INSERT_VALUES, global);
-}
+}*/
 
 // int PETScGrid::countNonZero() const {
 //   PetscScalar **gridArr2d;
@@ -241,10 +300,3 @@ void PETScGrid::copy(PETScGrid const &input) {
 //   VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &gridArr2d);
 //   return count;
 // }
-
-PETScGrid::~PETScGrid() {
-  VecRestoreArray2d(global, localNumOfRows, localNumOfCols, 0, 0, &values);
-  DMRestoreLocalVector(dm, &local);
-  DMRestoreGlobalVector(dm, &global);
-  DMDestroy(&dm);
-}
