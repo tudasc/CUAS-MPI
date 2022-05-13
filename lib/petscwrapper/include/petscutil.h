@@ -31,8 +31,8 @@ void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::str
     auto name = std::string(tnames[i]);
     if (!name.empty()) {
       names[i] = "-" + name;
-      auto value = std::string(tvalues[i]);
-      if (!value.empty()) {
+      if (tvalues[i]) {
+        auto value = std::string(tvalues[i]);
         values[i] = value;
       }
     } else {
@@ -41,7 +41,6 @@ void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::str
   }
 
   PetscOptionsLeftRestore(PETSC_NULL, &N, &tnames, &tvalues);
-  return;
 }
 
 std::string getPETScOptionsUnused() {
