@@ -33,6 +33,7 @@ class PETScMatrix {
     MatSetFromOptions(mat);
     MatSetUp(mat);
   }
+  explicit PETScMatrix(Mat mat) : mat(mat) { MatGetSize(mat, &nRows, &nCols); }
   PETScMatrix(PETScMatrix &) = delete;
   PETScMatrix(PETScMatrix &&) = delete;
   ~PETScMatrix() { MatDestroy(&mat); }
@@ -43,6 +44,7 @@ class PETScMatrix {
   int getNumberOfRows() const { return nRows; }
   // setter
   void setValue(int row, int col, PetscScalar val) { MatSetValue(mat, row, col, val, INSERT_VALUES); }
+  void setZero() { MatZeroEntries(mat); }
   // utils
   void assemble() {
     MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY);
@@ -51,8 +53,8 @@ class PETScMatrix {
 
  private:
   Mat mat;
-  const int nCols;
-  const int nRows;
+  int nCols;
+  int nRows;
 
   friend class PETScSolver;
 };

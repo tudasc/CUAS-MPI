@@ -60,6 +60,7 @@ test-petscwrapper:
     - mpirun -n 5 --timeout 60 ./test-PETScMatrix
     - mpirun -n 4 --timeout 60 ./test-PETScSolver
     - mpirun -n 4 --timeout 60 ./test-PETScGrid
+    - mpirun -n 4 --timeout 60 ./test-fillgrid
 
 test-cuascore:
   stage: unit-test
@@ -76,6 +77,7 @@ test-cuascore:
     - mpirun -n 6 --timeout 60 ./test-specialgradient
     - mpirun -n 6 --timeout 60 ./test-forcing
     - mpirun -n 1 --timeout 60 ./test-systemmatrix
+    - mpirun -n 4 --timeout 60 ./test-systemmatrix
     - mpirun -n 6 --timeout 60 ./test-fillNoData
     - mpirun -n 1 --timeout 60 ./test-NetCDFFile
     - mpirun -n 2 --timeout 60 ./test-NetCDFFile

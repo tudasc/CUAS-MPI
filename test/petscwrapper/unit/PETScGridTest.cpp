@@ -233,7 +233,7 @@ TEST(PETScGridTest, handleTest) {
   }
 }
 
-TEST(PETScGridTest, setGlobalVecColMajor) {
+/*TEST(PETScGridTest, setGlobalVecColMajor) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = 6;
@@ -301,9 +301,9 @@ TEST(PETScGridTest, setGlobalVecColMajor) {
       ASSERT_EQ(handle(2, 3, GHOSTED), 20);
     }
   }
-}
+}*/
 
-TEST(PETScGridTest, setGlobalVecRowMajor) {
+/*TEST(PETScGridTest, setGlobalVecRowMajor) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
 
   const int cols = 6;
@@ -371,7 +371,7 @@ TEST(PETScGridTest, setGlobalVecRowMajor) {
       ASSERT_EQ(handle(2, 3, GHOSTED), 19);
     }
   }
-}
+}*/
 
 TEST(PETScGridTest, setGhostBoundary) {
   ASSERT_EQ(mpiSize, MPI_SIZE);

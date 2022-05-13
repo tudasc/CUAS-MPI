@@ -11,7 +11,7 @@ int mpiSize;
 #define VEC_SIZE 4
 #define VERBOSE true
 
-TEST(PetscSolverTest, solve) {
+/*TEST(PetscSolverTest, solve) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
   auto A = std::make_unique<PETScMatrix>(VEC_SIZE, VEC_SIZE);
   auto b = std::make_unique<PETScVector>(VEC_SIZE);
@@ -91,7 +91,7 @@ TEST(PetscSolverTest, solveDirectMUMPS) {
   VecGetValues(s->getRaw(), 1, p, &v);
   ASSERT_EQ(v, mpiRank / 2.0);
 }
-#endif
+#endif*/
 
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);

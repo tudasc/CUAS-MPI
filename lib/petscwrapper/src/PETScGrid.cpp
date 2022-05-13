@@ -80,6 +80,16 @@ void PETScGrid::copy(PETScGrid const &input) {
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);
 }
 
+void PETScGrid::copyGlobal(PETScGrid const &input) {
+  if (!isCompatible(input)) {
+    CUAS_ERROR("PETScGrid.cpp: copy: input is not compatible. Exiting.")
+    exit(1);
+  }
+
+  VecCopy(input.global, global);
+  DMGlobalToLocal(dm, global, INSERT_VALUES, local);
+}
+
 void PETScGrid::setGhostBoundary(PetscScalar value) {
   auto handle = getWriteHandleGhost();
   for (int i = 0; i < localGhostNumOfRows; ++i) {
@@ -136,7 +146,7 @@ void PETScGrid::findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar new
   }
 }
 
-void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
+/*void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
   // the following lines are copying the globalVec Vector to each processor.
   // could probably be optimized to get the specific needed values.
 
@@ -196,9 +206,9 @@ void PETScGrid::setGlobalVecColMajor(PETScVector &globalVec, bool ghosted) {
     VecDestroy(&accessVector);
     VecScatterDestroy(&vs);
   }
-}
+}*/
 
-void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
+/*void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
   // the following lines are copying the globalVec Vector to each processor.
   // could probably be optimized to get the specific needed values.
 
@@ -258,7 +268,7 @@ void PETScGrid::setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted) {
     VecDestroy(&accessVector);
     VecScatterDestroy(&vs);
   }
-}
+}*/
 
 /*PetscScalar **PETScGrid::getAsLocal2dArr() {
   PetscScalar **values;

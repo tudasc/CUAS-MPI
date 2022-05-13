@@ -7,6 +7,8 @@
 #include "timeparse.h"
 
 #include "PETScGrid.h"
+#include "PETScMatrix.h"
+#include "fillgrid.h"
 
 namespace CUAS {
 
@@ -27,10 +29,22 @@ class CUASSolver {
     // basal velocity of ice
     basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
-    sol = std::make_unique<PETScVector>(numOfCols * numOfRows);
+    DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
+                 PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
+    DMSetFromOptions(dm);
+    DMSetUp(dm);
+    Mat petMat;
+    DMCreateMatrix(dm, &petMat);
+    matA = std::make_unique<PETScMatrix>(petMat);
+    bGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    solGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+    globalIndicesBlocked = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    fillGlobalIndicesBlocked(*globalIndicesBlocked);
   }
   CUASSolver(CUASSolver &) = delete;
   CUASSolver(CUASSolver &&) = delete;
+  ~CUASSolver() { DMDestroy(&dm); }
 
   void solve(std::vector<CUAS::timeSecs> &timeSteps);
 
@@ -41,7 +55,6 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> currHead;  // head at the current time level
   std::unique_ptr<PETScGrid> nextTransmissivity;
   std::unique_ptr<PETScGrid> currTransmissivity;
-  std::unique_ptr<PETScVector> sol;
 
  private:
   int const numOfCols;
@@ -56,6 +69,13 @@ class CUASSolver {
   CUASModel *const model;
   CUASArgs const *const args;
   CUAS::SolutionHandler *const solutionHandler;
+
+  std::unique_ptr<PETScGrid> globalIndicesBlocked;
+
+  DM dm;
+  std::unique_ptr<PETScMatrix> matA;
+  std::unique_ptr<PETScGrid> bGrid;
+  std::unique_ptr<PETScGrid> solGrid;
 };
 
 }  // namespace CUAS

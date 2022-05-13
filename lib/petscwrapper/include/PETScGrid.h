@@ -158,6 +158,7 @@ class PETScGrid {
 
   // copys the content of one grid to another
   void copy(PETScGrid const &input);
+  void copyGlobal(PETScGrid const &input);
 
   bool isCompatible(PETScGrid const &grid) const {
     if (totalNumOfCols == grid.totalNumOfCols && totalNumOfRows == grid.totalNumOfRows &&
@@ -176,9 +177,9 @@ class PETScGrid {
   void findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar newValue);
 
   // sets the grids values from globalVec using the column major layout
-  void setGlobalVecColMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
+  // void setGlobalVecColMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
   // sets the grids values from globalVec using the column major layout
-  void setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
+  // void setGlobalVecRowMajor(PETScVector &globalVec, bool ghosted = NONE_GHOSTED);
 
   // int countNonZero() const;
 
@@ -202,12 +203,13 @@ class PETScGrid {
   int getCornerYGhost() const { return cornerYGhost; }
 
   // DM getDM() { return dm; }
- private:
+ public:
   DM dm;
 
   Vec local;
   Vec global;
 
+ private:
   PetscScalar **values;
   PetscScalar **valuesGhosted;
 
