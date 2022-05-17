@@ -27,8 +27,14 @@ add_executable(test-PETScGrid
 target_link_libraries(test-PETScGrid petscwrapper)
 target_link_libraries(test-PETScGrid gtest)
 
+add_executable(test-fillgrid
+        fillgridTest.cpp
+        )
+target_link_libraries(test-fillgrid petscwrapper)
+target_link_libraries(test-fillgrid gtest)
+
 install(TARGETS test-PETScVector DESTINATION test/petscwrapper/unit)
 install(TARGETS test-PETScMatrix DESTINATION test/petscwrapper/unit)
 install(TARGETS test-PETScSolver DESTINATION test/petscwrapper/unit)
 install(TARGETS test-PETScGrid DESTINATION test/petscwrapper/unit)
-
+install(TARGETS test-fillgrid DESTINATION test/petscwrapper/unit)

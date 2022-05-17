@@ -2,14 +2,14 @@
 #define CUAS_PETSCSOLVER_H
 
 #include "Logger.h"
+#include "PETScGrid.h"
 #include "PETScMatrix.h"
-#include "PETScVector.h"
 
 #include "petsc.h"
 
 class PETScSolver {
  public:
-  inline static void solve(PETScMatrix const &A, PETScVector const &b, PETScVector &solution, bool verbose = false) {
+  inline static void solve(PETScMatrix const &A, PETScGrid const &bGrid, PETScGrid &solGrid, bool verbose = false) {
     KSP ksp;
     PC pc;
 
@@ -19,7 +19,7 @@ class PETScSolver {
     PCSetType(pc, PCJACOBI);
     KSPSetFromOptions(ksp);
 
-    KSPSolve(ksp, b.vec, solution.vec);
+    KSPSolve(ksp, bGrid.global, solGrid.global);
     {
       KSPConvergedReason reason;
       KSPGetConvergedReason(ksp, &reason);
@@ -50,7 +50,7 @@ class PETScSolver {
    *    -mat_mumps_icntl_14 120 -mat_mumps_icntl_28 2 -mat_mumps_icntl_29 2
    * For more options see https://petsc.org/main/docs/manualpages/Mat/MATSOLVERMUMPS.html
    */
-  inline static void solveDirectMUMPS(PETScMatrix const &A, PETScVector const &b, PETScVector &solution,
+  inline static void solveDirectMUMPS(PETScMatrix const &A, PETScGrid const &bGrid, PETScGrid &solGrid,
                                       bool verbose = false) {
     KSP ksp;
     PC pc;
@@ -81,7 +81,7 @@ class PETScSolver {
     KSPSetFromOptions(ksp);
 
     // solve the linear system, number of iteration will be 1 and rnorm = 0.0
-    KSPSolve(ksp, b.vec, solution.vec);
+    KSPSolve(ksp, bGrid.global, solGrid.global);
     {
       KSPConvergedReason reason;
       KSPGetConvergedReason(ksp, &reason);

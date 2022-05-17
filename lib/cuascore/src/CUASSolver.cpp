@@ -6,9 +6,7 @@
 #include "systemmatrix.h"
 
 #include "Logger.h"
-#include "PETScMatrix.h"
 #include "PETScSolver.h"
-#include "PETScVector.h"
 
 #include <cmath>
 #include <memory>
@@ -179,8 +177,6 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   // start
   // creating grids outside of loop to save time
   int size = model->Ncols * model->Nrows;
-  PETScMatrix A(size, size);
-  PETScVector b(size);
   PetscScalar eps = 0.0;
   PetscScalar Teps = 0.0;
 
@@ -300,13 +296,13 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       //
       // UPDATE HEAD
       //
-      systemmatrix(A, b, model->Nrows, model->Ncols, Seff, Teff, model->dx, dt, theta, *currHead, currentQ,
-                   *dirichletValues, *model->bndMask);
+      systemmatrix(*matA, *bGrid, Seff, Teff, model->dx, dt, theta, *currHead, currentQ, *dirichletValues,
+                   *model->bndMask, *globalIndicesBlocked);
 
       // solve the equation A*sol = b,
       // todo: - return number of iterations and rnorm for logging
-      PETScSolver::solve(A, b, *sol, args->verboseSolver && !args->directSolver);
-      nextHead->setGlobalVecColMajor(*sol);
+      PETScSolver::solve(*matA, *bGrid, *solGrid, args->verboseSolver && !args->directSolver);
+      nextHead->copyGlobal(*solGrid);
       // todo: eps_head = np.max(np.abs(nextHead - currHead))
       eps = nextHead->getMaxAbsDiff(*currHead) / dt;
       // switch pointers
