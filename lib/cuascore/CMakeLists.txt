@@ -15,6 +15,8 @@ target_include_directories(cuascore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(cuascore petscwrapper)
 
+add_dependencies(cuascore gitversion)
+
 add_netcdf(cuascore)
 
 add_cxxopts(cuascore)

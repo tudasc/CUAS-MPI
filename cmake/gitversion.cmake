@@ -1,5 +1,7 @@
 # tkleiner: found on https://www.mattkeeter.com/blog/2018-01-06-versioning/
 # and modified for cuas
+find_package(Git)
+
 if(Git_FOUND)
 execute_process(COMMAND ${GIT_EXECUTABLE} log --pretty=format:'%h' -n 1
         OUTPUT_VARIABLE GIT_REV
@@ -34,7 +36,8 @@ endif()
 
 set(VERSION "const char *GIT_REV = \"${GIT_REV}${GIT_DIFF}\";
 const char *GIT_TAG = \"${GIT_TAG}\";
-const char *GIT_BRANCH = \"${GIT_BRANCH}\";")
+const char *GIT_BRANCH = \"${GIT_BRANCH}\";
+")
 
 if(EXISTS ${PROJECT_SOURCE_DIR}/lib/cuascore/src/version.cpp)
     file(READ ${PROJECT_SOURCE_DIR}/lib/cuascore/src/version.cpp VERSION_)
@@ -44,4 +47,10 @@ endif()
 
 if (NOT "${VERSION}" STREQUAL "${VERSION_}")
     file(WRITE ${PROJECT_SOURCE_DIR}/lib/cuascore/src/version.cpp "${VERSION}")
+endif()
+
+if(NOT CMAKE_SCRIPT_MODE_FILE)
+    add_custom_target(gitversion ALL
+            ${CMAKE_COMMAND} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -P ${PROJECT_SOURCE_DIR}/cmake/gitversion.cmake
+            )
 endif()
