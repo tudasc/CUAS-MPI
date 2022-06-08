@@ -14,13 +14,13 @@ class ConstantForcing : public Forcing {
       : forcing(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows()) {
     forcing.copy(m_forcing);
 
-    applyMultiplier(multiplier);
-    applyOffset(offset);
+    ConstantForcing::applyMultiplier(multiplier);
+    ConstantForcing::applyOffset(offset);
   };
   ConstantForcing(ConstantForcing &) = delete;
   ConstantForcing(ConstantForcing &&) = delete;
 
-  PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override { return forcing; }
+  PETScGrid const &getCurrentQ(timeSecs currTime = 0) override { return forcing; }
 
  private:
   PETScGrid forcing;
