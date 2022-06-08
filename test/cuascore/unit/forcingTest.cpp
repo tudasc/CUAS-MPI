@@ -40,7 +40,7 @@ TEST(forcingTest, timeForcing) {
   qs[2]->setConst(5);
   qs[3]->setConst(11);
 
-  std::vector<CUAS::timeSecs> time_forcing = {1, 2, 10, 15};
+  std::vector<CUAS::timeSecs> time_forcing = {10, 20, 100, 150};
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing =
       std::make_unique<CUAS::TimeForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, false);
@@ -50,7 +50,7 @@ TEST(forcingTest, timeForcing) {
     auto temp1 = 1.0 / SPY * supplyMultiplier;
     auto temp2 = 7.0 / SPY * supplyMultiplier;
     auto result = 0.5 * temp1 + 0.5 * temp2;
-    auto &Q = forcing->getCurrentQ(1.5);
+    auto &Q = forcing->getCurrentQ(15);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -62,7 +62,7 @@ TEST(forcingTest, timeForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.8 * temp1 + 0.2 * temp2;
-    auto &Q = forcing->getCurrentQ(3.6);
+    auto &Q = forcing->getCurrentQ(36);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -74,7 +74,7 @@ TEST(forcingTest, timeForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.4375 * temp1 + 0.5625 * temp2;
-    auto &Q = forcing->getCurrentQ(6.5);
+    auto &Q = forcing->getCurrentQ(65);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -85,7 +85,7 @@ TEST(forcingTest, timeForcing) {
   // check exact hit
   {
     auto result = 5.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(10);
+    auto &Q = forcing->getCurrentQ(100);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -96,7 +96,7 @@ TEST(forcingTest, timeForcing) {
   // check higher currTime
   {
     auto result = 11.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(100);
+    auto &Q = forcing->getCurrentQ(1000);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -107,7 +107,7 @@ TEST(forcingTest, timeForcing) {
   // check lower currTime
   {
     auto result = 1.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(0.1);
+    auto &Q = forcing->getCurrentQ(1);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -129,17 +129,17 @@ TEST(forcingTest, loopForcing) {
   qs[2]->setConst(5);
   qs[3]->setConst(11);
 
-  std::vector<CUAS::timeSecs> time_forcing = {1, 2, 10, 15};
+  std::vector<CUAS::timeSecs> time_forcing = {10, 20, 100, 150};
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing =
       std::make_unique<CUAS::TimeForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, true);
 
-  // check interpolation
+  // check interpolation within the range
   {
     auto temp1 = 1.0 / SPY * supplyMultiplier;
     auto temp2 = 7.0 / SPY * supplyMultiplier;
     auto result = 0.5 * temp1 + 0.5 * temp2;
-    auto &Q = forcing->getCurrentQ(1.5);
+    auto &Q = forcing->getCurrentQ(15);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -151,7 +151,7 @@ TEST(forcingTest, loopForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.8 * temp1 + 0.2 * temp2;
-    auto &Q = forcing->getCurrentQ(3.6);
+    auto &Q = forcing->getCurrentQ(36);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -163,7 +163,7 @@ TEST(forcingTest, loopForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.4375 * temp1 + 0.5625 * temp2;
-    auto &Q = forcing->getCurrentQ(6.5);
+    auto &Q = forcing->getCurrentQ(65);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -174,7 +174,7 @@ TEST(forcingTest, loopForcing) {
   // check exact hit
   {
     auto result = 5.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(10);
+    auto &Q = forcing->getCurrentQ(100);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -182,12 +182,12 @@ TEST(forcingTest, loopForcing) {
       }
     }
   }
-  // check higher currTime
+  // check higher currTime to test loop forcing
   {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.5 * temp1 + 0.5 * temp2;
-    auto &Q = forcing->getCurrentQ(21);
+    auto &Q = forcing->getCurrentQ(210);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -197,7 +197,7 @@ TEST(forcingTest, loopForcing) {
   }
   {
     auto result = 7.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(47);
+    auto &Q = forcing->getCurrentQ(470);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -208,7 +208,7 @@ TEST(forcingTest, loopForcing) {
   // check lower currTime
   {
     auto result = 1.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(0.1);
+    auto &Q = forcing->getCurrentQ(1);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {

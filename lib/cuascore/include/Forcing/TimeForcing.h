@@ -32,23 +32,23 @@ class TimeForcing : public Forcing {
     std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
 
     if (multiplier != 1.0) {
-      applyMultiplier(multiplier);
+      TimeForcing::applyMultiplier(multiplier);
     }
     if (offset != 0.0) {
-      applyOffset(offset);
+      TimeForcing::applyOffset(offset);
     }
   }
   TimeForcing(TimeForcing &) = delete;
   TimeForcing(TimeForcing &&) = delete;
 
-  PETScGrid const &getCurrentQ(PetscScalar currTime = 0.0) override {
+  PETScGrid const &getCurrentQ(timeSecs currTime = 0) override {
     if (currTime < 0) {
       CUAS_ERROR("TimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.")
       exit(1);
     }
 
     if (loopForcing) {
-      currTime = std::fmod(currTime, time.back());
+      currTime = currTime % time.back();
     } else if (currTime > time.back()) {
       CUAS_WARN(
           "TimeForcing.h: getCurrentQ was called with currTime > time.back(). Using last Q of forcingStack. Consider "
@@ -70,9 +70,11 @@ class TimeForcing : public Forcing {
     }
 
     // compute weights for linear interpolation
+    // diff must a real type (double|float); with "auto" diff would be of type timeSecs aka long
+    // and division later would fail.
     auto diff = time[upperBound] - time[lowerBound];
-    auto wUpper = (currTime - time[lowerBound]) / diff;
-    auto wLower = (time[upperBound] - currTime) / diff;
+    auto wUpper = (PetscScalar)(currTime - time[lowerBound]) / (PetscScalar)diff;
+    auto wLower = (PetscScalar)(time[upperBound] - currTime) / (PetscScalar)diff;
 
     {
       auto fLower = forcingStack[lowerBound]->getReadHandle();
