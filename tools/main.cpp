@@ -26,7 +26,11 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
   }
 
   if (args.verbose) {
-    CUAS_INFO_RANK0("Number of time steps = {}", time.timeSteps.size() - 1)
+    if (time.timeSteps.size() == 1) {
+      CUAS_INFO_RANK0("No time steps requested. This run is diagnostic only!")
+    } else {
+      CUAS_INFO_RANK0("Number of time steps = {}", time.timeSteps.size() - 1)
+    }
   }
 }
 

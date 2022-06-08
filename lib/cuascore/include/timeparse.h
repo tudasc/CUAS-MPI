@@ -130,9 +130,55 @@ inline std::string parseTime(timeSecs const secs) {
 }
 
 inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTime, timeSecs dt) {
+  // negative time is considered to be fatal
+  if (startTime < 0) {
+    CUAS_ERROR("{} called with invalid startTime = {} < 0. Exiting.",  //
+               __PRETTY_FUNCTION__, startTime);
+    exit(1);
+  }
+  if (endTime < 0) {
+    CUAS_ERROR("{} called with invalid endTime = {} < 0. Exiting.",  //
+               __PRETTY_FUNCTION__, endTime);
+    exit(1);
+  }
+  if (dt < 0) {
+    CUAS_ERROR("{} called with invalid dt = {} < 0. Exiting.",  //
+               __PRETTY_FUNCTION__, dt);
+    exit(1);
+  }
+
+  // relationship between beginning and end
+  // end has to be larger than start
+  if (startTime > endTime) {
+    CUAS_ERROR("{} called with invalid startTime = {} > endTime = {}. Exiting.",  //
+               __PRETTY_FUNCTION__, startTime, endTime);
+    exit(1);
+  }
+
+  // create vector and insert default value startTime
   std::vector<CUAS::timeSecs> timeSteps;
   auto currTime = startTime;
   timeSteps.push_back(currTime);
+
+  // check if run is diagnostic: dt == 0 or start == end
+  // diagnostic runs only use startTime
+  if (dt == 0 && startTime == endTime) {
+    return timeSteps;
+  }
+  // nothing to do, but this could be intentional
+  if (dt == 0) {
+    CUAS_WARN("{} called with dt == 0. Ignoring startTime and endTime.", __PRETTY_FUNCTION__);
+    return timeSteps;
+  }
+  // nothing to do, but this could be intentional
+  if (startTime == endTime) {
+    CUAS_WARN("{} called with startTime equal to endTime. Ignoring time step length dt.", __PRETTY_FUNCTION__);
+    return timeSteps;
+  }
+
+  // this is the normal case
+  // timeSteps.back() might be larger than endTime, if endTime % dt != 0.
+  // This ensures that endTime is included in the computation.
   while (currTime < endTime) {
     currTime += dt;
     timeSteps.push_back(currTime);
