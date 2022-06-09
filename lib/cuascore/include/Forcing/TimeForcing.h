@@ -77,8 +77,8 @@ class TimeForcing : public Forcing {
     auto wLower = (PetscScalar)(time[upperBound] - currTime) / (PetscScalar)diff;
 
     {
-      auto fLower = forcingStack[lowerBound]->getReadHandle();
-      auto fUpper = forcingStack[upperBound]->getReadHandle();
+      auto &fLower = forcingStack[lowerBound]->getReadHandle();
+      auto &fUpper = forcingStack[upperBound]->getReadHandle();
       auto rows = forcingStack[lowerBound]->getLocalNumOfRows();
       auto cols = forcingStack[lowerBound]->getLocalNumOfCols();
       auto currQWrite = currQ->getWriteHandle();

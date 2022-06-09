@@ -213,7 +213,7 @@ TEST(NetCDFFileTest, readUnlimitedFile) {
     {
       auto cornerX = grid.getCornerX();
       auto cornerY = grid.getCornerY();
-      auto handle = grid.getReadHandle();
+      auto &handle = grid.getReadHandle();
       for (int j = 0; j < grid.getLocalNumOfRows(); ++j) {
         for (int i = 0; i < grid.getLocalNumOfCols(); ++i) {
           auto index = (cornerY + j) * grid.getTotalNumOfCols() + cornerX + i;
@@ -226,7 +226,7 @@ TEST(NetCDFFileTest, readUnlimitedFile) {
     {
       auto cornerX = grid.getCornerX();
       auto cornerY = grid.getCornerY();
-      auto handle = grid.getReadHandle();
+      auto &handle = grid.getReadHandle();
       for (int j = 0; j < grid.getLocalNumOfRows(); ++j) {
         for (int i = 0; i < grid.getLocalNumOfCols(); ++i) {
           auto index = (cornerY + j) * grid.getTotalNumOfCols() + cornerX + i;

@@ -323,7 +323,7 @@ inline void convolveStar11411(PETScGrid &input, PETScGrid &result) {
   //                                    [1, 4, 1],
   //                                    [0, 1, 0]]) / 8
 
-  auto inp = input.getReadHandle();
+  auto &inp = input.getReadHandle();
   auto res = result.getWriteHandle();
   int ghostIndexCols = 1;
   int ghostIndexRows = 1;
@@ -387,7 +387,7 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
   // Update T with melt, creep and cavity
   {
     auto T = newHydraulicTransmissivity.getWriteHandle();
-    auto T_n = hydraulicTransmissivity.getReadHandle();
+    auto &T_n = hydraulicTransmissivity.getReadHandle();
     auto &melt = aMelt.getReadHandle();      // dT/dt_melt
     auto &creep = aCreep.getReadHandle();    // dT/dt_creep
     auto &cavity = aCavity.getReadHandle();  // dT/dt_cavity
