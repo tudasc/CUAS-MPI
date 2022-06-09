@@ -715,7 +715,7 @@ void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int c
     std::array<size_t, 3> start;
     std::array<size_t, 3> count;
 
-    auto grid = input.getReadHandle();
+    auto &grid = input.getReadHandle();
     auto gridFromNetcdf = grid.getRaw();
 
 #if GRID_IMPLEMENTATION == GRID_ROWWISE
@@ -758,7 +758,7 @@ void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int c
     std::array<size_t, 2> start;
     std::array<size_t, 2> count;
 
-    auto grid = input.getReadHandle();
+    auto &grid = input.getReadHandle();
     auto gridFromNetcdf = grid.getRaw();
 
 #if GRID_IMPLEMENTATION == GRID_ROWWISE

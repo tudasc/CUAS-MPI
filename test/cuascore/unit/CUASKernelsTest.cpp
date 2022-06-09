@@ -242,7 +242,7 @@ TEST(CUASKernelsTest, computeMeltOpening) {
 
   CUAS::computeMeltOpening(result, r, K, T, gradh2);
 
-  auto res2d = result.getReadHandle();
+  auto &res2d = result.getReadHandle();
 
   PetscScalar *resArr[GRID_SIZE_Y];
   PetscScalar resArrBeginningEnd[GRID_SIZE_X] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -332,7 +332,7 @@ TEST(CUASKernelsTest, binaryDilation) {
   }
   gMask[GRID_SIZE_Y - 1] = gBeginningEnd;
 
-  auto grad2d = gradMask.getReadHandle();
+  auto &grad2d = gradMask.getReadHandle();
   for (int i = 0; i < gradMask.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < gradMask.getLocalNumOfCols(); ++j) {
       EXPECT_DOUBLE_EQ(grad2d(i, j), gMask[gradMask.getCornerY() + i][gradMask.getCornerX() + j]);
@@ -643,7 +643,7 @@ TEST(CUASKernelsTest, doChannels) {
   meltArr[GRID_SIZE_Y - 1] = meltFirstRow;
 
   // tkleiner (22.02.2022): fails as we compute melt opening using the gradMask
-  auto melt2d = melt.getReadHandle();
+  auto &melt2d = melt.getReadHandle();
   for (int i = 0; i < melt.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < melt.getLocalNumOfCols(); ++j) {
       EXPECT_DOUBLE_EQ(melt2d(i, j), meltArr[melt.getCornerY() + i][melt.getCornerX() + j])
@@ -665,7 +665,7 @@ TEST(CUASKernelsTest, doChannels) {
   }
 
   // tkleiner (22.02.2022): ok, as we compute creep opening everywhere without using the bndMask
-  auto creep2d = creep.getReadHandle();
+  auto &creep2d = creep.getReadHandle();
   for (int i = 0; i < creep.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < creep.getLocalNumOfCols(); ++j) {
       EXPECT_DOUBLE_EQ(creep2d(i, j), creepArr[creep.getCornerY() + i][creep.getCornerX() + j])
@@ -684,7 +684,7 @@ TEST(CUASKernelsTest, doChannels) {
   }
 
   // tkleiner (22.02.2022): ok, as we compute cavity opening everywhere without using the bndMask
-  auto cavity2d = cavity.getReadHandle();
+  auto &cavity2d = cavity.getReadHandle();
   for (int i = 0; i < cavity.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < cavity.getLocalNumOfCols(); ++j) {
       EXPECT_DOUBLE_EQ(cavity2d(i, j), cavityArr[cavity.getCornerY() + i][cavity.getCornerX() + j])
@@ -720,7 +720,7 @@ TEST(CUASKernelsTest, doChannels) {
   updatedTArr[GRID_SIZE_Y - 2] = updatedTSecondRow;
   updatedTArr[GRID_SIZE_Y - 1] = updatedTFirstRow;
 
-  auto updatedTGlobal = T.getReadHandle();
+  auto &updatedTGlobal = T.getReadHandle();
   for (int i = 0; i < T.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < T.getLocalNumOfCols(); ++j) {
       EXPECT_DOUBLE_EQ(updatedTGlobal(i, j), updatedTArr[T.getCornerY() + i][T.getCornerX() + j])
@@ -826,7 +826,7 @@ TEST(CUASKernelsTest, convolve) {
   resultArr[GRID_SIZE_Y - 1] = resultFirstRow;
 
   {
-    auto res2d = result.getReadHandle();
+    auto &res2d = result.getReadHandle();
 
     for (int i = 0; i < result.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < result.getLocalNumOfCols(); ++j) {
@@ -865,7 +865,7 @@ TEST(CUASKernelsTest, clamp) {
 
   // check
   {
-    auto inputGlobal = input.getReadHandle();
+    auto &inputGlobal = input.getReadHandle();
     for (int j = 0; j < input.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < input.getLocalNumOfCols(); ++i) {
         ASSERT_EQ(inputGlobal(j, i) >= minimum, true);

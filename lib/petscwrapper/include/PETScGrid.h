@@ -43,6 +43,12 @@ class PETScGrid {
   struct ReadHandle {
     PETScGrid const *const grid;
     explicit ReadHandle(PETScGrid const *grid) : grid(grid){};
+    // disable copy of ReadHandle to ensure that getReadHandle is only used to get a reference and avoid copies
+    ReadHandle(const ReadHandle &) = delete;
+    ReadHandle &operator=(ReadHandle const &) = delete;
+    ReadHandle(const ReadHandle &&) = delete;
+    ReadHandle &operator=(ReadHandle const &&) = delete;
+    ~ReadHandle() = default;
 
     PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
       if (ghosted) {
