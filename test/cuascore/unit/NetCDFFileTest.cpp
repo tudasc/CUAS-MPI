@@ -1,4 +1,5 @@
 #include "NetCDFFile.h"
+#include "timeparse.h"
 
 #include "gtest/gtest.h"
 
@@ -7,6 +8,7 @@ int mpiSize;
 
 #define GRID_SIZE_X 9
 #define GRID_SIZE_Y 5
+#define TIME_LEN 20
 
 TEST(NetCDFFileTest, define) {
   CUAS::NetCDFFile file("define.nc", GRID_SIZE_X, GRID_SIZE_Y);
@@ -237,9 +239,93 @@ TEST(NetCDFFileTest, readUnlimitedFile) {
   }
 }
 
-/*TEST(NetCDFFileTest, readTimeStepArray) {
-  // TODO
-}*/
+TEST(NetCDFFileTest, readTimeArrayOfDifferentTypes) {
+  // Note, NC_LONG and NC_INT are actually the same data type (signed 4 byte integer)
+  // See netcdf.h
+
+  std::string fileName = "readTimeArray.nc";
+
+  // CUAS data type for time, this is also "long" but could change in the future
+  std::vector<CUAS::timeSecs> time(TIME_LEN);
+  // default types
+  std::vector<double> time_double(TIME_LEN);
+  std::vector<float> time_float(TIME_LEN);
+  std::vector<long> time_long(TIME_LEN);
+  std::vector<int> time_int(TIME_LEN);
+  // unsupported, but should work
+  std::vector<short> time_short(TIME_LEN);
+  std::vector<unsigned int> time_uint(TIME_LEN);
+  std::vector<unsigned short> time_ushort(TIME_LEN);
+
+  for (short i = 0; i < TIME_LEN; ++i) {
+    time[i] = (CUAS::timeSecs)i;
+    time_double[i] = (double)i;
+    time_float[i] = (float)i;
+    time_long[i] = (long)i;
+    time_int[i] = (int)i;
+    time_short[i] = i;
+    time_uint[i] = (unsigned int)i;
+    time_ushort[i] = (unsigned short)i;
+  }
+
+  // generate a valid input file with different types for time
+  {
+    int fileId, dimId, varId, tmp;
+    nc_create_par(fileName.c_str(), NC_MPIIO | NC_NETCDF4, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId);
+    nc_def_dim(fileId, "time", TIME_LEN, &dimId);
+    // NetCDFFile::NetCDFFile(name, 'r') needs x- and y-dims
+    nc_def_dim(fileId, "x", GRID_SIZE_X, &tmp);  // dummy dim without data
+    nc_def_dim(fileId, "y", GRID_SIZE_Y, &tmp);  // dummy dim without data
+
+    // default types
+    nc_def_var(fileId, "time_double", NC_DOUBLE, 1, &dimId, &tmp);
+    nc_def_var(fileId, "time_float", NC_FLOAT, 1, &dimId, &tmp);
+    nc_def_var(fileId, "time_long", NC_LONG, 1, &dimId, &tmp);
+    nc_def_var(fileId, "time_int", NC_INT, 1, &dimId, &tmp);
+    // unsupported, but should work
+    nc_def_var(fileId, "time_short", NC_SHORT, 1, &dimId, &tmp);
+    nc_def_var(fileId, "time_uint", NC_UINT, 1, &dimId, &tmp);
+    nc_def_var(fileId, "time_ushort", NC_USHORT, 1, &dimId, &tmp);
+
+    nc_enddef(fileId);
+
+    // now write the data
+    nc_inq_varid(fileId, "time_double", &varId);
+    nc_put_var_double(fileId, varId, time_double.data());
+    nc_inq_varid(fileId, "time_float", &varId);
+    nc_put_var_float(fileId, varId, time_float.data());
+    nc_inq_varid(fileId, "time_long", &varId);
+    nc_put_var_long(fileId, varId, time_long.data());
+    nc_inq_varid(fileId, "time_int", &varId);
+    nc_put_var_int(fileId, varId, time_int.data());
+
+    nc_inq_varid(fileId, "time_short", &varId);
+    nc_put_var_short(fileId, varId, time_short.data());
+    nc_inq_varid(fileId, "time_uint", &varId);
+    nc_put_var_uint(fileId, varId, time_uint.data());
+    nc_inq_varid(fileId, "time_ushort", &varId);
+    nc_put_var_ushort(fileId, varId, time_ushort.data());
+    // done
+    nc_close(fileId);
+  }
+
+  // open test file for reading
+  CUAS::NetCDFFile file(fileName, 'r');
+  auto nt = file.getDimLength("time");
+  ASSERT_EQ(nt, TIME_LEN);
+
+  std::vector<std::string> varNames = {"time_double", "time_float", "time_long",  "time_int",
+                                       "time_short",  "time_uint",  "time_ushort"};
+
+  for (auto &name : varNames) {
+    std::vector<CUAS::timeSecs> time_in(nt);
+    // std::cout << name << std::endl;
+    file.read(name, time_in);
+    for (int i = 0; i < nt; ++i) {
+      EXPECT_EQ(time[i], time_in[i]);
+    }
+  }
+}
 
 int main(int argc, char *argv[]) {
   int result = 0;

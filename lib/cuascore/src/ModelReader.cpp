@@ -42,16 +42,18 @@ std::unique_ptr<CUAS::TimeForcing> ModelReader::getTimeForcing(std::string const
                                                                PetscScalar const multiplier, PetscScalar const offset,
                                                                bool const loopForcing) {
   auto timeForcingFile = std::make_unique<NetCDFFile>(timeForcingFileName, 'r');
-  auto timeDim = timeForcingFile->getDimLength("time");
-  auto x = timeForcingFile->getDimX();
-  auto y = timeForcingFile->getDimY();
-  std::vector<timeSecs> time(timeDim);
-  std::vector<std::unique_ptr<PETScGrid>> forcing(timeDim);
+  auto nt = timeForcingFile->getDimLength("time");
+  auto nx = timeForcingFile->getDimX();
+  auto ny = timeForcingFile->getDimY();
+  std::vector<timeSecs> time(nt);
+  std::vector<std::unique_ptr<PETScGrid>> forcing(nt);
   for (std::unique_ptr<PETScGrid> &grid : forcing) {
-    grid = std::make_unique<PETScGrid>(x, y);
+    grid = std::make_unique<PETScGrid>(nx, ny);
   }
+
   timeForcingFile->read("time", time);
   timeForcingFile->read(fieldName, forcing);
+
   return std::make_unique<CUAS::TimeForcing>(forcing, time, multiplier, offset, loopForcing);
 }
 
@@ -60,9 +62,9 @@ std::unique_ptr<CUAS::ConstantForcing> ModelReader::getConstantForcing(std::stri
                                                                        PetscScalar const multiplier,
                                                                        PetscScalar const offset) {
   auto timeForcingFile = std::make_unique<NetCDFFile>(timeForcingFileName, 'r');
-  auto x = timeForcingFile->getDimX();
-  auto y = timeForcingFile->getDimY();
-  PETScGrid forcing(x, y);
+  auto nx = timeForcingFile->getDimX();
+  auto ny = timeForcingFile->getDimY();
+  PETScGrid forcing(nx, ny);
   timeForcingFile->read(fieldName, forcing);
   return std::make_unique<CUAS::ConstantForcing>(forcing, multiplier, offset);
 }

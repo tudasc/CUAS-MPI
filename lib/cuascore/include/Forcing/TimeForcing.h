@@ -6,6 +6,7 @@
 #include "timeparse.h"
 
 #include "Logger.h"
+#include "utilities.h"
 
 #include <algorithm>
 #include <cmath>
@@ -25,9 +26,14 @@ class TimeForcing : public Forcing {
       exit(1);
     }
     if (time.size() < 2) {
-      CUAS_ERROR("TimeForcing.h: time is smaller than 2. Did you want to use ConstantForcing? Exiting.")
+      CUAS_ERROR("TimeForcing.h: time dimension length is less than 2. Did you want to use ConstantForcing? Exiting.")
       exit(1);
     }
+    if (!isIncreasing(time)) {
+      CUAS_ERROR("TimeForcing.h: time is not strictly increasing. Exiting.")
+      exit(1);
+    }
+
     currQ = std::make_unique<PETScGrid>(forcing[0]->getTotalNumOfCols(), forcing[0]->getTotalNumOfRows());
     std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
 
