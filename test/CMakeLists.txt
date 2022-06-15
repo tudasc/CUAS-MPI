@@ -31,7 +31,7 @@ if (CMAKE_VERSION VERSION_LESS 2.8.11)
 endif()
 
 
-add_subdirectory(example)
+# add_subdirectory(example)
 add_subdirectory(petscwrapper/unit)
 add_subdirectory(cuascore/unit)
 add_subdirectory(cuascore/integration)
