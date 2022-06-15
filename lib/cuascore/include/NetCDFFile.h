@@ -84,7 +84,7 @@ class NetCDFFile {
   // a generalized method to get the size of a specific dimension by the dimName
   int getDimLength(std::string const &name) const;
   // a generalized method to get the size of a specific dimension by the dimId
-  int getDimLength(int const dimId) const;
+  int getDimLength(int dimId) const;
   // checks if the file has the variable specified by name
   bool hasVariable(std::string const &name) const;
   // returns the number of dimensions the specified variable has
@@ -141,6 +141,11 @@ class NetCDFFile {
   std::string readTextAttribute(std::string const &varName, std::string const &attName);
 
   ~NetCDFFile();
+
+  // Return a string containing the name of the type defined in netcdf.h
+  static std::string getTypeName(nc_type varType);
+  static bool isNetCDFFloatingPoint(nc_type varType);
+  static bool isNetCDFIntegral(nc_type varType);
 };
 }  // namespace CUAS
 
