@@ -8,7 +8,7 @@ stages:
   - install
   - unit-test
   - integration-test
-  - clang-format
+  - linting
 
 .lb-setup: &lb-setup
   - module load cmake
@@ -100,13 +100,23 @@ test-cuas:
     - mpirun -n 9 --timeout 60 ./test-noData
 
 run-clang-format:
-  stage: clang-format
+  stage: linting
   tags:
     - general
   before_script:
-    - module load gcc llvm
+    - module load gcc llvm/12.0.1
   variables:
     GIT_STRATEGY: none
   script:
-    - ./utils/checkFormat.sh
+    - ./utils/checkClangFormat.sh
 
+run-clang-tidy:
+  stage: linting
+  tags:
+    - general
+  before_script:
+    - module load gcc llvm/12.0.1
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - ./utils/checkClangTidy.sh
