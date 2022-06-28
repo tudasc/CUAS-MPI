@@ -51,19 +51,21 @@ class PETScGrid {
     ~ReadHandle() = default;
 
     PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
+      PetscScalar result;
       if (ghosted) {
         if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
           CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.")
           exit(1);
         }
-        return grid->valuesGhosted[i][j];
+        result = grid->valuesGhosted[i][j];
       } else {
         if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
           CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.")
           exit(1);
         }
-        return grid->values[i][j];
+        result = grid->values[i][j];
       }
+      return result;
     };
 
     PetscScalar const *const *getRaw() const { return grid->values; }
@@ -167,13 +169,10 @@ class PETScGrid {
   void copyGlobal(PETScGrid const &input);
 
   bool isCompatible(PETScGrid const &grid) const {
-    if (totalNumOfCols == grid.totalNumOfCols && totalNumOfRows == grid.totalNumOfRows &&
-        localNumOfCols == grid.localNumOfCols && localNumOfRows == grid.localNumOfRows &&
-        localGhostNumOfCols == grid.localGhostNumOfCols && localGhostNumOfRows == grid.localGhostNumOfRows &&
-        totalGhostNumOfCols == grid.totalGhostNumOfCols && totalGhostNumOfRows == grid.totalGhostNumOfRows)
-      return true;
-    else
-      return false;
+    return totalNumOfCols == grid.totalNumOfCols && totalNumOfRows == grid.totalNumOfRows &&
+           localNumOfCols == grid.localNumOfCols && localNumOfRows == grid.localNumOfRows &&
+           localGhostNumOfCols == grid.localGhostNumOfCols && localGhostNumOfRows == grid.localGhostNumOfRows &&
+           totalGhostNumOfCols == grid.totalGhostNumOfCols && totalGhostNumOfRows == grid.totalGhostNumOfRows;
   }
 
   // sets the outer boundaries (ghost-cells) of the grid
