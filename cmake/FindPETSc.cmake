@@ -1,3 +1,5 @@
+# source https://github.com/pism/pism/blob/main/CMake/FindPETSc.cmake
+
 # - Try to find PETSc
 # Once done this will define
 #
