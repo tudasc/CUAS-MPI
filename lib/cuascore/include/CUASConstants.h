@@ -1,9 +1,6 @@
 #ifndef CUAS_PHYSICALCONSTANTS_H
 #define CUAS_PHYSICALCONSTANTS_H
 
-#include <cfloat>
-#include <netcdf.h>
-
 // Also a tiny value and NOFLOW value which are not really constants but here anyway
 #ifndef NOFLOW_VALUE
 #define NOFLOW_VALUE 1e-14  // value used to mimic noflow condition
@@ -25,10 +22,6 @@
 #endif
 #ifndef GRAVITY
 #define GRAVITY 9.81
-#endif
-
-#ifndef IOFILL
-#define IOFILL NC_FILL_DOUBLE
 #endif
 
 #define COMPUTE_FLAG 0          // active cuas grid point
