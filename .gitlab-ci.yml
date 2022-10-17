@@ -104,6 +104,7 @@ run-clang-format:
   tags:
     - general
   before_script:
+    - *lb-setup
     - module load gcc llvm/12.0.1
   variables:
     GIT_STRATEGY: none
@@ -115,6 +116,7 @@ run-clang-tidy:
   tags:
     - general
   before_script:
+    - *lb-setup
     - module load gcc llvm/12.0.1
   variables:
     GIT_STRATEGY: none
