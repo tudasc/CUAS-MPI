@@ -23,6 +23,9 @@
 #ifndef GRAVITY
 #define GRAVITY 9.81
 #endif
+#ifndef PSI_BELOW_ZERO_REPLACE_VALUE
+#define PSI_BELOW_ZERO_REPLACE_VALUE 0.01
+#endif
 
 #define COMPUTE_FLAG 0          // active cuas grid point
 #define DIRICHLET_FLAG 1        // lateral boundary

@@ -875,6 +875,338 @@ TEST(CUASKernelsTest, clamp) {
   }
 }
 
+TEST(CUASKernelsTest, getEffectiveAquiferProperties) {
+  /*
+   * Note, we only test inside the boundary, because boundary conditions are applied elsewhere.
+   */
+
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  // input
+  PETScGrid head(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid transmissivity(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid bndMask(GRID_SIZE_X, GRID_SIZE_Y);
+  // output
+  PETScGrid Teff(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid Seff(GRID_SIZE_X, GRID_SIZE_Y);
+
+  // config confined-case
+  constexpr PetscScalar specificStorage = 1e-3;  // unit: m^-1, selected for testing only; usually much lower
+  constexpr PetscScalar specificYield = 0.3;     // unit: none, selected for testing only; usually 0.4
+  constexpr PetscScalar Tinit = 10.0;            // unit: m^2/s
+  constexpr PetscScalar hinit = 100.0;           // unit: m
+
+  head.setConst(hinit);            // unit: m, > layer thickness->confined
+  transmissivity.setConst(Tinit);  // unit: m^2/s
+  topg.setConst(0.0);              // unit: m
+  bndMask.setConst(COMPUTE_FLAG);
+  bndMask.setRealBoundary(DIRICHLET_FLAG);
+
+  // confined case: head > layer thickness
+  {
+    constexpr PetscScalar layerThickness = 0.1 * hinit;                  // unit: m
+    constexpr PetscScalar unconfinedSmooth = 0.5 * layerThickness;       // not used in the confined case
+    constexpr PetscScalar Seff_test = specificStorage * layerThickness;  // Ehlig & Halepaska 1976, eq. 7
+    constexpr PetscScalar Teff_test = Tinit;                             // Ehlig & Halepaska 1976, eq. 5
+
+    CUAS::getEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                        specificStorage, specificYield, unconfinedSmooth);
+
+    // now test Teff
+    auto &result1 = Teff.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), Teff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // now test Seff
+    auto &result2 = Seff.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), Seff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+  // no netcdf dump for the trivial confined case
+
+  // unconfined case: head <= layer thickness and head < layer thickness - unconfinedSmooth
+  {
+    constexpr PetscScalar layerThickness = 2.0 * hinit;             // unit: m
+    constexpr PetscScalar unconfinedSmooth = 0.5 * layerThickness;  // less than the layer thickness
+    constexpr PetscScalar psi = hinit;
+    constexpr PetscScalar Seff_test = specificStorage * layerThickness + specificYield;
+    constexpr PetscScalar Teff_test = Tinit / layerThickness * psi;
+
+    CUAS::getEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                        specificStorage, specificYield, unconfinedSmooth);
+
+    // now test Teff
+    auto &result1 = Teff.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), Teff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // now test Seff
+    auto &result2 = Seff.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), Seff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+  // unconfined case: head <= layer thickness and head > layer thickness - unconfinedSmooth
+  {
+    /*
+     * Note, S'(h) = S'/d * (b - h) (Ehlig & Halepaska 1976, eq. 7), where S' = Sy in CUAS
+     * We use b = 2 * h0, d = 1.5 * h0 and Sy = 0.3, and therefore we get:
+     *       S'(h0) = Sy/(1.5*h0)*(2*h0-h0) = Sy/1.5 = 0.2
+     *       Seff = Ss*b + S'(h0) = Ss * 2 * h0 + Sy/1.5 = 0.4
+     */
+    constexpr PetscScalar layerThickness = 2.0 * hinit;    // unit: m
+    constexpr PetscScalar unconfinedSmooth = 1.5 * hinit;  // the head is now within the smoothing region
+    constexpr PetscScalar psi = hinit;
+    constexpr PetscScalar Seff_test = specificStorage * layerThickness + specificYield / 1.5;
+    constexpr PetscScalar Teff_test = Tinit / layerThickness * psi;
+
+    CUAS::getEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                        specificStorage, specificYield, unconfinedSmooth);
+
+    // now test Teff
+    auto &result1 = Teff.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), Teff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // now test Seff
+    auto &result2 = Seff.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), Seff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+  // head below bedrock: This should not happen in a simulation, but sometimes it happens and thus,
+  // we need to consider this.
+  {
+    constexpr PetscScalar layerThickness = 2.0 * hinit;    // unit: m
+    constexpr PetscScalar unconfinedSmooth = 1.5 * hinit;  // the head is now within the smoothing region
+    constexpr PetscScalar psi = -10.0;                     // head below bedrock (topg=0)
+    head.setConst(psi);                                    // the head is now below zero and below the smoothing region
+
+    constexpr PetscScalar Seff_test =
+        specificStorage * layerThickness + specificYield;  // max value that can be reached
+    constexpr PetscScalar Teff_test = Tinit / layerThickness * PSI_BELOW_ZERO_REPLACE_VALUE;  // slightly above zero
+
+    // fixme:
+    CUAS::getEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                        specificStorage, specificYield, unconfinedSmooth);
+
+    // now test Teff
+    auto &result1 = Teff.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), Teff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // now test Seff
+    auto &result2 = Seff.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), Seff_test) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+#ifdef TESTS_DUMP_NETCDF
+  // Gets information about the currently running test.
+  // Do NOT delete the returned object - it's managed by the UnitTest class.
+  const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+  auto filename = std::string(test_info->test_suite_name())
+                      .append(std::string("_-_"))
+                      .append(std::string(test_info->name()))
+                      .append(std::string(".nc"));
+
+  CUAS::NetCDFFile file(filename, GRID_SIZE_X, GRID_SIZE_Y);
+  file.defineGrid("bndMask", LIMITED);
+  file.defineGrid("transmissivity", LIMITED);
+  file.defineGrid("head", LIMITED);
+  file.defineGrid("effective_transmissivity", LIMITED);
+  file.defineGrid("effective_storativity", LIMITED);
+
+  file.write("bndMask", bndMask, 0);
+  file.write("transmissivity", transmissivity, 0);
+  file.write("head", head, 0);
+  file.write("effective_transmissivity", Teff, 0);
+  file.write("effective_storativity", Seff, 0);
+
+#endif
+}
+
+TEST(CUASKernelsTest, updateEffectiveAquiferProperties) {
+  /*
+   * Note, we only test inside the boundary, because boundary conditions are applied elsewhere.
+   * This test re-uses code from the getEffectiveAquiferProperties test.
+   */
+
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  // input
+  PETScGrid head(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid transmissivity(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid topg(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid bndMask(GRID_SIZE_X, GRID_SIZE_Y);
+  // defaults
+  PETScGrid TeffDflt(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid SeffDflt(GRID_SIZE_X, GRID_SIZE_Y);
+  // output
+  PETScGrid Teff(GRID_SIZE_X, GRID_SIZE_Y);
+  PETScGrid Seff(GRID_SIZE_X, GRID_SIZE_Y);
+
+  // config confined-case
+  constexpr PetscScalar specificStorage = 1e-3;          // unit: m^-1, selected for testing only; usually much lower
+  constexpr PetscScalar specificYield = 0.3;             // unit: none, selected for testing only; usually 0.4
+  constexpr PetscScalar Tinit = 10.0;                    // unit: m^2/s
+  constexpr PetscScalar hinit = 100.0;                   // unit: m
+  constexpr PetscScalar layerThickness = 2.0 * hinit;    // unit: m
+  constexpr PetscScalar unconfinedSmooth = 1.5 * hinit;  // the head is now within the smoothing region
+
+  head.setConst(hinit);            // unit: m, > layer thickness->confined
+  transmissivity.setConst(Tinit);  // unit: m^2/s
+  topg.setConst(0.0);              // unit: m
+  bndMask.setConst(COMPUTE_FLAG);
+  bndMask.setRealBoundary(DIRICHLET_FLAG);
+
+  // get the default values for this setup
+  CUAS::getEffectiveAquiferProperties(SeffDflt, TeffDflt, transmissivity, head, topg, bndMask, layerThickness,
+                                      specificStorage, specificYield, unconfinedSmooth);
+
+  // case1: disableUnconfined true, and doAnyChannel true.
+  {
+    Teff.setConst(999.9);
+    Seff.setConst(666.6);
+    CUAS::updateEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                           specificStorage, specificYield, unconfinedSmooth, true, true);
+
+    // now test Teff
+    auto &result1 = Teff.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), Tinit) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // Seff should be untouched
+    auto &result2 = Seff.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), 666.6) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+  // case2: disableUnconfined true, and doAnyChannel false.
+  {
+    Teff.setConst(999.9);
+    Seff.setConst(666.6);
+    CUAS::updateEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                           specificStorage, specificYield, unconfinedSmooth, true, false);
+
+    // Teff should be untouched
+    auto &result1 = Teff.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), 999.9) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // Seff should also be untouched
+    auto &result2 = Seff.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), 666.6) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+  // case3: disableUnconfined false, and doAnyChannel true.
+  {
+    Teff.setConst(999.9);
+    Seff.setConst(666.6);
+    CUAS::updateEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                           specificStorage, specificYield, unconfinedSmooth, false, true);
+
+    // Teff should have changed
+    auto &result1 = Teff.getReadHandle();
+    auto &default1 = TeffDflt.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), default1(i, j)) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // Seff should have changed
+    auto &result2 = Seff.getReadHandle();
+    auto &default2 = SeffDflt.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), default2(i, j)) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+  // case4: disableUnconfined false, and doAnyChannel false. This should give the same results as in case 3.
+  {
+    Teff.setConst(999.9);
+    Seff.setConst(666.6);
+    CUAS::updateEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,
+                                           specificStorage, specificYield, unconfinedSmooth, false, false);
+
+    // Teff should have changed
+    auto &result1 = Teff.getReadHandle();
+    auto &default1 = TeffDflt.getReadHandle();
+    for (int i = 1; i < Teff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Teff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result1(i, j), default1(i, j)) << "at i=" << i << ", j=" << j;
+      }
+    }
+    // Seff should have changed
+    auto &result2 = Seff.getReadHandle();
+    auto &default2 = SeffDflt.getReadHandle();
+    for (int i = 1; i < Seff.getLocalNumOfRows() - 1; ++i) {
+      for (int j = 1; j < Seff.getLocalNumOfCols() - 1; ++j) {
+        EXPECT_DOUBLE_EQ(result2(i, j), default2(i, j)) << "at i=" << i << ", j=" << j;
+      }
+    }
+  }
+
+#ifdef TESTS_DUMP_NETCDF
+  // Gets information about the currently running test.
+  // Do NOT delete the returned object - it's managed by the UnitTest class.
+  const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+  auto filename = std::string(test_info->test_suite_name())
+                      .append(std::string("_-_"))
+                      .append(std::string(test_info->name()))
+                      .append(std::string(".nc"));
+
+  CUAS::NetCDFFile file(filename, GRID_SIZE_X, GRID_SIZE_Y);
+  file.defineGrid("bndMask", LIMITED);
+  file.defineGrid("transmissivity", LIMITED);
+  file.defineGrid("head", LIMITED);
+  file.defineGrid("effective_transmissivity", LIMITED);
+  file.defineGrid("effective_storativity", LIMITED);
+
+  file.write("bndMask", bndMask, 0);
+  file.write("transmissivity", transmissivity, 0);
+  file.write("head", head, 0);
+  file.write("effective_transmissivity", Teff, 0);
+  file.write("effective_storativity", Seff, 0);
+
+#endif
+}
+
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
   PetscInitialize(&argc, &argv, nullptr, nullptr);
