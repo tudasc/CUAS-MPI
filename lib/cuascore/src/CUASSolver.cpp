@@ -221,16 +221,10 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     // TODO
     //}
 
-    if (args->doAnyChannel) {
-      if (args->disableUnconfined) {
-        // We don't need to update Seff until we have also some kind of evolution in this parameter.
-        Teff.copy(*currTransmissivity);
-      } else {
-        getEffectiveAquiferProperties(Seff, Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
-                                      args->layerThickness, args->specificStorage, args->specificYield,
-                                      args->unconfSmooth);
-      }
-    }
+    // Update Seff, Teff or both if needed.
+    updateEffectiveAquiferProperties(Seff, Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
+                                     args->layerThickness, args->specificStorage, args->specificYield,
+                                     args->unconfSmooth, args->disableUnconfined, args->doAnyChannel);
 
     // calculate effective pressure for diagnostic output and probably for creep opening/closure
     headToEffectivePressure(pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);

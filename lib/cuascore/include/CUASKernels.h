@@ -286,13 +286,12 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
 
       if (mask(j, i) == (PetscScalar)COMPUTE_FLAG) {
         auto psi_org = head(j, i) - topg(j, i);
-        auto psi = (psi_org < 0.0) ? 0.01 : psi_org;  // # this is needed for Seff and I don't understand why, yet
-        PetscScalar Sprime;
-
+        // fixme: CUAS is using PSI_BELOW_ZERO_REPLACE_VALUE without justification.
+        auto psi = (psi_org < 0.0) ? PSI_BELOW_ZERO_REPLACE_VALUE : psi_org;  // this is needed for Seff, why?
         // implements Ehlig & Halepaska Eq. 5a,b
         Teff(j, i) = (psi < layerThickness) ? T(j, i) / layerThickness * psi : T(j, i);
-
         // implements Ehlig & Halepaska Eq. 7
+        PetscScalar Sprime;
         if (unconfinedSmooth > 0.0) {
           // psi could be negative and needs to be handled next
           Sprime = (psi < layerThickness) ? specificYield / unconfinedSmooth * (layerThickness - psi) : 0.0;
@@ -305,6 +304,44 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
         Teff(j, i) = T(j, i);
       }
     }
+  }
+}
+
+/** Calls getEffectiveAquiferProperties() if needed
+ *
+ * @param effectiveStorativity (1)
+ * @param effectiveTransmissivity (m^2/s)
+ * @param hydraulicTransmissivity (m^2/s)
+ * @param hydraulicHead (m)
+ * @param bedElevation (m)
+ * @param bndMask (1)
+ * @param layerThickness (m)
+ * @param specificStorage (m^-1)
+ * @param specificYield (1)
+ * @param unconfinedSmooth confined - unconfined transition length, \f$ 0 \le d \le b \f$ (m)
+ * @param disableUnconfined (boolean flag) See also CUASArgs::parseArgs()
+ * @param doAnyChannel (boolean flag) See also CUASArgs::parseArgs()
+ *
+ */
+inline void updateEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETScGrid &effectiveTransmissivity,
+                                             PETScGrid const &hydraulicTransmissivity, PETScGrid const &hydraulicHead,
+                                             PETScGrid const &bedElevation, PETScGrid const &bndMask,
+                                             PetscScalar const layerThickness, PetscScalar const specificStorage,
+                                             PetscScalar const specificYield, PetscScalar const unconfinedSmooth,
+                                             bool const disableUnconfined, bool const doAnyChannel) {
+  /*
+   * Do not check input field compatibility here
+   */
+
+  if (disableUnconfined) {
+    // We don't need to update Seff until we have some evolution in this aquifer property.
+    if (doAnyChannel) {
+      effectiveTransmissivity.copy(hydraulicTransmissivity);
+    }
+  } else {
+    getEffectiveAquiferProperties(effectiveStorativity, effectiveTransmissivity, hydraulicTransmissivity, hydraulicHead,
+                                  bedElevation, bndMask, layerThickness, specificStorage, specificYield,
+                                  unconfinedSmooth);
   }
 }
 
