@@ -136,6 +136,9 @@ class PETScGrid {
   // max(abs(this - sub))
   PetscScalar getMaxAbsDiff(PETScGrid const &sub) const;
 
+  // maximum value of the grid
+  PetscScalar getMax() const;
+
   // sets each entry of grid to value
   void setConst(PetscScalar value);
 

@@ -65,6 +65,12 @@ PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
   return result;
 }
 
+PetscScalar PETScGrid::getMax() const {
+  PetscScalar result;
+  VecMax(global, PETSC_NULL, &result);
+  return result;
+}
+
 void PETScGrid::setConst(PetscScalar value) {
   VecSet(local, value);
   DMLocalToGlobal(dm, local, INSERT_VALUES, global);

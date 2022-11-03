@@ -98,6 +98,16 @@ test-cuas:
   script:
     - cd install/test/cuascore/integration
     - mpirun -n 9 --timeout 60 ./test-noData
+    # argc,argv test, no file io
+    - mpirun -n 2 --timeout 60 ./test-exactTransientSolution
+    - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0
+    - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0 31
+    - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0 31 31
+    - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0 31 31 11
+    - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0 31 31 31 86400
+    # runs with file io
+    - mpirun -n 4 --timeout 60 ./test-exactTransientSolution 1000.0 101 101 31 86400 exact_transient_solution_r1000_101x101x31.nc
+    - mpirun -n 4 --timeout 60 ./test-exactTransientSolution    1.0 101 101 31 86400 exact_transient_solution_r0001_101x101x31.nc
 
 run-clang-format:
   stage: linting
