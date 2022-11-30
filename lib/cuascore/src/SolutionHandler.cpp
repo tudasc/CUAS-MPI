@@ -49,14 +49,21 @@ void SolutionHandler::defineSolution() {
   file->addAttributeToVariable("y", "long_name", "Y-coordinate in Cartesian system");
   file->addAttributeToVariable("y", "axis", "Y");
 
-  file->defineGrid("bnd_mask");  // in the python version the noflow_mask was stored, here we store the bnd
+  file->defineGrid("bnd_mask");  // in the python version the noflow_mask was stored, here we store the bnd_mask
   file->addAttributeToVariable("bnd_mask", "units", "1");
   file->addAttributeToVariable("bnd_mask", "flag_meanings",
-                               "COMPUTE_FLAG DIRICHLET_FLAG NOFLOW_FLAG DIRICHLET_LAKE_FLAG");
-  // todo add list of flag values as: bnd_mask:flag_values = 0, 1, 2, 3 ;
+                               "COMPUTE_FLAG DIRICHLET_FLAG NOFLOW_FLAG DIRICHLET_OCEAN_FLAG DIRICHLET_LAKE_FLAG");
   file->addAttributeToVariable("bnd_mask", "standard_name", "bnd_mask");
-  file->addAttributeToVariable("bnd_mask", "long_name",
-                               "bnd_mask (0 = cuas, 1 = floating ice or ocean, 2 = no-flow, 3 = periglacial lake)");
+  // TODO use c++20 std::format, we only allow for c++17 in CMakeLists.txt
+  // clang-format off
+  std::string s = "bnd_mask (" +
+                  std::to_string(COMPUTE_FLAG) + " = cuas active, " +
+                  std::to_string(DIRICHLET_FLAG) + " = domain boundary (Dirichlet), " +
+                  std::to_string(NOFLOW_FLAG) + " = no-flow (Neumann), " +
+                  std::to_string(DIRICHLET_OCEAN_FLAG) + " = ocean (Dirichlet), " +
+                  std::to_string(DIRICHLET_LAKE_FLAG) + " = periglacial lake or river (Dirichlet))";
+  // clang-format on
+  file->addAttributeToVariable("bnd_mask", "long_name", s);
 
   /*
    * state variables
