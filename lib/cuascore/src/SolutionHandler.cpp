@@ -190,12 +190,14 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
     file->write("pice", *model.pIce, nextSolution);
   }
 
-  // Todo: this should be done in an automated way using 'reflection'.
-  //  The code below will break soon or later if somebody changes CUASArgs
+  // TODO: The code below will break soon or later if somebody changes CUASArgs
+  //       This should be done in an automated way, e.g. by using 'reflection'.
   file->addGlobalAttribute("Tmax", args.Tmax);
   file->addGlobalAttribute("Tmin", args.Tmin);
+  file->addGlobalAttribute("Tinit", args.Tinit);
   file->addGlobalAttribute("totaltime", args.totaltime);
   file->addGlobalAttribute("dt", args.dt);
+  file->addGlobalAttribute("timeStepFile", args.timeStepFile);
   file->addGlobalAttribute("saveEvery", args.saveEvery);
   file->addGlobalAttribute("conductivity", args.conductivity);
   file->addGlobalAttribute("doAllChannels", args.doAllChannels);
@@ -210,10 +212,12 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("layerThickness", args.layerThickness);
   file->addGlobalAttribute("unconfSmooth", args.unconfSmooth);
   file->addGlobalAttribute("restart", args.restart);
+  file->addGlobalAttribute("restartNoneZeroInitialGuess", args.restartNoneZeroInitialGuess);
   file->addGlobalAttribute("specificStorage", args.specificStorage);
   file->addGlobalAttribute("specificYield", args.specificYield);
   file->addGlobalAttribute("noSmoothMelt", args.noSmoothMelt);
   file->addGlobalAttribute("loopForcing", args.loopForcing);
+  file->addGlobalAttribute("forcingFile", args.forcingFile);
   file->addGlobalAttribute("basalVelocityIce", args.basalVelocityIce);
   file->addGlobalAttribute("cavityBeta", args.cavityBeta);
   file->addGlobalAttribute("initialHead", args.initialHead);
