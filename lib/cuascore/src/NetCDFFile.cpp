@@ -8,40 +8,38 @@
 // we currently use GRID_BLOCKWISE presupposing PETScGrid data stored en bloc
 #define GRID_ROWWISE 0
 #define GRID_BLOCKWISE 1
+#ifndef GRID_IMPLEMENTATION
 #define GRID_IMPLEMENTATION GRID_BLOCKWISE
+#endif
 
 namespace CUAS {
 
+#define SECURED_NETCDF_EXECUTION(val) check((val), #val, __func__, __FILE__, __LINE__)
+template <typename T>
+void check(T ncerr, const char *callee, const char *func, const char *file, int line) {
+  if (ncerr) {
+    std::string netcdfError = nc_strerror(ncerr);
+    CUAS_ERROR("{}:{} {}\ncalling {}:\nA netcdf error occurred:\n{}\nExiting.",  //
+               file, line, func, callee, netcdfError)
+    std::exit(EXIT_FAILURE);
+  }
+}
+
 int NetCDFFile::getVarId(std::string const &varName) const {
   int varId;
-  // get varId
-  if (int retval = nc_inq_varid(fileId, varName.c_str(), &varId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: getVarId('{}'): A netcdf error occurred: {}. Exiting.",  //
-               varName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_varid(fileId, varName.c_str(), &varId));
   return varId;
 }
 
 int NetCDFFile::getDimId(std::string const &dimName) const {
   int dimId;
-  if (int retval = nc_inq_dimid(fileId, dimName.c_str(), &dimId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: getDimId('{}'): A netcdf error occurred: {}. Exiting.",  //
-               dimName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_dimid(fileId, dimName.c_str(), &dimId));
   return dimId;
 }
 
 int NetCDFFile::getNumberOfDimensions() const {
   int numberOfDimensions = 0;
-  if (int retval = nc_inq_ndims(fileId, &numberOfDimensions)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: read() with PETScGrid: A netcdf error occurred: " + netcdfError + ". Exiting.")
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_ndims(fileId, &numberOfDimensions));
   return numberOfDimensions;
 }
 
@@ -77,11 +75,8 @@ bool NetCDFFile::checkDimensions(std::string const &varName, PETScGrid const &in
   nc_inq_vardimid(fileId, varId, dimIds.data());
   nc_inq_dimlen(fileId, dimIds[0], &numOfRows);
   nc_inq_dimlen(fileId, dimIds[1], &numOfCols);
-  if (numOfCols == input.getTotalNumOfCols() && numOfRows == input.getTotalNumOfRows()) {
-    return true;
-  } else {
-    return false;
-  }
+
+  return numOfCols == input.getTotalNumOfCols() && numOfRows == input.getTotalNumOfRows();
 }
 
 bool NetCDFFile::checkDimensionsUnlimited(std::string const &varName, PETScGrid const &input) const {
@@ -94,11 +89,8 @@ bool NetCDFFile::checkDimensionsUnlimited(std::string const &varName, PETScGrid 
   nc_inq_dimlen(fileId, dimIds[2], &numOfCols);
   size_t unlimited;
   nc_inq_dimlen(fileId, dimIds[0], &unlimited);
-  if (numOfCols == input.getTotalNumOfCols() && numOfRows == input.getTotalNumOfRows()) {
-    return true;
-  } else {
-    return false;
-  }
+
+  return numOfCols == input.getTotalNumOfCols() && numOfRows == input.getTotalNumOfRows();
 }
 
 bool NetCDFFile::checkDimensionsTimeForcing(std::string const &varName,
@@ -131,11 +123,8 @@ bool NetCDFFile::checkDimensions(std::string const &varName, PETScVector const &
   int dimId;
   nc_inq_vardimid(fileId, varId, &dimId);
   nc_inq_dimlen(fileId, dimId, &size);
-  if (size == input.getSize()) {
-    return true;
-  } else {
-    return false;
-  }
+
+  return size == input.getSize();
 }
 
 bool NetCDFFile::checkDimensionsUnlimited(std::string const &varName, PETScVector const &input) const {
@@ -144,11 +133,8 @@ bool NetCDFFile::checkDimensionsUnlimited(std::string const &varName, PETScVecto
   std::vector<int> dimIds(2);
   nc_inq_vardimid(fileId, varId, dimIds.data());
   nc_inq_dimlen(fileId, dimIds[1], &size);
-  if (size == input.getSize()) {
-    return true;
-  } else {
-    return false;
-  }
+
+  return size == input.getSize();
 }
 
 bool NetCDFFile::checkDimensions(std::string const &varName, std::vector<PetscScalar> const &input) const {
@@ -157,11 +143,8 @@ bool NetCDFFile::checkDimensions(std::string const &varName, std::vector<PetscSc
   int dimId;
   nc_inq_vardimid(fileId, varId, &dimId);
   nc_inq_dimlen(fileId, dimId, &size);
-  if (size == input.size()) {
-    return true;
-  } else {
-    return false;
-  }
+
+  return size == input.size();
 }
 
 bool NetCDFFile::checkDimensions(std::string const &varName, std::vector<long> const &input) const {
@@ -170,22 +153,14 @@ bool NetCDFFile::checkDimensions(std::string const &varName, std::vector<long> c
   int dimId;
   nc_inq_vardimid(fileId, varId, &dimId);
   nc_inq_dimlen(fileId, dimId, &size);
-  if (size == input.size()) {
-    return true;
-  } else {
-    return false;
-  }
+
+  return size == input.size();
 }
 
 void NetCDFFile::defineVectorWithOffset(std::string const &varName, int offset) {
   // maybe we need a different dimIdGrids array for unlimited dimensions
   int varId;
-  if (int retval = nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 1, &dimIds[offset], &varId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: defineVectorWithOffset('{}', {}): A netcdf error occurred: {}. Exiting.",  //
-               varName, offset, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 1, &dimIds[offset], &varId));
 
   netcdfVars[varName] = NetCDFVar{varName, varId, LIMITED};
 }
@@ -202,12 +177,7 @@ std::vector<int> NetCDFFile::getDimIdsForVariable(std::string const &varName) co
   int varId = getVarId(varName);
   int numberOfDimensions = getDimensionsForVariable(varName);
   std::vector<int> dimIdsForVar(numberOfDimensions);
-  if (int retval = nc_inq_vardimid(fileId, varId, dimIdsForVar.data())) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: getDimIdsForVariable('{}'): A netcdf error occurred: {}. Exiting.",  //
-               varName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_vardimid(fileId, varId, dimIdsForVar.data()));
   return dimIdsForVar;
 }
 
@@ -215,20 +185,12 @@ NetCDFFile::NetCDFFile(std::string const &fileName, char mode) : fileName(fileNa
   switch (mode) {
     // openfile for reading
     case 'r': {
-      if (int retval = nc_open_par(fileName.c_str(), NC_NOWRITE, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId)) {
-        std::string netcdfError = nc_strerror(retval);
-        CUAS_ERROR("NetCDFFile.cpp: NetCDFFile() in read-mode: A netcdf error occurred: " + netcdfError + "Exiting.")
-        exit(1);
-      }
+      SECURED_NETCDF_EXECUTION(nc_open_par(fileName.c_str(), NC_NOWRITE, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId));
       break;
     }
     // openfile for writing
     case 'w': {
-      if (int retval = nc_open_par(fileName.c_str(), NC_WRITE, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId)) {
-        std::string netcdfError = nc_strerror(retval);
-        CUAS_ERROR("NetCDFFile.cpp: NetCDFFile() in write-mode: A netcdf error occurred: " + netcdfError + "Exiting.")
-        exit(1);
-      }
+      SECURED_NETCDF_EXECUTION(nc_open_par(fileName.c_str(), NC_WRITE, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId));
       break;
     }
     default: {
@@ -243,6 +205,7 @@ NetCDFFile::NetCDFFile(std::string const &fileName, char mode) : fileName(fileNa
   // get dimId of unlimtedDimension
   int dimIdUnlimited;
   size_t sizeOfUnlimitedDim;
+  // TODO check
   if (int retval = nc_inq_dimid(fileId, "time", &dimIdUnlimited)) {
     std::string netcdfError = nc_strerror(retval);
     CUAS_INFO_RANK0("NetCDFFile.cpp: The netcdf file doesn't have unlimited dimensions.")
@@ -258,11 +221,8 @@ NetCDFFile::NetCDFFile(std::string const &fileName, char mode) : fileName(fileNa
 }
 
 NetCDFFile::NetCDFFile(std::string const &fileName, int dimX, int dimY) : fileName(fileName), dimX(dimX), dimY(dimY) {
-  if (int retval = nc_create_par(fileName.c_str(), NC_MPIIO | NC_NETCDF4, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: NetCDFFile() in create-mode: A netcdf error occurred: " + netcdfError + "Exiting.")
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(
+      nc_create_par(fileName.c_str(), NC_MPIIO | NC_NETCDF4, PETSC_COMM_WORLD, MPI_INFO_NULL, &fileId));
 
   // define dimensions for grids
   dimIds.reserve(3);
@@ -284,12 +244,7 @@ bool NetCDFFile::hasVariable(std::string const &name) const {
 int NetCDFFile::getDimensionsForVariable(std::string const &name) const {
   int varId = getVarId(name);
   int numberOfDimensions;
-  if (int retval = nc_inq_varndims(fileId, varId, &numberOfDimensions)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: getDimensionsForVariable('{}'): A netcdf error occurred: {}. Exiting.",  //
-               name, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_varndims(fileId, varId, &numberOfDimensions));
   return numberOfDimensions;
 }
 
@@ -304,12 +259,7 @@ bool NetCDFFile::variableHasDimensionByName(std::string const &varName, std::str
   int const numberOfDimensions = getDimensionsForVariable(varName);
   std::vector<int> dimIdsForVar(numberOfDimensions);
   int varId = getVarId(varName);
-  if (int retval = nc_inq_vardimid(fileId, varId, dimIdsForVar.data())) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: variableHasDimensionByName('{}', '{}'): A netcdf error occurred: {}. Exiting.",  //
-               varName, dimName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_vardimid(fileId, varId, dimIdsForVar.data()));
   // checks if dimIdsForVar contains dimId
   return std::find(std::begin(dimIdsForVar), std::end(dimIdsForVar), dimId) != std::end(dimIdsForVar);
 }
@@ -317,20 +267,10 @@ bool NetCDFFile::variableHasDimensionByName(std::string const &varName, std::str
 void NetCDFFile::defineGrid(std::string const &varName, bool isUnlimited) {
   int varId;
   if (isUnlimited) {
-    if (int retval = nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 3, dimIds.data(), &varId)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: defineGrid('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 3, dimIds.data(), &varId));
   } else {
     // maybe we need a different dimIdGrids array for unlimited dimensions
-    if (int retval = nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 2, &dimIds[1], &varId)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: defineGrid('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 2, &dimIds[1], &varId));
   }
 
   netcdfVars[varName] = NetCDFVar{varName, varId, isUnlimited};
@@ -343,19 +283,9 @@ void NetCDFFile::defineVectorY(std::string const &varName) { defineVectorWithOff
 void NetCDFFile::defineScalar(std::string const &varName, bool isUnlimited) {
   int varId;
   if (isUnlimited) {
-    if (int retval = nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 1, &dimIds[0], &varId)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: defineScalar('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 1, &dimIds[0], &varId));
   } else {
-    if (int retval = nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 0, nullptr, &varId)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: defineScalar('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_def_var(fileId, varName.c_str(), NC_DOUBLE, 0, nullptr, &varId));
   }
 
   netcdfVars[varName] = NetCDFVar{varName, varId, isUnlimited};
@@ -364,51 +294,26 @@ void NetCDFFile::defineScalar(std::string const &varName, bool isUnlimited) {
 void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string const &attributeName,
                                         std::string const &attributeText) {
   auto varId = getVarId(varName);
-  if (int retval =
-          nc_put_att_text(fileId, varId, attributeName.c_str(), strlen(attributeText.c_str()), attributeText.c_str())) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: addAttributeToVariable('{}', '{}', ...): A netcdf error occurred: {}. Exiting.",  //
-               varName, attributeName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(
+      nc_put_att_text(fileId, varId, attributeName.c_str(), strlen(attributeText.c_str()), attributeText.c_str()));
 }
 
 void NetCDFFile::addGlobalAttribute(std::string const &attributeName, std::string const &attributeText) {
-  if (int retval = nc_put_att_text(fileId, NC_GLOBAL, attributeName.c_str(), strlen(attributeText.c_str()),
-                                   attributeText.c_str())) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: addGlobalAttribute('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-               attributeName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(
+      nc_put_att_text(fileId, NC_GLOBAL, attributeName.c_str(), strlen(attributeText.c_str()), attributeText.c_str()));
 }
 
 void NetCDFFile::addGlobalAttribute(std::string const &attributeName, PetscScalar attribute) {
-  if (int retval = nc_put_att_double(fileId, NC_GLOBAL, attributeName.c_str(), NC_DOUBLE, 1, &attribute)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: addGlobalAttribute('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-               attributeName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_put_att_double(fileId, NC_GLOBAL, attributeName.c_str(), NC_DOUBLE, 1, &attribute));
 }
 
 void NetCDFFile::addGlobalAttribute(std::string const &attributeName, bool attribute) {
   int boolToInt(attribute);
-  if (int retval = nc_put_att_int(fileId, NC_GLOBAL, attributeName.c_str(), NC_INT, 1, &boolToInt)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: addGlobalAttribute('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-               attributeName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_put_att_int(fileId, NC_GLOBAL, attributeName.c_str(), NC_INT, 1, &boolToInt));
 }
 
 void NetCDFFile::addGlobalAttribute(std::string const &attributeName, int attribute) {
-  if (int retval = nc_put_att_int(fileId, NC_GLOBAL, attributeName.c_str(), NC_INT, 1, &attribute)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: addGlobalAttribute('{}', ...): A netcdf error occurred: {}. Exiting.",  //
-               attributeName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_put_att_int(fileId, NC_GLOBAL, attributeName.c_str(), NC_INT, 1, &attribute));
 }
 
 void NetCDFFile::read(std::string const &varName, PETScGrid &dest) const {
@@ -447,11 +352,7 @@ void NetCDFFile::read(std::string const &varName, PETScGrid &dest) const {
 
     for (int i = 0; i < dest.getLocalNumOfRows(); ++i) {
       start[1] = dest.getCornerY() + i;
-      if (int retval = nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0])) {
-        std::string netcdfError = nc_strerror(retval);
-        CUAS_ERROR("NetCDFFile.cpp: read() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.");
-        exit(1);
-      }
+      SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0]));
     }
 #elif GRID_IMPLEMENTATION == GRID_BLOCKWISE
     start[0] = headIndex;
@@ -461,12 +362,7 @@ void NetCDFFile::read(std::string const &varName, PETScGrid &dest) const {
     count[1] = dest.getLocalNumOfRows();
     count[2] = dest.getLocalNumOfCols();
 
-    if (int retval = nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0])) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: read('{}') with PETScGrid: A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0]));
 #endif
   } else {
     if (!checkDimensions(varName, dest)) {
@@ -487,11 +383,7 @@ void NetCDFFile::read(std::string const &varName, PETScGrid &dest) const {
 
     for (int i = 0; i < dest.getLocalNumOfRows(); ++i) {
       start[0] = dest.getCornerY() + i;
-      if (int retval = nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0])) {
-        std::string netcdfError = nc_strerror(retval);
-        CUAS_ERROR("NetCDFFile.cpp: read() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.");
-        exit(1);
-      }
+      SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0]));
     }
 #elif GRID_IMPLEMENTATION == GRID_BLOCKWISE
     start[0] = dest.getCornerY();
@@ -499,11 +391,7 @@ void NetCDFFile::read(std::string const &varName, PETScGrid &dest) const {
     count[0] = dest.getLocalNumOfRows();
     count[1] = dest.getLocalNumOfCols();
 
-    if (int retval = nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0])) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: read() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0]));
 #endif
   }
 }
@@ -547,12 +435,7 @@ void NetCDFFile::read(std::string const &varName, PETScVector &dest) const {
     vecFromNetcdf.resize(localSizeOfInput);
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_get_vara_double(fileId, varId, start.data(), count.data(), vecFromNetcdf.data())) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp:read('{}') with PETScVector: A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), vecFromNetcdf.data()));
 
     for (int i = startIndex; i < endIndex; ++i) {
       dest.setValue(i, vecFromNetcdf[i - startIndex]);
@@ -577,12 +460,7 @@ void NetCDFFile::read(std::string const &varName, PETScVector &dest) const {
     vecFromNetcdf.resize(localSizeOfInput);
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_get_vara_double(fileId, varId, &start, &count, vecFromNetcdf.data())) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp:read('{varName}) with PETScVector: A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, &start, &count, vecFromNetcdf.data()));
 
     for (int i = startIndex; i < endIndex; ++i) {
       dest.setValue(i, vecFromNetcdf[i - startIndex]);
@@ -601,12 +479,7 @@ void NetCDFFile::read(std::string const &varName, std::vector<PetscScalar> &dest
   }
 
   // the std::vector is not distributed. Therefore the sequential get method from netcdf is called
-  if (int retval = nc_get_var_double(fileId, varId, dest.data())) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: read('{}') with std::vector: A netcdf error occurred: {}. Exiting.",  //
-               varName, netcdfError)
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_get_var_double(fileId, varId, dest.data()));
 }
 
 void NetCDFFile::read(std::string const &varName, std::vector<long> &dest) const {
@@ -633,13 +506,7 @@ void NetCDFFile::read(std::string const &varName, std::vector<long> &dest) const
     exit(1);
   }
 
-  if (int retval = nc_inq_vartype(fileId, varId, &varType)) {
-    CUAS_ERROR(
-        "NetCDFFile.cpp: read('{}') with std::vector<long>: A netcdf error occurred during nc_inq_vartype: {}. "
-        "Exiting.",
-        varName, nc_strerror(retval))
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_inq_vartype(fileId, varId, &varType));
 
   // The std::vector is not distributed. Therefore, the sequential get method from netcdf is called.
 
@@ -648,13 +515,7 @@ void NetCDFFile::read(std::string const &varName, std::vector<long> &dest) const
     double fractpart, intpart;
 
     // read as double and check for truncation error during cast to long
-    if (int retval = nc_get_var_double(fileId, varId, tmp.data())) {
-      CUAS_ERROR(
-          "NetCDFFile.cpp: read('{}') with std::vector<long>: A netcdf error occurred during nc_get_var_double: {}. "
-          "Exiting.",
-          varName, nc_strerror(retval))
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_var_double(fileId, varId, tmp.data()));
     for (std::vector<long>::size_type i = 0; i != dest.size(); ++i) {
       fractpart = modf(tmp[i], &intpart);  // fractional part with sign
       dest[i] = (long)intpart;
@@ -672,13 +533,7 @@ void NetCDFFile::read(std::string const &varName, std::vector<long> &dest) const
           "NetCDFFile.cpp: read('{}') with std::vector<long>: Unsupported variable type {}. Try reading as NC_LONG",
           varName, getTypeName(varType))
     }
-    if (int retval = nc_get_var_long(fileId, varId, dest.data())) {
-      CUAS_ERROR(
-          "NetCDFFile.cpp: read('{}') with std::vector<long>: A netcdf error occurred during nc_get_var_long: {}. "
-          "Exiting.",
-          varName, nc_strerror(retval))
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_var_long(fileId, varId, dest.data()));
   }
 }
 
@@ -706,21 +561,11 @@ void NetCDFFile::read(std::string const &varName, PetscScalar &dest) const {
     count[0] = 1;
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_get_vara_double(fileId, varId, start, count, &dest)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: read('{}') with PetscScalar: A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start, count, &dest));
   }
 
   else {
-    if (int retval = nc_get_var_double(fileId, varId, &dest)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: read('{}') with PetscScalar: A netcdf error occurred: {}. Exiting.",  //
-                 varName, netcdfError)
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_var_double(fileId, varId, &dest));
   }
 }
 
@@ -756,11 +601,7 @@ void NetCDFFile::read(std::string const &forcingName, std::vector<std::unique_pt
     count[1] = currentGrid.getLocalNumOfRows();
     count[2] = currentGrid.getLocalNumOfCols();
 
-    if (int retval = nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0])) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: read() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0]));
   }
 }
 
@@ -791,11 +632,7 @@ void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int c
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
     for (int i = 0; i < input.getLocalNumOfRows(); ++i) {
       start[1] = input.getCornerY() + i;
-      if (int retval = nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0])) {
-        std::string netcdfError = nc_strerror(retval);
-        CUAS_ERROR("NetCDFFile.cpp: write() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.");
-        exit(1);
-      }
+      SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0]));
     }
 #elif GRID_IMPLEMENTATION == GRID_BLOCKWISE
     start[0] = currentTimeStep;
@@ -806,11 +643,7 @@ void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int c
     count[2] = input.getLocalNumOfCols();
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0])) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: write() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0]));
 #endif
   } else {
     if (!checkDimensions(varName, input)) {
@@ -831,11 +664,7 @@ void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int c
 
     for (int i = 0; i < input.getLocalNumOfRows(); ++i) {
       start[0] = input.getCornerY() + i;
-      if (int retval = nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0])) {
-        std::string netcdfError = nc_strerror(retval);
-        CUAS_ERROR("NetCDFFile.cpp: write() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.");
-        exit(1);
-      }
+      SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[i][0]));
     }
 #elif GRID_IMPLEMENTATION == GRID_BLOCKWISE
     start[0] = input.getCornerY();
@@ -843,11 +672,7 @@ void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int c
     count[0] = input.getLocalNumOfRows();
     count[1] = input.getLocalNumOfCols();
 
-    if (int retval = nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0])) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: write() with PETScGrid: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0]));
 #endif
   }
 }
@@ -895,12 +720,7 @@ void NetCDFFile::write(std::string const &varName, PETScVector &input, const int
     }
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_put_vara_double(fileId, varId, start.data(), count.data(), vecFromNetcdf.data())) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: write() with PETScVector: A netcdf error occurred: " + netcdfError +
-                               "Exiting.");
-      exit(1);
-    }*/
+    SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, start.data(), count.data(), vecFromNetcdf.data()));*/
   } else {
     if (!checkDimensions(varName, input)) {
       CUAS_ERROR("NetCDFFile.cpp: write() with PETScVector: size does not fit! Exiting.")
@@ -930,11 +750,7 @@ void NetCDFFile::write(std::string const &varName, PETScVector &input, const int
     }
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_put_vara_double(fileId, varId, &start, &count, vecFromNetcdf.data())) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: write() with PETScVector: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, &start, &count, vecFromNetcdf.data()));
   }
 }
 
@@ -957,11 +773,7 @@ void NetCDFFile::write(std::string const &varName, std::vector<PetscScalar> cons
     }
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (int retval = nc_put_var_double(fileId, varId, input.data())) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: write() with std::vector: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_put_var_double(fileId, varId, input.data()));
   }
 }
 
@@ -969,27 +781,11 @@ void NetCDFFile::write(std::string const &varName, std::vector<PetscScalar> cons
 /*void NetCDFFile::writeTimeSteps(std::vector<int> timeSteps) {
   nc_redef(fileId);
   std::vector<int> dimTimeSteps(1);
-  if (int retval = nc_def_dim(fileId, "numOfTimeSteps", timeSteps.size(), &dimTimeSteps[0])) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: writeTimeSteps() when defining dimensions: A netcdf error occurred: " +
-                             netcdfError + "Exiting.");
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_def_dim(fileId, "numOfTimeSteps", timeSteps.size(), &dimTimeSteps[0]));
   int varId;
-  if (int retval = nc_def_var(fileId, "time", NC_INT, 1, dimTimeSteps.data(), &varId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: writeTimeSteps() when defining a variable: A netcdf error occurred: " +
-                             netcdfError + "Exiting.");
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_def_var(fileId, "time", NC_INT, 1, dimTimeSteps.data(), &varId));
   nc_enddef(fileId);
-  if (int retval = nc_put_var_int(fileId, varId, timeSteps.data())) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR(
-        "NetCDFFile.cpp: writeTimeSteps() when defining writing timeSteps: A netcdf error occurred: " + netcdfError +
-        "Exiting.");
-    exit(1);
-  }
+  SECURED_NETCDF_EXECUTION(nc_put_var_int(fileId, varId, timeSteps.data()));
 }*/
 
 void NetCDFFile::write(std::string const &varName, PetscScalar input, const int currentTimeStep) {
@@ -1004,35 +800,15 @@ void NetCDFFile::write(std::string const &varName, PetscScalar input, const int 
     count[0] = 1;
 
     nc_var_par_access(fileId, varId, NC_COLLECTIVE);
-    if (auto retval = nc_put_vara_double(fileId, varId, start.data(), count.data(), &input)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: write() with PetscScalar: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_put_vara_double(fileId, varId, start.data(), count.data(), &input));
   } else {
-    if (auto retval = nc_put_var_double(fileId, varId, &input)) {
-      std::string netcdfError = nc_strerror(retval);
-      CUAS_ERROR("NetCDFFile.cpp: read() with PetscScalar: A netcdf error occurred: " + netcdfError + "Exiting.")
-      exit(1);
-    }
+    SECURED_NETCDF_EXECUTION(nc_put_var_double(fileId, varId, &input));
   }
 }
 
-void NetCDFFile::sync() const {
-  if (int retval = nc_sync(fileId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: sync(): A netcdf error occurred: " + netcdfError + "Exiting.")
-    exit(1);
-  }
-}
+void NetCDFFile::sync() const { SECURED_NETCDF_EXECUTION(nc_sync(fileId)); }
 
-NetCDFFile::~NetCDFFile() {
-  if (int retval = nc_close(fileId)) {
-    std::string netcdfError = nc_strerror(retval);
-    CUAS_ERROR("NetCDFFile.cpp: ~NetCDFFile(): A netcdf error occurred: " + netcdfError + "Exiting.")
-    exit(1);
-  }
-}
+NetCDFFile::~NetCDFFile() { SECURED_NETCDF_EXECUTION(nc_close(fileId)); }
 
 std::string NetCDFFile::readTextAttribute(const std::string &varName, const std::string &attName) {
   int varId = getVarId(varName);

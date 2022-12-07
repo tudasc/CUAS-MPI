@@ -6,8 +6,6 @@ namespace CUAS {
 
 inline PetscScalar hmean(PetscScalar x1, PetscScalar x2) { return 2.0 * x1 * x2 / (x1 + x2 + TINY); }
 
-inline int m(int j, int lengthOfDimI, int i) { return j * lengthOfDimI + i; }
-
 void systemmatrix(PETScMatrix &A, PETScGrid &b, PETScGrid const &hydraulicStorativity,
                   PETScGrid const &hydraulicTransmissivity, PetscScalar dx, PetscScalar dt, PetscScalar theta,
                   PETScGrid const &hydraulicHead, PETScGrid const &Q, PETScGrid const &dirichletValues,
