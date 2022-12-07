@@ -350,7 +350,7 @@ inline void updateEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PE
  * @param input
  * @param result
  */
-inline void convolveStar11411(PETScGrid &input, PETScGrid &result) {
+inline void convolveStar11411(PETScGrid const &input, PETScGrid &result) {
   if (!input.isCompatible(result)) {
     CUAS_ERROR("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.");
     exit(1);
