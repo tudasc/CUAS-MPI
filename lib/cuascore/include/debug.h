@@ -9,6 +9,16 @@
 #include <unordered_map>
 #include <vector>
 
+// CMake adds -DNDEBUG to the CMAKE_C_FLAGS_{RELEASE, MINSIZEREL} by default.
+#ifndef NDEBUG
+#define CUAS_DEBUG_ASSERT(x, msg)                                                               \
+  if (!(x)) {                                                                                   \
+    CUAS_ERROR("ASSERT - {}\n\t{}\n\tin file: {}\n\ton line: {}", #x, msg, __FILE__, __LINE__); \
+  }
+#else
+#define CUAS_DEBUG_ASSERT(x, msg) (void)0
+#endif
+
 namespace CUAS {
 struct namedGrid {
   std::string name;
