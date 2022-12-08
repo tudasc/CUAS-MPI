@@ -16,6 +16,13 @@
 namespace CUAS {
 
 void CUASSolver::setup() {
+  melt->setZero();
+  creep->setZero();
+  cavity->setZero();
+  pEffective->setZero();
+  gradHeadSquared->setZero();
+  fluxMagnitude->setZero();
+
   rateFactorIce->setConst(args->flowConstant);         // todo: read 2d field from file (optional)
   basalVelocityIce->setConst(args->basalVelocityIce);  // todo: read 2d field from file (optional)
 
@@ -148,37 +155,15 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   }
   dirichletValues->copy(*currHead);  // store initial values as dirichlet values for this run
 
-  PETScGrid melt(model->Ncols, model->Nrows);
-  PETScGrid creep(model->Ncols, model->Nrows);
-  PETScGrid cavity(model->Ncols, model->Nrows);
-  PETScGrid pEffective(model->Ncols, model->Nrows);  // same as model->pIce
-  PETScGrid gradHeadSquared(model->Ncols, model->Nrows);
-  PETScGrid fluxMagnitude(model->Ncols, model->Nrows);
-
-  PETScGrid Seff(model->Ncols, model->Nrows);  // effective Storativity
-  PETScGrid Teff(model->Ncols, model->Nrows);  // effectife Transmissivity
-
-  melt.setZero();
-  creep.setZero();
-  cavity.setZero();
-  pEffective.setZero();
-  gradHeadSquared.setZero();
-  fluxMagnitude.setZero();
-
   // initialized as confined only and thus Seff = S = Ss * b, and Teff = T
-  Seff.setConst(args->layerThickness * args->specificStorage);
-  Teff.copy(*currTransmissivity);
+  Seff->setConst(args->layerThickness * args->specificStorage);
+  Teff->copy(*currTransmissivity);
 
+  // start
   clock_t t;
   if (rank == 0) {
     t = clock();
   }
-
-  // start
-  // creating grids outside of loop to save time
-  int size = model->Ncols * model->Nrows;
-  PetscScalar eps = 0.0;
-  PetscScalar Teps = 0.0;
 
   // Why is this not an arg?
   // tkleiner: Because other values are not working! This indicates that the choice of initial
@@ -222,37 +207,38 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     //}
 
     // Update Seff, Teff or both if needed.
-    updateEffectiveAquiferProperties(Seff, Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
+    updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
                                      args->layerThickness, args->specificStorage, args->specificYield,
                                      args->unconfSmooth, args->disableUnconfined, args->doAnyChannel);
 
     // calculate effective pressure for diagnostic output and probably for creep opening/closure
-    headToEffectivePressure(pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
+    headToEffectivePressure(*pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
 
     // we need gradient of head for the flux and probably for melt opening
-    getGradHeadSQR(gradHeadSquared, *currHead, model->dx, *gradMask);
+    getGradHeadSQR(*gradHeadSquared, *currHead, model->dx, *gradMask);
 
+    // TODO extract?
     // compute channel opening terms to be ready for netcdf output
     if (args->doAnyChannel) {
       // creep
       if (args->doCreep) {
-        computeCreepOpening(creep, *rateFactorIce, pEffective, *currTransmissivity);
+        computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity);
       }
       // melt
       if (args->doMelt) {
-        computeMeltOpening(melt, args->roughnessFactor, args->conductivity, *currTransmissivity, gradHeadSquared);
+        computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, *currTransmissivity, *gradHeadSquared);
         if (!args->noSmoothMelt) {
-          PETScGrid tmp(melt.getTotalNumOfCols(), melt.getTotalNumOfRows());
-          convolveStar11411(melt, tmp);
-          melt.copy(tmp);
+          convolveStar11411(*melt, *tmpMelt);
+          melt->copy(*tmpMelt);
         }
       }
       // cavity
       if (args->doCavity) {
-        computeCavityOpening(cavity, args->cavityBeta, args->conductivity, *basalVelocityIce);
+        computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce);
       }
     }
 
+    // TODO extract?
     //
     // STORE DATA, IF NEEDED
     //
@@ -263,16 +249,16 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
           CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt);
         }
         // Process diagnostic variables for output only. We don't need them in every time step
-        getFluxMagnitude(fluxMagnitude, gradHeadSquared, Teff);  // was currTransmissivity for a very long time
+        getFluxMagnitude(*fluxMagnitude, *gradHeadSquared, *Teff);  // was currTransmissivity for a very long time
         // ... more
 
         if (reason == OutputReason::INITIAL) {
           // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
-          solutionHandler->storeInitialSetup(*currHead, *currTransmissivity, *model, fluxMagnitude, melt, creep, cavity,
-                                             pEffective, Seff, Teff, currentQ, *args);
+          solutionHandler->storeInitialSetup(*currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
+                                             *cavity, *pEffective, *Seff, *Teff, currentQ, *args);
         } else {
-          solutionHandler->storeSolution(currTime, *currHead, *currTransmissivity, *model, fluxMagnitude, melt, creep,
-                                         cavity, pEffective, Seff, Teff, currentQ, eps, Teps);
+          solutionHandler->storeSolution(currTime, *currHead, *currTransmissivity, *model, *fluxMagnitude, *melt,
+                                         *creep, *cavity, *pEffective, *Seff, *Teff, currentQ, eps, Teps);
         }
       }
     }  // solutionHandler
@@ -290,7 +276,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       //
       // UPDATE HEAD
       //
-      systemmatrix(*matA, *bGrid, Seff, Teff, model->dx, dt, theta, *currHead, currentQ, *dirichletValues,
+      systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, dt, theta, *currHead, currentQ, *dirichletValues,
                    *model->bndMask, *globalIndicesBlocked);
 
       // solve the equation A*sol = b,
@@ -306,7 +292,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       // UPDATE TRANSMISSIVITY, IF NEEDED
       //
       if (args->doAnyChannel) {
-        doChannels(*nextTransmissivity, *currTransmissivity, creep, melt, cavity, *model->bndMask, args->Tmin,
+        doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
                    args->Tmax, dt);
         // todo: eps_T = np.max(np.abs(T - currTransmissivity))
         Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / dt;
