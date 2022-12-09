@@ -94,7 +94,7 @@ class PETScGrid {
     // Please keep in mind that this might cause double communication
     void setValues() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); };
 
-    ~WriteHandle() { DMGlobalToLocal(grid->dm, grid->global, INSERT_VALUES, grid->local); }
+    ~WriteHandle() { setValues(); }
 
     PetscScalar *const *getRaw() { return grid->values; }
   };
@@ -115,7 +115,7 @@ class PETScGrid {
     // Please keep in mind that this might cause double communication
     void setValues() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); };
 
-    ~WriteHandleGhost() { DMLocalToGlobal(grid->dm, grid->local, INSERT_VALUES, grid->global); }
+    ~WriteHandleGhost() { setValues(); }
 
     PetscScalar *const *getRaw() { return grid->valuesGhosted; }
   };
