@@ -29,6 +29,17 @@ class CUASSolver {
     // basal velocity of ice
     basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
+    melt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    tmpMelt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    creep = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    cavity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
+    gradHeadSquared = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+    fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+    Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
+    Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effectife Transmissivity
+
     DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
                  PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
     DMSetFromOptions(dm);
@@ -66,6 +77,17 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> rateFactorIce;
   std::unique_ptr<PETScGrid> basalVelocityIce;
 
+  std::unique_ptr<PETScGrid> melt;
+  std::unique_ptr<PETScGrid> tmpMelt;
+  std::unique_ptr<PETScGrid> creep;
+  std::unique_ptr<PETScGrid> cavity;
+  std::unique_ptr<PETScGrid> pEffective;  // same as model->pIce
+  std::unique_ptr<PETScGrid> gradHeadSquared;
+  std::unique_ptr<PETScGrid> fluxMagnitude;
+
+  std::unique_ptr<PETScGrid> Seff;  // effective Storativity
+  std::unique_ptr<PETScGrid> Teff;  // effectife Transmissivity
+
   CUASModel *const model;
   CUASArgs const *const args;
   CUAS::SolutionHandler *const solutionHandler;
@@ -76,6 +98,9 @@ class CUASSolver {
   std::unique_ptr<PETScMatrix> matA;
   std::unique_ptr<PETScGrid> bGrid;
   std::unique_ptr<PETScGrid> solGrid;
+
+  PetscScalar eps = 0.0;
+  PetscScalar Teps = 0.0;
 };
 
 }  // namespace CUAS
