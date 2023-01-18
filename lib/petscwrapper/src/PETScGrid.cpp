@@ -65,6 +65,22 @@ PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
   return result;
 }
 
+std::array<PetscScalar, 3> PETScGrid::getErrorNorms(PETScGrid const &sub) const {
+  if (!isCompatible(sub)) {
+    CUAS_ERROR("{}: input is not compatible. Exiting.", __PRETTY_FUNCTION__);
+    exit(1);
+  }
+  PetscScalar L1, L2, Linf;
+  Vec diff;
+  DMCreateGlobalVector(dm, &diff);
+  VecCopy(global, diff);
+  VecAXPY(diff, -1, sub.global);
+  VecNorm(diff, NORM_1, &L1);
+  VecNorm(diff, NORM_2, &L2);
+  VecNorm(diff, NORM_INFINITY, &Linf);
+  return {L1, L2, Linf};
+}
+
 PetscScalar PETScGrid::getMax() const {
   PetscScalar result;
   VecMax(global, PETSC_NULL, &result);

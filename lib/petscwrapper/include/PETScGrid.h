@@ -6,6 +6,8 @@
 #include "Logger.h"
 #include "PETScVector.h"
 
+#include <array>
+
 #define GHOSTED true
 #define NONE_GHOSTED false
 
@@ -133,8 +135,11 @@ class PETScGrid {
 
   WriteHandleGhost getWriteHandleGhost() { return WriteHandleGhost(this); }
 
-  // max(abs(this - sub))
+  // max(abs(this - sub)) this is L_inf error norm (PETSc: NORM_INFINITY)
   PetscScalar getMaxAbsDiff(PETScGrid const &sub) const;
+
+  // returns NORM_1, NORM_2 and NORM_INFINITY
+  std::array<PetscScalar, 3> getErrorNorms(PETScGrid const &sub) const;
 
   // maximum value of the grid
   PetscScalar getMax() const;

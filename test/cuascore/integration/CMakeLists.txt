@@ -10,3 +10,9 @@ target_link_libraries(test-exactTransientSolution gtest)
 
 install(TARGETS test-exactTransientSolution
         DESTINATION test/cuascore/integration)
+
+add_executable(test-exactSteadySolution exactSteadySolutionTest.cpp)
+target_link_libraries(test-exactSteadySolution cuascore)
+target_link_libraries(test-exactSteadySolution gtest)
+
+install(TARGETS test-exactSteadySolution DESTINATION test/cuascore/integration)

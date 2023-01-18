@@ -183,7 +183,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   // Why is this not an arg?
   // tkleiner: Because other values are not working! This indicates that the choice of initial
   // conditions is not appropriate.
-  const int theta = 1;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
+  const PetscScalar theta = 1.0;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
 
   if (args->verbose) {
     CUAS_INFO_RANK0("  S = Ss * b = {}", args->specificStorage * args->layerThickness);

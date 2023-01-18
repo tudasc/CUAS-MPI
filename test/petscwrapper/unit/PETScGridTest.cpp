@@ -643,6 +643,46 @@ TEST(PETScGridTest, getMaxAbsDiff) {
   }
 }
 
+TEST(PETScGridTest, getErrorNorms) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  const int cols = 5;
+  const int rows = 3;
+
+  PETScGrid grid1(cols, rows);
+  PETScGrid grid2(cols, rows);
+  {
+    auto grid1Handle = grid1.getWriteHandle();
+    auto grid2Handle = grid2.getWriteHandle();
+    for (int j = 0; j < grid1.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < grid1.getLocalNumOfCols(); ++i) {
+        grid1Handle(j, i) = (i + 1) * (j + 1) * (-1 * mpiRank - 1);
+        grid2Handle(j, i) = (i - j) * 10;
+      }
+    }
+  }
+
+  auto [L1, L2, Linf] = grid1.getErrorNorms(grid2);
+  CUAS_INFO_RANK0("{}: L1={}, L2={}, Linf={}\n", __PRETTY_FUNCTION__, L1, L2, Linf);
+
+  ASSERT_EQ(L1, 164.0);
+  // L2 = sqrt(1^2+12^2+23^2+8^2+4^2+16^2+2^2+14^2+6^2+8^2+3^2+16^2+29^2+4^2+18^2)
+  ASSERT_NEAR(L2, 52.4976189936, 1e-6);
+  ASSERT_EQ(Linf, 29.0);  // same as in maxAbsDiff()
+
+  // check if both grids have not changed
+  {
+    auto &grid1Handle = grid1.getReadHandle();
+    auto &grid2Handle = grid2.getReadHandle();
+    for (int j = 0; j < grid1.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < grid1.getLocalNumOfCols(); ++i) {
+        ASSERT_EQ(grid1Handle(j, i), (i + 1) * (j + 1) * (-1 * mpiRank - 1));
+        ASSERT_EQ(grid2Handle(j, i), (i - j) * 10);
+      }
+    }
+  }
+}
+
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
   PetscInitialize(&argc, &argv, nullptr, nullptr);
