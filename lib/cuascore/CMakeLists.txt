@@ -1,4 +1,5 @@
-add_library(cuascore
+add_library(
+  cuascore
   src/specialgradient.cpp
   src/CUASModel.cpp
   src/CUASArgs.cpp
@@ -8,8 +9,7 @@ add_library(cuascore
   src/SolutionHandler.cpp
   src/ModelReader.cpp
   src/utilities.cpp
-  src/version.cpp
-)
+  src/version.cpp)
 
 target_include_directories(cuascore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -23,5 +23,8 @@ add_cxxopts(cuascore)
 add_spdlog(cuascore)
 
 install(TARGETS cuascore DESTINATION lib)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
-
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+  DESTINATION include
+  FILES_MATCHING
+  PATTERN "*.h")
