@@ -1,4 +1,4 @@
-#include "exactTransientSolutionTest.h"
+#include "exactSteadySolutionTest.h"
 #include "CUASArgs.h"
 #include "CUASSolver.h"
 #include "timeparse.h"  // CUAS::Time, ...
@@ -9,7 +9,6 @@
 #endif
 
 #include "gtest/gtest.h"
-
 #include <memory>
 
 #define MPI_SIZE 4
@@ -21,12 +20,13 @@ int mpiSize;
 int m_argc;
 char **m_argv;
 
-TEST(exactTransientSolutionTest, transientForcingTest) {
+TEST(exactSteadySolutionTest, steadyForcingTest) {
   // ASSERT_EQ(mpiSize, MPI_SIZE);
 
-  int nx = 21;
-  int ny = 11;
-  PetscScalar res = 50000.0;
+  // setup for Lx = Ly = 100km
+  int nx = 51;
+  int ny = 51;
+  PetscScalar res = 2000.0;
 
   // nx and ny must be odd for the test
   ASSERT_EQ(nx % 2, 1);
@@ -35,23 +35,25 @@ TEST(exactTransientSolutionTest, transientForcingTest) {
   // setup time steps
   CUAS::Time time;
   CUAS::timeSecs dt = 86400;
-  CUAS::timeSecs endTime = dt * 31;
+  CUAS::timeSecs endTime = dt * 3;  // check only a few time steps, because forcing does not depend time
   time.timeSteps = CUAS::getTimeStepArray(0, endTime, dt);
 
   // setup forcing
-  auto forcing = std::make_unique<TransientForcing>(nx, ny, res);
+  auto forcing = std::make_unique<SteadyForcing>(nx, ny, res);
 
   // sanity test the forcing: max(Q(x,y,t)) == Q_max(t), convert m/s to m/a
   const PetscScalar Lx = (nx - 1) * res;
   const PetscScalar Ly = (ny - 1) * res;
+  auto Q_max = max_Q_exact(Lx, Ly);
+  CUAS_INFO_RANK0("{}: res={}, nx={}, ny={}, Lx={}, Ly={}, Q_max={}", __PRETTY_FUNCTION__, res, nx, ny, Lx, Ly, Q_max)
+
   for (auto &t_secs : time.timeSteps) {
-    auto Q_max = max_Q_exact((PetscScalar)t_secs, Lx, Ly);
     auto maxQ = forcing->getCurrentQ(t_secs).getMax();
     ASSERT_DOUBLE_EQ(Q_max * SPY, maxQ * SPY) << "at t = " << t_secs << " seconds";
   }
 }
 
-TEST(exactTransientSolutionTest, exactSolutionTest) {
+TEST(exactSteadySolutionTest, exactSolutionTest) {
   // ASSERT_EQ(mpiSize, MPI_SIZE);
 
   // command line args
@@ -63,7 +65,7 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
 
   ASSERT_LE(m_argc, 7);  // no more than 6 arguments allowed
   parseTestArgs(m_argc, m_argv, res, nx, ny, nt, dt, fileName);
-  CUAS_INFO_RANK0("\"Setup: res={}, nx={}, ny={}, nt={}, dt={}, filename=<{}>", res, nx, ny, nt, dt, fileName)
+  CUAS_INFO_RANK0("Setup: res={}, nx={}, ny={}, nt={}, dt={}, filename=<{}>", res, nx, ny, nt, dt, fileName)
 
   // for testing hmax and Qmax at Lx/2, Ly/2 we need a grid point at that location,
   // thus nx and ny must be odd
@@ -81,7 +83,7 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
   ASSERT_EQ(Ly, model.yAxis.back() - model.yAxis.front());
 
   // confined: the layer thickness must be below the initial head
-  constexpr PetscScalar layerThickness = 0.5 * EXACT_TRANSIENT_SOLUTION_H0;
+  constexpr PetscScalar layerThickness = 0.5 * EXACT_STEADY_SOLUTION_H0;
 
   // set-up command-line arguments for CUAS
   int argc = 12;
@@ -95,13 +97,13 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
   char arg6[BUFLEN];
   snprintf(arg6, BUFLEN, "--dt=%ld seconds", dt);
   char arg7[BUFLEN];
-  snprintf(arg7, BUFLEN, "--initialHead=%.1f", EXACT_TRANSIENT_SOLUTION_H0);
+  snprintf(arg7, BUFLEN, "--initialHead=%.1f", EXACT_STEADY_SOLUTION_H0);
   char arg8[BUFLEN];
-  snprintf(arg8, BUFLEN, "--Tinit=%g", EXACT_TRANSIENT_SOLUTION_TRANSMISSIVITY);
+  snprintf(arg8, BUFLEN, "--Tinit=%g", EXACT_STEADY_SOLUTION_TRANSMISSIVITY);
   char arg9[BUFLEN];
-  snprintf(arg9, BUFLEN, "--specificStorage=%g", EXACT_TRANSIENT_SOLUTION_STORATIVITY / layerThickness);
+  snprintf(arg9, BUFLEN, "--specificStorage=%g", EXACT_STEADY_SOLUTION_STORATIVITY / layerThickness);
   char arg10[BUFLEN];
-  snprintf(arg10, BUFLEN, "--conductivity=%g", EXACT_TRANSIENT_SOLUTION_TRANSMISSIVITY / layerThickness);
+  snprintf(arg10, BUFLEN, "--conductivity=%g", EXACT_STEADY_SOLUTION_TRANSMISSIVITY / layerThickness);
   char arg11[BUFLEN];
   snprintf(arg11, BUFLEN, "--layerThickness=%f", layerThickness);
 
@@ -131,19 +133,8 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
   PETScGrid diff(nx, ny);
 
   {
-    // Note, for this 30day experiment, the last time steps are
-    // ...
-    // [2022-10-20 23:09:56.733] [console] [info] time(30/31) = 2592000 s, dt = 86400 s  <-- 30 days
-    // [2022-10-20 23:09:56.738] [console] [info] time(31/31) = 2678400 s, dt = -9999 s  <-- update diagnostics
-    //
-    // That's because CUAS uses the n time.timeSteps to compute n-1 dt's,
-    // and thus we only have n-1 solutions.
-    // |---------|---------|--------- ... |---------|-------|
-    // |<  dt1  >|<  dt2  >|<  dt3  > ... |< dtn-1 >|
-    // t0        t1        t2         ... tn-1      tn
-    auto t = (PetscScalar)time.timeSteps[time.timeSteps.size() - 2];  // second last element
-    auto nRows = exactHead.getLocalNumOfRows();                       // y-dir
-    auto nCols = exactHead.getLocalNumOfCols();                       // x-dir
+    auto nRows = exactHead.getLocalNumOfRows();  // y-dir
+    auto nCols = exactHead.getLocalNumOfCols();  // x-dir
     auto const cornerX = exactHead.getCornerX();
     auto const cornerY = exactHead.getCornerY();
     auto h = exactHead.getWriteHandle();
@@ -152,9 +143,9 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
 
     for (int i = 0; i < nRows; ++i) {    // y-dir
       for (int j = 0; j < nCols; ++j) {  // x-dir
-        auto x = (cornerX + j) * res;    // todo: not sure about x and y here
+        auto x = (cornerX + j) * res;
         auto y = (cornerY + i) * res;
-        h(i, j) = head_exact(x, y, Lx, Ly, t);
+        h(i, j) = head_exact(x, y, Lx, Ly);
         d(i, j) = h(i, j) - hcuas(i, j);
       }
     }
@@ -182,7 +173,9 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
 #endif
 
   // Report error norms for temporal, spatial or combined order of accuracy analysis.
-  // Do the test later to make sure we get the error norms!
+  // Quite often in the literature authors report the error as L1 or L2 norm of the
+  // difference, but this is not the correct error norm. Ferziger&Peric 2002 are very clear about this.
+  // See e.g. "Richardson extrapolation"
   // Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), MaxE
   const PetscScalar N = nx * ny;
   auto [L1, L2, Linf] = exactHead.getErrorNorms(*solver.currHead);
@@ -196,7 +189,12 @@ TEST(exactTransientSolutionTest, exactSolutionTest) {
     auto &hcuas = solver.currHead->getReadHandle();
     for (int i = 0; i < nRows; ++i) {    // y-dir
       for (int j = 0; j < nCols; ++j) {  // x-dir
-        ASSERT_NEAR(hexact(i, j), hcuas(i, j), 1e-10) << "at i=" << i << ", j=" << j;
+        // The tolerance depends on how long we run the test towards the steady state,
+        // where the effective time step length depends on the storativity.
+        // For S=1e-3 the head slowly approaches the steady-state head, and S=1e-6 nearly immediately
+        // reaches steady-stade for a time step length of 1 day (h0=10m, hmax=100m).
+        // Note, the error is largest at the domain center for this setup.
+        ASSERT_NEAR(hexact(i, j), hcuas(i, j), 1e-6) << "at i=" << i << ", j=" << j;
       }
     }
   }

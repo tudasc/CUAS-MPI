@@ -1,5 +1,5 @@
-#ifndef CUAS_EXACT_TRANSIENT_SOLUTION_TEST_H
-#define CUAS_EXACT_TRANSIENT_SOLUTION_TEST_H
+#ifndef CUAS_EXACT_STEADY_SOLUTION_TEST_H
+#define CUAS_EXACT_STEADY_SOLUTION_TEST_H
 
 #include "CUASConstants.h"
 #include "CUASModel.h"
@@ -8,44 +8,37 @@
 #include "cxxopts.hpp"
 #include "timeparse.h"
 
-#ifndef EXACT_TRANSIENT_SOLUTION_STORATIVITY
-#define EXACT_TRANSIENT_SOLUTION_STORATIVITY 1.0e-6
+#ifndef EXACT_STEADY_SOLUTION_STORATIVITY
+#define EXACT_STEADY_SOLUTION_STORATIVITY 1.0e-6
+// reach "steady-state" within 31 days, but with visible transient, 5.0e-4 is too high.
+// #define EXACT_STEADY_SOLUTION_STORATIVITY 2.0e-4
 #endif
 
-#ifndef EXACT_TRANSIENT_SOLUTION_TRANSMISSIVITY
-#define EXACT_TRANSIENT_SOLUTION_TRANSMISSIVITY 1.0
+#ifndef EXACT_STEADY_SOLUTION_TRANSMISSIVITY
+#define EXACT_STEADY_SOLUTION_TRANSMISSIVITY 1.0
 #endif
 
-#ifndef EXACT_TRANSIENT_SOLUTION_AFAC
-#define EXACT_TRANSIENT_SOLUTION_AFAC (1.0 / 1800.0)
+#ifndef EXACT_STEADY_SOLUTION_H0
+#define EXACT_STEADY_SOLUTION_H0 10.0
 #endif
 
-#ifndef EXACT_TRANSIENT_SOLUTION_H0
-#define EXACT_TRANSIENT_SOLUTION_H0 10.0
+#ifndef EXACT_STEADY_SOLUTION_HMAX
+#define EXACT_STEADY_SOLUTION_HMAX 100.0
+#endif
+
+#ifndef EXACT_STEADY_SOLUTION_AFAC
+#define EXACT_STEADY_SOLUTION_AFAC (16.0 * (EXACT_STEADY_SOLUTION_HMAX - EXACT_STEADY_SOLUTION_H0))
 #endif
 
 /** computes the exact solution for the head
  *
  * @return
  */
-inline PetscScalar head_exact(PetscScalar const x, PetscScalar const y, PetscScalar const Lx, PetscScalar const Ly,
-                              PetscScalar const t) {
-  constexpr PetscScalar h0 = EXACT_TRANSIENT_SOLUTION_H0;
-  constexpr PetscScalar a = EXACT_TRANSIENT_SOLUTION_AFAC;
+inline PetscScalar head_exact(PetscScalar const x, PetscScalar const y, PetscScalar const Lx, PetscScalar const Ly) {
+  constexpr PetscScalar h0 = EXACT_STEADY_SOLUTION_H0;
+  constexpr PetscScalar a = EXACT_STEADY_SOLUTION_AFAC;
   const auto c = Lx * Lx * Ly * Ly;
-  return a * t * x * y * (Lx - x) * (Ly - y) / c + h0;
-}
-
-/** computes dh/dt based on the exact solution
- * Note, dh/dt is just a/16 for x = Lx/2, y = Lx/2, and for all times
- *
- * @return
- */
-inline PetscScalar dhdt_exact(PetscScalar const x, PetscScalar const y, PetscScalar const Lx, PetscScalar const Ly,
-                              [[maybe_unused]] PetscScalar const t) {
-  constexpr PetscScalar a = EXACT_TRANSIENT_SOLUTION_AFAC;
-  const auto c = Lx * Lx * Ly * Ly;
-  return a * x * y * (Lx - x) * (Ly - y) / c;
+  return a * x * y * (Lx - x) * (Ly - y) / c + h0;
 }
 
 /** computes d^2 h / dx^2 based on the exact solution
@@ -53,10 +46,10 @@ inline PetscScalar dhdt_exact(PetscScalar const x, PetscScalar const y, PetscSca
  * @return
  */
 inline PetscScalar d2hdx2_exact([[maybe_unused]] PetscScalar const x, PetscScalar const y, PetscScalar const Lx,
-                                PetscScalar const Ly, PetscScalar const t) {
-  constexpr PetscScalar a = EXACT_TRANSIENT_SOLUTION_AFAC;
+                                PetscScalar const Ly) {
+  constexpr PetscScalar a = EXACT_STEADY_SOLUTION_AFAC;
   const auto c = Lx * Lx * Ly * Ly;
-  return -2.0 * a * t * y * (Ly - y) / c;
+  return -2.0 * a * y * (Ly - y) / c;
 }
 
 /** computes d^2 h / dy^2 based on the exact solution
@@ -64,64 +57,55 @@ inline PetscScalar d2hdx2_exact([[maybe_unused]] PetscScalar const x, PetscScala
  * @return
  */
 inline PetscScalar d2hdy2_exact(PetscScalar const x, [[maybe_unused]] PetscScalar const y, PetscScalar const Lx,
-                                PetscScalar const Ly, PetscScalar const t) {
-  constexpr PetscScalar a = EXACT_TRANSIENT_SOLUTION_AFAC;
+                                PetscScalar const Ly) {
+  constexpr PetscScalar a = EXACT_STEADY_SOLUTION_AFAC;
   const auto c = Lx * Lx * Ly * Ly;
-  return -2.0 * a * t * x * (Lx - x) / c;
+  return -2.0 * a * x * (Lx - x) / c;
 }
 
 /** Computes the time-dependent maximum head of the exact solution
  *
  * @return maxHead(t) in m/s
  */
-inline PetscScalar max_head_exact(PetscScalar const t) {
-  constexpr PetscScalar h0 = EXACT_TRANSIENT_SOLUTION_H0;
-  constexpr PetscScalar a = EXACT_TRANSIENT_SOLUTION_AFAC;
-  return 1.0 / 16.0 * a * t + h0;
+inline PetscScalar max_head_exact() {
+  constexpr PetscScalar h0 = EXACT_STEADY_SOLUTION_H0;
+  constexpr PetscScalar a = EXACT_STEADY_SOLUTION_AFAC;
+  return a / 16.0 + h0;
 }
 
-/** Computes the time-dependent maximum head of the exact solution
+/** Computes the maximum melt of the exact solution
  *
- * @return maxQ(t) in m/s
+ * @return maxQ in m/s
  */
-inline PetscScalar max_Q_exact(PetscScalar const t, PetscScalar const Lx, PetscScalar const Ly) {
-  constexpr PetscScalar S = EXACT_TRANSIENT_SOLUTION_STORATIVITY;
-  constexpr PetscScalar T = EXACT_TRANSIENT_SOLUTION_TRANSMISSIVITY;
-  constexpr PetscScalar a = EXACT_TRANSIENT_SOLUTION_AFAC;
-  // T_hmean = 2.0 * T1 * T2 / (T1 + T2 + TINY) =  2*T^2 / (2*T + TINY) < T_exact
+inline PetscScalar max_Q_exact(PetscScalar const Lx, PetscScalar const Ly) {
+  constexpr PetscScalar T = EXACT_STEADY_SOLUTION_TRANSMISSIVITY;
+  constexpr PetscScalar a = EXACT_STEADY_SOLUTION_AFAC;
+  const auto c = Lx * Lx * Ly * Ly;
   constexpr PetscScalar T_hmean = 2.0 * T * T / (2.0 * T + TINY);
-
-  return 1.0 / 16.0 * a * (8.0 * t * T_hmean * (1.0 / (Lx * Lx) + 1.0 / (Ly * Ly)) + S);
+  return 0.5 * a * T_hmean * ((Lx * Lx) + (Ly * Ly)) / c;
 }
 
-class TransientForcing : public CUAS::Forcing {
+class SteadyForcing : public CUAS::Forcing {
  public:
-  explicit TransientForcing(int const nx, int const ny, PetscScalar const res, PetscScalar const multiplier = 1.0,
-                            PetscScalar const offset = 0.0)
+  explicit SteadyForcing(int const nx, int const ny, PetscScalar const res, PetscScalar const multiplier = 1.0,
+                         PetscScalar const offset = 0.0)
       : resolution(res), Lx(res * (nx - 1)), Ly(res * (ny - 1)) {
     currQ = std::make_unique<PETScGrid>(nx, ny);
 
     if (multiplier != 1.0) {
-      TransientForcing::applyMultiplier(multiplier);
+      SteadyForcing::applyMultiplier(multiplier);
     }
     if (offset != 0.0) {
-      TransientForcing::applyOffset(offset);
+      SteadyForcing::applyOffset(offset);
     }
   }
-  TransientForcing(TransientForcing &) = delete;
-  TransientForcing(TransientForcing &&) = delete;
+  SteadyForcing(SteadyForcing &) = delete;
+  SteadyForcing(SteadyForcing &&) = delete;
 
   PETScGrid const &getCurrentQ(CUAS::timeSecs currTime) override {
-    if (currTime < 0) {
-      CUAS_ERROR("getCurrentQ was called with currTime < 0. Exiting.")
-      exit(1);
-    }
-
     {
       // some abbreviations
-      const auto t = (PetscScalar)currTime;
-      constexpr PetscScalar S = EXACT_TRANSIENT_SOLUTION_STORATIVITY;
-      constexpr PetscScalar T = EXACT_TRANSIENT_SOLUTION_TRANSMISSIVITY;
+      constexpr PetscScalar T = EXACT_STEADY_SOLUTION_TRANSMISSIVITY;
       // CUAS uses the harmonic mean to build the solution matrix.
       // See lib/cuascore/src/systemmatrix.cpp and thus,
       // T_hmean = 2.0 * T1 * T2 / (T1 + T2 + TINY) =  2*T^2 / (2*T + TINY) < T_exact
@@ -137,10 +121,9 @@ class TransientForcing : public CUAS::Forcing {
         for (int j = 0; j < nCols; ++j) {  // x-dir
           auto x = (cornerX + j) * resolution;
           auto y = (cornerY + i) * resolution;
-          auto dhdt = dhdt_exact(x, y, Lx, Ly, t);
-          auto d2hdx2 = d2hdx2_exact(x, y, Lx, Ly, t);
-          auto d2hdy2 = d2hdy2_exact(x, y, Lx, Ly, t);
-          currQWrite(i, j) = S * dhdt - T_hmean * (d2hdx2 + d2hdy2);  // T_hmean instead of T
+          auto d2hdx2 = d2hdx2_exact(x, y, Lx, Ly);
+          auto d2hdy2 = d2hdy2_exact(x, y, Lx, Ly);
+          currQWrite(i, j) = -T_hmean * (d2hdx2 + d2hdy2);  // T_hmean instead of T
         }
       }
     }
@@ -182,7 +165,7 @@ std::unique_ptr<CUAS::CUASModel> fillModelData(int nx, int ny, PetscScalar res) 
   model.bndMask->setConst(COMPUTE_FLAG);
   model.bndMask->setGhostBoundary(DIRICHLET_FLAG);
   model.bndMask->setRealBoundary(DIRICHLET_FLAG);
-  model.Q = std::make_unique<TransientForcing>(nx, ny, res);
+  model.Q = std::make_unique<SteadyForcing>(nx, ny, res);
 
   return pmodel;
 }
