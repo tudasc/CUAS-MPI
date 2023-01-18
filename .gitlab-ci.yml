@@ -132,3 +132,15 @@ run-clang-tidy:
     GIT_STRATEGY: none
   script:
     - ./utils/checkClangTidy.sh
+
+run-cmake-format:
+  stage: linting
+  tags:
+    - general
+  before_script:
+    - *lb-setup
+    - module load python/3.9.5
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - ./utils/checkCmakeFormat.sh
