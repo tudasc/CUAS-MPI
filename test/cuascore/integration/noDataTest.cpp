@@ -1,3 +1,9 @@
+/**
+ * File: noDataTest.cpp
+ * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
+ * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
+ */
+
 #include "noDataTest.h"
 
 #include "../unit/fillNoData.h"

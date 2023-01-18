@@ -1,3 +1,9 @@
+/**
+ * File: PETScSolverTest.cpp
+ * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
+ * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
+ */
+
 #include "PETScSolver.h"
 #include "PETScMatrix.h"
 #include "PETScVector.h"

@@ -1,3 +1,9 @@
+/**
+ * File: CUASKernels.h
+ * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
+ * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
+ */
+
 #ifndef CUAS_KERNELS_H
 #define CUAS_KERNELS_H
 
