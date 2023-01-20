@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite its initial paper."
+authors:
+  - family-names: Fischler
+    given-names: Yannic
+    orcid: https://orcid.org/0000-0001-7664-3895
+  - family-names: Kleiner
+    given-names: Thomas
+    orcid: https://orcid.org/0000-0001-7825-5765
+  - family-names: Bischof
+    given-names: Christian
+    orcid: https://orcid.org/0000-0003-2711-3032
+  - family-names: Schmiedel
+    given-names: Jeremie
+    orcid: https://orcid.org/0000-0002-7559-3379
+  - family-names: Sayag
+    given-names: Roiy
+    orcid: https://orcid.org/0000-0002-1672-982X
+  - family-names: Emunds
+    given-names: Raban
+    orcid: https://orcid.org/0000-0002-8184-5026
+  - family-names: Oestreich
+    given-names: "Lennart Frederik"
+    orcid: https://orcid.org/0000-0001-9374-4364
+  - family-names: Humbert
+    given-names: Angelika
+    orcid: https://orcid.org/0000-0002-0244-8760
+title: "A parallel implementation of the confined-unconfined aquifer system model for subglacial hydrology: design, verification, and performance analysis (CUAS-MPI v0.1.0)"
+doi:
+version: 0.1.0
+date-released: 2023-01-20

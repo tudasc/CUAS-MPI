@@ -1,0 +1,8 @@
+/build*/
+/install*/
+/cmake-build-*/
+/.idea/
+
+/extern/
+
+lib/cuascore/src/version.cpp
