@@ -1,3 +1,9 @@
+/**
+ * File: exactTransientSolutionTest.h
+ * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
+ * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
+ */
+
 #ifndef CUAS_EXACT_TRANSIENT_SOLUTION_TEST_H
 #define CUAS_EXACT_TRANSIENT_SOLUTION_TEST_H
 
@@ -192,7 +198,7 @@ void parseTestArgs(int argc, char **argv, PetscScalar &res, int &nx, int &ny, in
   cxxopts::Options options("test");
   // clang-format off
   options
-    .positional_help("[RES] [NX] [NY] [NT] [DT] [FILENAME]")
+    .positional_help("[RES] [NX] [NY] [NT] [DT] [exactTransientSolutionTest.h]")
     .show_positional_help()
     .add_options()
       ("script", "The script file to execute", cxxopts::value<std::string>())
