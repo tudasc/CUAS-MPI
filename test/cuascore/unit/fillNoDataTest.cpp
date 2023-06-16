@@ -15,8 +15,8 @@ int mpiSize;
 
 #define MPI_SIZE 6
 
-//#define NODATA_COLS 20
-//#define NODATA_ROWS 10
+// #define NODATA_COLS 20
+// #define NODATA_ROWS 10
 
 TEST(fillNoDataTest, fillNoData) {
   ASSERT_EQ(mpiSize, MPI_SIZE);

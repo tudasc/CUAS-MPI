@@ -47,7 +47,7 @@ class NetCDFFile {
   int dimY;
   // dimension id for all structures. This is important for the netcdf file
   std::vector<int> dimIds;
-  // gets the dimensions id the the specified dimension in the netcdf file
+  // gets the dimensions id the specified dimension in the netcdf file
   int getDimId(std::string const &dimName) const;
   // gets the variable id of the specifed variable name in the netcdf file
   int getVarId(std::string const &varName) const;
@@ -108,6 +108,8 @@ class NetCDFFile {
   // adds an attribute to a variable
   void addAttributeToVariable(std::string const &varName, std::string const &attributeName,
                               std::string const &attributeText);
+  void addAttributeToVariable(const std::string &varName, const std::string &attributeName, PetscScalar attribute);
+  void addAttributeToVariable(const std::string &varName, const std::string &attributeName, int attribute);
 
   // adds global attribute to file
   void addGlobalAttribute(std::string const &attributeName, std::string const &attributeText);
@@ -126,7 +128,7 @@ class NetCDFFile {
   void read(std::string const &varName, std::vector<long> &dest) const;
   // writes the scalar with the name varName from a netcdf file in the input PetscScalar
   void read(std::string const &varName, PetscScalar &dest) const;
-  // writes the 3 dimensional forcing grid into a vector of grids
+  // writes the 3-dimensional forcing grid into a vector of grids
   void read(std::string const &forcingName, std::vector<std::unique_ptr<PETScGrid>> &forcing);
   // flushes cached data to file
   void sync() const;

@@ -62,7 +62,8 @@ class SolutionHandler {
                      CUASModel const &model, PETScGrid const &fluxMagnitude, PETScGrid const &melt,
                      PETScGrid const &creep, PETScGrid const &cavity, PETScGrid const &effectivePressure,
                      PETScGrid const &effectiveStorativity, PETScGrid const &effectiveTransmissivity,
-                     PETScGrid const &waterSource, PetscScalar eps_inf = -9999.0, PetscScalar Teps_inf = -9999.0);
+                     PETScGrid const &waterSource, PetscScalar eps_inf = NC_FILL_DOUBLE,
+                     PetscScalar Teps_inf = NC_FILL_DOUBLE);
 
   void setTimeUnits(std::string const &s);
   void setCalendar(std::string const &s);
