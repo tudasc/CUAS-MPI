@@ -91,8 +91,8 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> gradHeadSquared;
   std::unique_ptr<PETScGrid> fluxMagnitude;
 
-  std::unique_ptr<PETScGrid> Seff;  // effective Storativity
-  std::unique_ptr<PETScGrid> Teff;  // effectife Transmissivity
+  std::unique_ptr<PETScGrid> Seff;  //!< effective Storativity
+  std::unique_ptr<PETScGrid> Teff;  //!< effectife Transmissivity
 
   CUASModel *const model;
   CUASArgs const *const args;
@@ -105,8 +105,8 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> bGrid;
   std::unique_ptr<PETScGrid> solGrid;
 
-  PetscScalar eps = 0.0;
-  PetscScalar Teps = 0.0;
+  PetscScalar eps = 0.0;   //!<  \f$ max(|h^n - h^{n-1}|)/dt \f$
+  PetscScalar Teps = 0.0;  //!<  \f$ max(|T^n - T^{n-1}|)/dt \f$
 };
 
 }  // namespace CUAS

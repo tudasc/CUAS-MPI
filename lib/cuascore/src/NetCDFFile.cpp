@@ -304,6 +304,18 @@ void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string 
       nc_put_att_text(fileId, varId, attributeName.c_str(), strlen(attributeText.c_str()), attributeText.c_str()));
 }
 
+void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string const &attributeName,
+                                        PetscScalar attribute) {
+  auto varId = getVarId(varName);
+  double petscToDouble(attribute);  // PetscScalar is double, but this could change
+  SECURED_NETCDF_EXECUTION(nc_put_att_double(fileId, varId, attributeName.c_str(), NC_DOUBLE, 1, &petscToDouble));
+}
+
+void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string const &attributeName, int attribute) {
+  auto varId = getVarId(varName);
+  SECURED_NETCDF_EXECUTION(nc_put_att_int(fileId, varId, attributeName.c_str(), NC_INT, 1, &attribute));
+}
+
 void NetCDFFile::addGlobalAttribute(std::string const &attributeName, std::string const &attributeText) {
   SECURED_NETCDF_EXECUTION(
       nc_put_att_text(fileId, NC_GLOBAL, attributeName.c_str(), strlen(attributeText.c_str()), attributeText.c_str()));

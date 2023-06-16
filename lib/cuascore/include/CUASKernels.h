@@ -447,6 +447,7 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
           T(j, i) = Tmax;  // todo: better use Tocean here
         } else if (mask(j, i) == (PetscScalar)DIRICHLET_FLAG) {
           // Do nothing. If the head is as Dirichlet BC assume the transmissivity is also given.
+          // T(j, i) = T_n(j, i); // fixme: here or in CUASSolver.cpp ? actual done in CUASSolver
         } else {
           CUAS_ERROR("CUASKernels.h: doChannels was called with unknown bndMask value {}. Exiting.", mask(j, i));
           exit(1);

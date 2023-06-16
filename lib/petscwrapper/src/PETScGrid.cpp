@@ -44,30 +44,12 @@ PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
     CUAS_ERROR("PETScGrid.cpp: copy: input is not compatible. Exiting.")
     exit(1);
   }
-
   PetscScalar result = 0.0;
-
-  // TODO this implementation uses PETSc functions and is easy to understand,
-  //  but it is probably slower than the manual implmentation below
   Vec diff;
   DMCreateGlobalVector(dm, &diff);
   VecCopy(global, diff);
   VecAXPY(diff, -1, sub.global);
-  VecAbs(diff);
-  VecMax(diff, PETSC_NULL, &result);
-  VecDestroy(&diff);
-
-  /*auto &minuend = getReadHandle();
-  auto &subtrahend = sub.getReadHandle();
-  for (int j = 0; j < getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < getLocalNumOfCols(); ++i) {
-      auto absDiff = std::abs(minuend(j, i) - subtrahend(j, i));
-      result = std::max(absDiff, result);
-    }
-  }
-
-  MPI_Allreduce(&result, &result, 1, MPI_DOUBLE, MPI_MAX, PETSC_COMM_WORLD);*/
-
+  VecNorm(diff, NORM_INFINITY, &result);
   return result;
 }
 

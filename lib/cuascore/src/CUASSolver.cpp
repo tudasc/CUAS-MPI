@@ -159,7 +159,8 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       }
     }
   }
-  dirichletValues->copy(*currHead);  // store initial values as dirichlet values for this run
+  dirichletValues->copy(*currHead);               // store initial values as dirichlet values for this run
+  nextTransmissivity->copy(*currTransmissivity);  // otherwise invalid for bnd:mask == DIRICHLET_FLAG
 
   // initialized as confined only and thus Seff = S = Ss * b, and Teff = T
   Seff->setConst(args->layerThickness * args->specificStorage);
@@ -300,7 +301,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       if (args->doAnyChannel) {
         doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
                    args->Tmax, dt);
-        // todo: eps_T = np.max(np.abs(T - currTransmissivity))
+        // eps_T = np.max(np.abs(T - currTransmissivity))
         Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / dt;
         // switch pointers
         currTransmissivity.swap(nextTransmissivity);
