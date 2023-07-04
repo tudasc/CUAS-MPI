@@ -28,7 +28,7 @@ void CUASModel::init() {
   dx = xAxis[1] - xAxis[0];
   dy = yAxis[1] - yAxis[0];
   if (dx != dy) {
-    CUAS_ERROR("CUASModel.cpp: init(): dx and dy are not equal. Exiting.");
+    CUAS_ERROR("CUASModel.cpp: init(): dx = {} and dy = {} are not equal. Exiting.", dx, dy);
     exit(1);
   }
 
@@ -38,16 +38,21 @@ void CUASModel::init() {
     exit(1);
   }
 
+  // fixme: For dx < 1.0 comparison with epsilon works only,
+  //        if dx = 2^(-n), n = 1, 2, ...
   for (int i = 0; i < xAxis.size() - 1; ++i) {
-    if (std::fabs(xAxis[i + 1] - xAxis[i] - dx) > std::numeric_limits<double>::epsilon()) {
-      CUAS_ERROR("CUASModel.cpp: init(): The values of xAxis are not evenly spaced across all time steps. Exiting.");
+    auto err = std::fabs(xAxis[i + 1] - xAxis[i] - dx);
+    if (err > std::numeric_limits<double>::epsilon()) {
+      CUAS_ERROR("CUASModel.cpp: init(): The values of xAxis are not evenly spaced (err={}). Exiting.", err);
       exit(1);
     }
   }
 
+  // fixme: dy < 1.0 (see above for dx)
   for (int i = 0; i < yAxis.size() - 1; ++i) {
-    if (std::fabs(yAxis[i + 1] - yAxis[i] - dy) > std::numeric_limits<double>::epsilon()) {
-      CUAS_ERROR("CUASModel.cpp: init(): The values of yAxis are not evenly spaced across all time steps. Exiting.");
+    auto err = std::fabs(xAxis[i + 1] - xAxis[i] - dx);
+    if (err > std::numeric_limits<double>::epsilon()) {
+      CUAS_ERROR("CUASModel.cpp: init(): The values of yAxis are not evenly spaced (err={}). Exiting.", err);
       exit(1);
     }
   }
