@@ -98,6 +98,7 @@ test-cuas:
   script:
     - cd install/test/cuascore/integration
     - mpirun -n 9 --timeout 60 ./test-noData
+    - mpirun -n 2 ./test-exactCircularSteadySolution 81 31 86400 # no output
     # argc,argv test
     - mpirun -n 2 --timeout 60 ./test-exactTransientSolution
     - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0
