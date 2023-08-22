@@ -46,10 +46,11 @@ PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
   }
   PetscScalar result = 0.0;
   Vec diff;
-  DMCreateGlobalVector(dm, &diff);
+  DMGetGlobalVector(dm, &diff);
   VecCopy(global, diff);
   VecAXPY(diff, -1, sub.global);
   VecNorm(diff, NORM_INFINITY, &result);
+  DMRestoreGlobalVector(dm, &diff);
   return result;
 }
 
