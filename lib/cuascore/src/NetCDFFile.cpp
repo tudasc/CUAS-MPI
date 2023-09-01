@@ -73,6 +73,12 @@ int NetCDFFile::getDimLength(int dimId) const {
   return lengthOfDim;
 }
 
+std::string NetCDFFile::getDimName(int dimId) const {
+  char name[NC_MAX_NAME + 1];
+  SECURED_NETCDF_EXECUTION(nc_inq_dimname(fileId, dimId, &name[0]));
+  return std::string(name);
+}
+
 bool NetCDFFile::checkDimensions(std::string const &varName, PETScGrid const &input) const {
   int varId = getVarId(varName);
   size_t numOfCols;
@@ -222,6 +228,9 @@ NetCDFFile::NetCDFFile(std::string const &fileName, char mode) : fileName(fileNa
     CUAS_ERROR("NetCDFFile.cpp: NetCDFFile() in create-mode: A netcdf error occurred: " + netcdfError + "Exiting.")
     exit(1);
   }
+
+  // fixme: Here is the problem: all files are expected to have "x" and "y"! This is not the case
+  //        for, e.g. a file that just contains time steps.
   dimX = getDimLength("x");
   dimY = getDimLength("y");
 }
@@ -492,11 +501,11 @@ void NetCDFFile::read(std::string const &varName, std::vector<PetscScalar> &dest
   int varId = getVarId(varName);
 
   if (!checkDimensions(varName, dest)) {
-    CUAS_ERROR("NetCDFFile.cpp: read('{}') with std::vector: size does not fit! Exiting.", varName)
+    CUAS_ERROR("NetCDFFile.cpp: read('{}') with std::vector<PetscScalar>: size does not fit! Exiting.", varName)
     exit(1);
   }
 
-  // the std::vector is not distributed. Therefore the sequential get method from netcdf is called
+  // the std::vector is not distributed. Therefore, the sequential get method from netcdf is called
   SECURED_NETCDF_EXECUTION(nc_get_var_double(fileId, varId, dest.data()));
 }
 
