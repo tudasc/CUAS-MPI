@@ -47,7 +47,7 @@ class NetCDFFile {
   int dimY;
   // dimension id for all structures. This is important for the netcdf file
   std::vector<int> dimIds;
-  // gets the dimensions id the specified dimension in the netcdf file
+  // gets the dimensions id of the specified dimension in the netcdf file
   int getDimId(std::string const &dimName) const;
   // gets the variable id of the specifed variable name in the netcdf file
   int getVarId(std::string const &varName) const;
@@ -91,6 +91,8 @@ class NetCDFFile {
   int getDimLength(std::string const &name) const;
   // a generalized method to get the size of a specific dimension by the dimId
   int getDimLength(int dimId) const;
+  // dimension name from dimId
+  std::string getDimName(int dimId) const;
   // checks if the file has the variable specified by name
   bool hasVariable(std::string const &name) const;
   // returns the number of dimensions the specified variable has
