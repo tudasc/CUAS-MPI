@@ -34,6 +34,9 @@ class CUASModel {
   std::unique_ptr<Forcing> Q;
 
   void init();
+
+ private:
+  static PetscScalar getAxisSpacing(std::vector<PetscScalar> const &axis, const std::string &attName);
 };
 
 }  // namespace CUAS
