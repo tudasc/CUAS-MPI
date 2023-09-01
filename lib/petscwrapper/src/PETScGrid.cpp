@@ -101,14 +101,24 @@ void PETScGrid::copyGlobal(PETScGrid const &input) {
   DMGlobalToLocal(dm, global, INSERT_VALUES, local);
 }
 
+bool PETScGrid::isOnGhostBoundary(int row, int col) const {
+  return cornerYGhost == -1 && row == 0 || cornerXGhost == -1 && col == 0 ||
+         cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localGhostNumOfRows - 1 ||
+         cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localGhostNumOfCols - 1;
+}
+
+bool PETScGrid::isOnRealBoundary(int row, int col) const {
+  return cornerYGhost == -1 && row == 0 || cornerXGhost == -1 && col == 0 ||
+         cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localNumOfRows - 1 ||
+         cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localNumOfCols - 1;
+}
+
 void PETScGrid::setGhostBoundary(PetscScalar value) {
   auto handle = getWriteHandleGhost();
-  for (int i = 0; i < localGhostNumOfRows; ++i) {
-    for (int j = 0; j < localGhostNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
-        handle(i, j) = value;
+  for (int row = 0; row < localGhostNumOfRows; ++row) {
+    for (int col = 0; col < localGhostNumOfCols; ++col) {
+      if (isOnGhostBoundary(row, col)) {
+        handle(row, col) = value;
       }
     }
   }
@@ -116,12 +126,10 @@ void PETScGrid::setGhostBoundary(PetscScalar value) {
 
 void PETScGrid::setRealBoundary(PetscScalar value) {
   auto handle = getWriteHandle();
-  for (int i = 0; i < localNumOfRows; ++i) {
-    for (int j = 0; j < localNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
-        handle(i, j) = value;
+  for (int row = 0; row < localNumOfRows; ++row) {
+    for (int col = 0; col < localNumOfCols; ++col) {
+      if (isOnRealBoundary(row, col)) {
+        handle(row, col) = value;
       }
     }
   }
@@ -129,13 +137,11 @@ void PETScGrid::setRealBoundary(PetscScalar value) {
 
 void PETScGrid::findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar newValue) {
   auto handle = getWriteHandleGhost();
-  for (int i = 0; i < localGhostNumOfRows; ++i) {
-    for (int j = 0; j < localGhostNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
-        if (handle(i, j) == oldValue) {
-          handle(i, j) = newValue;
+  for (int row = 0; row < localGhostNumOfRows; ++row) {
+    for (int col = 0; col < localGhostNumOfCols; ++col) {
+      if (isOnGhostBoundary(row, col)) {
+        if (handle(row, col) == oldValue) {
+          handle(row, col) = newValue;
         }
       }
     }
@@ -144,13 +150,11 @@ void PETScGrid::findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar ne
 
 void PETScGrid::findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar newValue) {
   auto handle = getWriteHandle();
-  for (int i = 0; i < localNumOfRows; ++i) {
-    for (int j = 0; j < localNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
-        if (handle(i, j) == oldValue) {
-          handle(i, j) = newValue;
+  for (int row = 0; row < localNumOfRows; ++row) {
+    for (int col = 0; col < localNumOfCols; ++col) {
+      if (isOnRealBoundary(row, col)) {
+        if (handle(row, col) == oldValue) {
+          handle(row, col) = newValue;
         }
       }
     }
