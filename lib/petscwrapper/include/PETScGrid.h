@@ -44,9 +44,9 @@
 
 class PETScGrid {
  public:
-  /*
-   * Use ReadHandle to only read values of the grid.
-   * if ghosted: GhostValues are being read aswell.
+  /** Use ReadHandle to only read values of the grid.
+   *
+   * If ghosted: GhostValues are being read as well.
    */
   struct ReadHandle {
     PETScGrid const *const grid;
@@ -58,20 +58,20 @@ class PETScGrid {
     ReadHandle &operator=(ReadHandle const &&) = delete;
     ~ReadHandle() = default;
 
-    PetscScalar operator()(int i, int j, bool ghosted = NONE_GHOSTED) const {
+    PetscScalar operator()(int row, int col, bool ghosted = NONE_GHOSTED) const {
       PetscScalar result;
       if (ghosted) {
-        if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
+        if (row < 0 || col < 0 || row >= grid->getLocalGhostNumOfRows() || col >= grid->getLocalGhostNumOfCols()) {
           CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.")
           exit(1);
         }
-        result = grid->valuesGhosted[i][j];
+        result = grid->valuesGhosted[row][col];
       } else {
-        if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
+        if (row < 0 || col < 0 || row >= grid->getLocalNumOfRows() || col >= grid->getLocalNumOfCols()) {
           CUAS_ERROR("PETScGrid.h: ReadHandle: Access out of range. Exiting.")
           exit(1);
         }
-        result = grid->values[i][j];
+        result = grid->values[row][col];
       }
       return result;
     };
@@ -80,8 +80,8 @@ class PETScGrid {
     PetscScalar const *const *getRawGhosted() const { return grid->valuesGhosted; }
   };
 
-  /*
-   * Use WriteHandle to read and write values of the grid.
+  /** Use WriteHandle to read and write values of the grid.
+   *
    * To explicitly set values now use setValues().
    * Otherwise the values are being set automatically when WriteHandle is out of scope.
    * Using WriteHandle you can not write to ghost-cells.
@@ -90,12 +90,12 @@ class PETScGrid {
     PETScGrid *const grid;
     explicit WriteHandle(PETScGrid *grid) : grid(grid){};
 
-    PetscScalar &operator()(int i, int j) {
-      if (i < 0 || j < 0 || i >= grid->getLocalNumOfRows() || j >= grid->getLocalNumOfCols()) {
+    PetscScalar &operator()(int row, int col) {
+      if (row < 0 || col < 0 || row >= grid->getLocalNumOfRows() || col >= grid->getLocalNumOfCols()) {
         CUAS_ERROR("PETScGrid.h: WriteHandle: Access out of range. Exiting.")
         exit(1);
       }
-      return grid->values[i][j];
+      return grid->values[row][col];
     };
 
     // only use if you want to set values before destruction of WriteHandle
@@ -111,12 +111,12 @@ class PETScGrid {
     PETScGrid *const grid;
     explicit WriteHandleGhost(PETScGrid *grid) : grid(grid){};
 
-    PetscScalar &operator()(int i, int j) {
-      if (i < 0 || j < 0 || i >= grid->getLocalGhostNumOfRows() || j >= grid->getLocalGhostNumOfCols()) {
+    PetscScalar &operator()(int row, int col) {
+      if (row < 0 || col < 0 || row >= grid->getLocalGhostNumOfRows() || col >= grid->getLocalGhostNumOfCols()) {
         CUAS_ERROR("PETScGrid.h: WriteHandleGhost: Access out of range. Exiting.")
         exit(1);
       }
-      return grid->valuesGhosted[i][j];
+      return grid->valuesGhosted[row][col];
     };
 
     // only use if you want to set values before destruction of WriteHandle
@@ -160,9 +160,9 @@ class PETScGrid {
     auto fWrite = getWriteHandle();
     auto rows = getLocalNumOfRows();
     auto cols = getLocalNumOfCols();
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        fWrite(i, j) = fWrite(i, j) + offset;
+    for (int row = 0; row < rows; ++row) {
+      for (int col = 0; col < cols; ++col) {
+        fWrite(row, col) = fWrite(row, col) + offset;
       }
     }
   }
@@ -171,9 +171,9 @@ class PETScGrid {
     auto fWrite = getWriteHandle();
     auto rows = getLocalNumOfRows();
     auto cols = getLocalNumOfCols();
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        fWrite(i, j) = fWrite(i, j) * multiplier;
+    for (int row = 0; row < rows; ++row) {
+      for (int col = 0; col < cols; ++col) {
+        fWrite(row, col) = fWrite(row, col) * multiplier;
       }
     }
   }
@@ -188,6 +188,9 @@ class PETScGrid {
            localGhostNumOfCols == grid.localGhostNumOfCols && localGhostNumOfRows == grid.localGhostNumOfRows &&
            totalGhostNumOfCols == grid.totalGhostNumOfCols && totalGhostNumOfRows == grid.totalGhostNumOfRows;
   }
+
+  bool isOnGhostBoundary(int row, int col) const;
+  bool isOnRealBoundary(int row, int col) const;
 
   // sets the outer boundaries (ghost-cells) of the grid
   void setGhostBoundary(PetscScalar value);
