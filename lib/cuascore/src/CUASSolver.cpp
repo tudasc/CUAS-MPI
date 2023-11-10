@@ -75,13 +75,13 @@ void CUASSolver::setup() {
       auto initialHeadValue = (PetscScalar)std::stod(args->initialHead);
       currHead->setConst(initialHeadValue);
     } catch (std::invalid_argument const &ex) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead invalid_argument: '" + args->initialHead + "'. Exiting.");
+      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead invalid_argument: '" + args->initialHead + "'. Exiting.")
       exit(1);
     } catch (std::out_of_range const &ex) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead out_of_range: '" + args->initialHead + "'. Exiting.");
+      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead out_of_range: '" + args->initialHead + "'. Exiting.")
       exit(1);
     } catch (...) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero, topg or valid number. Exiting.");
+      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero, topg or valid number. Exiting.")
       exit(1);
     }
   }
@@ -97,7 +97,7 @@ void CUASSolver::setup() {
     for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
       for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
         // should we use true = 1.0 and false = 0.0 to match type of PetscScalar?
-        glob(i, j) = (mask(i, j) == (PetscScalar)NOFLOW_FLAG) ? true : false;
+        glob(i, j) = (mask(i, j) == (PetscScalar)NOFLOW_FLAG);
       }
     }
     glob.setValues();
@@ -136,6 +136,10 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   //
   // SOLVER PREPARATION
   //
+
+  // compute max digits needed for verboseSolver output format
+  auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
+  auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
 
   // after restart apply checks and set values consistent to cuas mask
   {
@@ -178,15 +182,15 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   const PetscScalar theta = 1.0;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
 
   if (args->verbose) {
-    CUAS_INFO_RANK0("  S = Ss * b = {}", args->specificStorage * args->layerThickness);
-    CUAS_INFO_RANK0("          Sy = {}", args->specificYield);
-    CUAS_INFO_RANK0("        TINY = {}", TINY);
-    CUAS_INFO_RANK0("NOFLOW_VALUE = {}", NOFLOW_VALUE);
-    CUAS_INFO_RANK0("     RHO_ICE = {}", RHO_ICE);
-    CUAS_INFO_RANK0("         SPY = {}", SPY);
-    CUAS_INFO_RANK0("       input = {}", args->input);
-    CUAS_INFO_RANK0("      output = {}", args->output);
-    CUAS_INFO_RANK0("Starting CUASSolver");
+    CUAS_INFO_RANK0("  S = Ss * b = {}", args->specificStorage * args->layerThickness)
+    CUAS_INFO_RANK0("          Sy = {}", args->specificYield)
+    CUAS_INFO_RANK0("        TINY = {}", TINY)
+    CUAS_INFO_RANK0("NOFLOW_VALUE = {}", NOFLOW_VALUE)
+    CUAS_INFO_RANK0("     RHO_ICE = {}", RHO_ICE)
+    CUAS_INFO_RANK0("         SPY = {}", SPY)
+    CUAS_INFO_RANK0("       input = {}", args->input)
+    CUAS_INFO_RANK0("      output = {}", args->output)
+    CUAS_INFO_RANK0("Starting CUASSolver")
   }
 
   timeSecs dt = 0;
@@ -252,8 +256,9 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     if (solutionHandler != nullptr) {
       OutputReason reason = solutionHandler->getOutputReason(timeStepIndex, (int)timeSteps.size(), args->saveEvery);
       if (reason != OutputReason::NONE) {
-        if (args->verbose) {
-          CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt);
+        if (!args->verboseSolver && args->verbose) {
+          // show only if verboseSolver is off
+          CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt)
         }
         // Process diagnostic variables for output only. We don't need them in every time step
         getFluxMagnitude(*fluxMagnitude, *gradHeadSquared, *Teff);  // was currTransmissivity for a very long time
@@ -276,22 +281,21 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     if (timeStepIndex < timeSteps.size() - 1) {
       // Sanity check
       if (dt <= 0) {
-        CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt);
+        CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
         exit(1);
       }
 
       //
       // UPDATE HEAD
       //
-      systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, dt, theta, *currHead, currentQ, *dirichletValues,
-                   *model->bndMask, *globalIndicesBlocked);
+      systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), theta, *currHead, currentQ,
+                   *dirichletValues, *model->bndMask, *globalIndicesBlocked);
 
       // solve the equation A*sol = b,
-      // todo: - return number of iterations and rnorm for logging
-      PETScSolver::solve(*matA, *bGrid, *solGrid, args->verboseSolver && !args->directSolver);
+      auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
       nextHead->copyGlobal(*solGrid);
-      // todo: eps_head = np.max(np.abs(nextHead - currHead))
-      eps = nextHead->getMaxAbsDiff(*currHead) / dt;
+      // eps_head = np.max(np.abs(nextHead - currHead))
+      eps = nextHead->getMaxAbsDiff(*currHead) / static_cast<double>(dt);
       // switch pointers
       currHead.swap(nextHead);
 
@@ -300,11 +304,17 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       //
       if (args->doAnyChannel) {
         doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
-                   args->Tmax, dt);
+                   args->Tmax, static_cast<double>(dt));
         // eps_T = np.max(np.abs(T - currTransmissivity))
-        Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / dt;
+        Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / static_cast<double>(dt);
         // switch pointers
         currTransmissivity.swap(nextTransmissivity);
+      }
+
+      if (args->verboseSolver) {
+        // no fmt given for res.numberOfIterations, because this is only available from PETSc
+        CUAS_INFO_RANK0("SOLVER: {:{}d} {:{}d} {:.5e} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
+                        maxDigitsTime, eps, Teps, res.residualNorm, res.numberOfIterations, res.reason)
       }
 
     } else {
@@ -315,7 +325,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   // end
   if (rank == 0) {
     t = clock() - t;
-    CUAS_INFO_RANK0("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC);
+    CUAS_INFO_RANK0("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC)
   }
 }
 

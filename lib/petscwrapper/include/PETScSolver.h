@@ -13,11 +13,20 @@
 
 #include "petsc.h"
 
+struct PETScSolverConvergenceInformation {
+  int numberOfIterations;  // to solution
+  double residualNorm;
+  std::string reason;  // the reason why the `KSP` iteration was stopped
+                       // as in PETSC src/ksp/ksp/interface/dlregisksp.c
+};
+
 class PETScSolver {
  public:
-  inline static void solve(PETScMatrix const &A, PETScGrid const &bGrid, PETScGrid &solGrid, bool verbose = false) {
+  inline static PETScSolverConvergenceInformation solve(PETScMatrix const &A, PETScGrid const &bGrid,
+                                                        PETScGrid &solGrid) {
     KSP ksp;
     PC pc;
+    PETScSolverConvergenceInformation result = {0, 0.0, ""};
 
     KSPCreate(PETSC_COMM_WORLD, &ksp);
     KSPSetOperators(ksp, A.mat, A.mat);
@@ -28,25 +37,26 @@ class PETScSolver {
     KSPSolve(ksp, bGrid.global, solGrid.global);
     {
       KSPConvergedReason reason;
+      PetscInt numberOfIterations;  // to solution
+      PetscReal residualNorm;
       KSPGetConvergedReason(ksp, &reason);
       if (reason < 0) {
         // diverged
-        CUAS_ERROR_RANK0("PETScSolver: solve(): failed to converge (KSP reason {}).", KSPConvergedReasons[reason]);
+        CUAS_ERROR_RANK0("PETScSolver: solve(): failed to converge (KSP reason {}).", KSPConvergedReasons[reason])
         exit(1);
-      } else {
-        if (verbose) {
-          // converged
-          PetscInt its;     // number of iterations to solution
-          PetscReal rnorm;  // residual norm
-          KSPGetIterationNumber(ksp, &its);
-          KSPGetResidualNorm(ksp, &rnorm);
-          CUAS_INFO_RANK0("PETScSolver: solve(): converged (KSP reason {}) in {} iterations (residual norm {}).",
-                          KSPConvergedReasons[reason], (int)its, (double)rnorm);
-        }
       }
+
+      KSPGetIterationNumber(ksp, &numberOfIterations);
+      KSPGetResidualNorm(ksp, &residualNorm);
+
+      // fill in return values
+      result.numberOfIterations = static_cast<int>(numberOfIterations);
+      result.residualNorm = static_cast<double>(residualNorm);
+      result.reason = std::string(KSPConvergedReasons[reason]);
     }
 
     KSPDestroy(&ksp);
+    return result;
   }
 
   /** Solve with MUMPS direct solver
@@ -56,10 +66,11 @@ class PETScSolver {
    *    -mat_mumps_icntl_14 120 -mat_mumps_icntl_28 2 -mat_mumps_icntl_29 2
    * For more options see https://petsc.org/main/docs/manualpages/Mat/MATSOLVERMUMPS.html
    */
-  inline static void solveDirectMUMPS(PETScMatrix const &A, PETScGrid const &bGrid, PETScGrid &solGrid,
-                                      bool verbose = false) {
+  inline static PETScSolverConvergenceInformation solveDirectMUMPS(PETScMatrix const &A, PETScGrid const &bGrid,
+                                                                   PETScGrid &solGrid) {
     KSP ksp;
     PC pc;
+    PETScSolverConvergenceInformation result = {1, 0.0, ""};
 
     KSPCreate(PETSC_COMM_WORLD, &ksp);   // creates the default KSP context
     KSPSetOperators(ksp, A.mat, A.mat);  // PETSc >= 3.5.0
@@ -86,19 +97,21 @@ class PETScSolver {
     // set the command line options provided by the user to override the defaults
     KSPSetFromOptions(ksp);
 
-    // solve the linear system, number of iteration will be 1 and rnorm = 0.0
+    // solve the linear system, number of iteration will be 1 and residualNorm = 0.0
     KSPSolve(ksp, bGrid.global, solGrid.global);
     {
       KSPConvergedReason reason;
       KSPGetConvergedReason(ksp, &reason);
       if (reason < 0) {
         // diverged
-        CUAS_ERROR("PETScSolver: solve(): failed to converge (KSP reason {}).", KSPConvergedReasons[reason]);
+        CUAS_ERROR("PETScSolver: solve(): failed to converge (KSP reason {}).", KSPConvergedReasons[reason])
         exit(1);
       }
+      result.reason = KSPConvergedReasons[reason];
     }
 
     KSPDestroy(&ksp);
+    return result;
   }
 };
 
