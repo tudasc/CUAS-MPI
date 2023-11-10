@@ -66,14 +66,22 @@ mpirun -n $NN  $cuas --totaltime '15 days' --dt '1 hour' --saveEvery 1 --verbose
 ### Build
 
 We expect that *PETSC_ROOT* and *LIBNETCDF_ROOT* are set, being the path to the toplevel diretory of your PETSc and NetCDF installation.
-And *CUAS_INSTALL_PREFIX* is the path which you want to use for the CUAS-MPI installation.
+And `<prefix>` is the path which you want to use for the CUAS-MPI installation.
 Fullfilling these requirements, you should be able to run:
 
 ```
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCMAKE_INSTALL_PREFIX=<prefix>
+cmake --build build
+cmake --install build
+```
+You don't need to use *CMAKE_INSTALL_PREFIX* and decide your preferred prefix later using:
+```
+# alternative without using CMAKE_INSTALL_PREFIX 
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
 cmake --build build
-cmake --install build --prefix CUAS_INSTALL_PREFIX
+cmake --install build --prefix <prefix>
 ```
+
 
 Beside the default cmake options like *CMAKE_BUILD_TYPE* we use the following options:
 | Option | Default | Description                                                                                                  |
@@ -89,5 +97,14 @@ Beside the default cmake options like *CMAKE_BUILD_TYPE* we use the following op
     <a href=https://doi.org/10.5194/tc-12-3931-2018>
     A confined–unconfined aquifer model for subglacial hydrology and its application to the Northeast Greenland Ice Stream</a>.
     In <i>The Cryosphere</i>, pages 3931–3947, 2018.</td>
+</tr>
+<tr>
+    <td valign="top"><a name="ref-CUAS-2023"></a>[CUAS23]</td>
+    <td>Fischler, Yannic and Kleiner, Thomas and Bischof, Christian and Schmiedel, Jeremie and Sayag, Roiy and 
+        Emunds, Raban and Oestreich, Lennart Frederik and Humbert, Angelika
+    <a href=https://doi.org/10.5194/gmd-16-5305-2023>
+    A parallel implementation of the confined–unconfined aquifer system model for subglacial hydrology: design, 
+    verification, and performance analysis (CUAS-MPI v0.1.0) </a>.
+    In <i>Geoscientific Model Development</i>, pages 5305-5322, 2023.</td>
 </tr>
 </table>
