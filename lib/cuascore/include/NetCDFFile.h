@@ -147,6 +147,16 @@ class NetCDFFile {
   // TODO deprecated?
   // void writeTimeSteps(std::vector<int>);
 
+  /**
+   * Copy lat/lon coordinates and lat_bnds/lon_bnds (optional)
+   * @param srcFileName
+   */
+  void copyCoordinatesFrom(std::string const &srcFileName);
+  /**
+   * Set the coordinates attribute to "lat lon"
+   */
+  void setCoordinatesAttribute();
+
   //! \brief Get a text attribute.
   std::string readTextAttribute(std::string const &varName, std::string const &attName);
 

@@ -927,4 +927,72 @@ bool NetCDFFile::isNetCDFIntegral(nc_type varType) {
   return (varType == NC_LONG) || (varType == NC_INT) || (varType == NC_SHORT);
 }
 
+// Use nc_copy_var (int ncid_in, int varid_in, int ncid_out)
+// This will copy a variable that is an array of primitive type and its
+// attributes from one file to another, assuming dimensions in the output
+// file are already defined and have same dimension IDs and length.
+void NetCDFFile::copyCoordinatesFrom(const std::string &srcFileName) {
+  constexpr static std::string_view prefix{"NetCDFFile::copyCoordinatesFrom()"};
+
+  if (srcFileName.empty()) {
+    CUAS_ERROR_RANK0("{}: called with empty fileName. Exiting.", prefix)
+    exit(1);
+  }
+
+  auto ncin = std::make_unique<NetCDFFile>(srcFileName, 'r');
+
+  // copy lat(y,x), lon(y,x), lat_bnds(y, x, nv4), lon_bnds(y, x, nv4),  ;
+  // The name of the third dimension name 'nv4' may vary.
+  const std::array<std::string, 4> varNames{"lat", "lon", "lat_bnds", "lon_bnds"};
+  for (auto &varName : varNames) {
+    if (!ncin->hasVariable(varName)) {
+      if (varName == "lat" || varName == "lon") {
+        CUAS_ERROR_RANK0("{}: Variabe '{}' not found in file '{}'. Exiting.", prefix, varName, srcFileName)
+        exit(1);
+      } else {
+        // lat_bnds and lon_bnds are only needed for later remapping using CDO
+        CUAS_WARN_RANK0("{}: Variabe '{}' not found in file '{}'. Continue.", prefix, varName, srcFileName)
+        continue;  // terminate current iteration for varName
+      }
+    }
+    // check the dimensions and create new dimensions if missing
+    auto srcDimIds = ncin->getDimIdsForVariable(varName);
+    for (auto dimId : srcDimIds) {
+      auto dimName = ncin->getDimName(dimId);
+      if (!hasDimension(dimName)) {
+        if (dimName == "x" || dimName == "y") {
+          CUAS_ERROR_RANK0("{}: Dimension '{}' should already exist in output file. Exiting.", prefix, dimName)
+          exit(1);
+        }
+        auto dimLen = ncin->getDimLength(dimName);
+        int newDimId;
+        SECURED_NETCDF_EXECUTION(nc_redef(fileId));
+        SECURED_NETCDF_EXECUTION(nc_def_dim(fileId, dimName.c_str(), dimLen, &newDimId));
+        SECURED_NETCDF_EXECUTION(nc_enddef(fileId));
+      }
+    }
+    // now all dimensions exist and we can start copy all over
+    auto srcVarId = ncin->getVarId(varName);
+    auto srcFileId = ncin->getFileId();
+    int retval;
+    if ((retval = nc_copy_var(srcFileId, srcVarId, fileId)) != NC_NOERR) {
+      std::string netcdfError = nc_strerror(retval);
+      CUAS_ERROR("{}: nc_copy_var() failed for '{}' with error {}. Exiting.", prefix, varName, netcdfError)
+      exit(1);
+    }
+  }
+}
+
+void NetCDFFile::setCoordinatesAttribute() {
+  const char attText[] = "lat lon";
+  for (auto &ncVar : netcdfVars) {
+    auto varName = ncVar.first;
+    auto varId = ncVar.second.varId;
+    // only variable in the map plane are qualified
+    if (variableHasDimensionByName(varName, "x") && variableHasDimensionByName(varName, "y")) {
+      SECURED_NETCDF_EXECUTION(nc_put_att_text(fileId, varId, "coordinates", strlen(attText), attText));
+    }
+  }
+}
+
 }  // namespace CUAS
