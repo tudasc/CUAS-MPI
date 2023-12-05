@@ -8,6 +8,7 @@
 #define CUAS_PETSCVEC_H
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 class PETScVector {
  public:

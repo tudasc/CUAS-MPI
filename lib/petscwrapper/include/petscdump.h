@@ -12,6 +12,7 @@
 #include "PETScVector.h"
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 #include <chrono>
 #include <iostream>

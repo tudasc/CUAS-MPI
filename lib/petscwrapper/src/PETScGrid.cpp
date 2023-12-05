@@ -72,7 +72,7 @@ std::array<PetscScalar, 3> PETScGrid::getErrorNorms(PETScGrid const &sub) const 
 
 PetscScalar PETScGrid::getMax() const {
   PetscScalar result;
-  VecMax(global, PETSC_NULL, &result);
+  VecMax(global, PETSC_NULLPTR, &result);
   return result;
 }
 

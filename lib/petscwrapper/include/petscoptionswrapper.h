@@ -10,12 +10,13 @@
 #include "Logger.h"
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 #include <string>
 
 std::string getPETScOptionsAll() {
   char *copts;
-  PetscOptionsGetAll(PETSC_NULL, &copts);
+  PetscOptionsGetAll(PETSC_NULLPTR, &copts);
   auto result = std::string(copts);
   PetscFree(copts);
   return result;
@@ -32,7 +33,7 @@ void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::str
   PetscInt N;
   char **tnames;
   char **tvalues;
-  PetscOptionsLeftGet(PETSC_NULL, &N, &tnames, &tvalues);
+  PetscOptionsLeftGet(PETSC_NULLPTR, &N, &tnames, &tvalues);
 
   names.resize(N);
   values.resize(N);
@@ -50,7 +51,7 @@ void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::str
     }
   }
 
-  PetscOptionsLeftRestore(PETSC_NULL, &N, &tnames, &tvalues);
+  PetscOptionsLeftRestore(PETSC_NULLPTR, &N, &tnames, &tvalues);
 }
 
 std::string getPETScOptionsUnused() {

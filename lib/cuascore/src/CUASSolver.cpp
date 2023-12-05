@@ -114,14 +114,14 @@ void CUASSolver::setup() {
 #if (PETSC_HAVE_MUMPS == 1) && (PETSC_HAVE_PARMETIS == 1)
     CUAS_INFO("CUASSolver::setup(): Setup MUMPS+PARMETIS");
     // See: https://petsc.org/release/docs/manualpages/Mat/MATSOLVERMUMPS.html
-    PetscOptionsSetValue(PETSC_NULL, "-ksp_type", "preonly");
-    PetscOptionsSetValue(PETSC_NULL, "-pc_type", "lu");
-    PetscOptionsSetValue(PETSC_NULL, "-pc_factor_mat_solver_type", "mumps");
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_14", "120");  // needed?
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_28", "2");    // parallel analysis
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_29", "2");    // parallel ordering: 2 = parmetis
+    PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_type", "preonly");
+    PetscOptionsSetValue(PETSC_NULLPTR, "-pc_type", "lu");
+    PetscOptionsSetValue(PETSC_NULLPTR, "-pc_factor_mat_solver_type", "mumps");
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_14", "120");  // needed?
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_28", "2");    // parallel analysis
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_29", "2");    // parallel ordering: 2 = parmetis
     // if MUMPS factorization fails inside a KSP solve, give information about the failure
-    PetscOptionsSetValue(PETSC_NULL, "-ksp_error_if_not_converged", nullptr);
+    PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_error_if_not_converged", nullptr);
 #else
     CUAS_ERROR("CUASSolver.cpp: setup(): args->directSolver requires PETSc compiled with MUMPS and PARMETIS. Exiting.");
     exit(1);
