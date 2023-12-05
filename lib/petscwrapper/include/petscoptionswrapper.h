@@ -1,8 +1,11 @@
 /**
- * File: petscutil.h
+ * File: petscoptions.h
  * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
  * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
  */
+
+#ifndef CUAS_PETSCOPTIONSWRAPPER_H
+#define CUAS_PETSCOPTIONSWRAPPER_H
 
 #include "Logger.h"
 
@@ -93,3 +96,5 @@ std::string getPETScOptionsUsed() {
 
   return result;
 }
+
+#endif  // CUAS_PETSCOPTIONSWRAPPER_H

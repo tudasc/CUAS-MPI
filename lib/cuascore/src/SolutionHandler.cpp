@@ -9,7 +9,7 @@
 #include "CUASConstants.h"
 #include "utilities.h"  // for CUAS::version
 
-#include "petscutil.h"
+#include "petscoptionswrapper.h"
 
 namespace CUAS {
 
