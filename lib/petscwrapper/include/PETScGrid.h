@@ -8,6 +8,7 @@
 #define CUAS_PETSCGRID_H
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 #include "Logger.h"
 #include "PETScVector.h"

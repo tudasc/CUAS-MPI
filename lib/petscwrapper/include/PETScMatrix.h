@@ -8,6 +8,7 @@
 #define CUAS_PETSCMAT_H
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 /*
  * Matrices in PETSc are stored row major

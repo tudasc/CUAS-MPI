@@ -12,6 +12,7 @@
 #include "PETScMatrix.h"
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 struct PETScSolverConvergenceInformation {
   int numberOfIterations;  // to solution
@@ -90,9 +91,9 @@ class PETScSolver {
     // tell the solver to perform the LU factorization and get the
     PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);  // PETSc >= 3.9.0
 
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_14", "120");  // needed?
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_28", "2");    // parallel analysis
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_29", "2");    // parallel ordering: 2 = parmetis
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_14", "120");  // needed?
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_28", "2");    // parallel analysis
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_29", "2");    // parallel ordering: 2 = parmetis
 
     // set the command line options provided by the user to override the defaults
     KSPSetFromOptions(ksp);
