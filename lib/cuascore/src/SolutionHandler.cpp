@@ -223,6 +223,7 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("specificYield", args.specificYield);
   file->addGlobalAttribute("noSmoothMelt", args.noSmoothMelt);
   file->addGlobalAttribute("loopForcing", args.loopForcing);
+  file->addGlobalAttribute("coordinatesFile", args.coordinatesFile);
   file->addGlobalAttribute("forcingFile", args.forcingFile);
   file->addGlobalAttribute("basalVelocityIce", args.basalVelocityIce);
   file->addGlobalAttribute("cavityBeta", args.cavityBeta);
@@ -242,6 +243,13 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("NOFLOW_VALUE", NOFLOW_VALUE);
   file->addGlobalAttribute("RHO_ICE", RHO_ICE);
   file->addGlobalAttribute("SPY", SPY);
+
+  // copy lat/lon lat_bnds/lon_bnds from input file if needed
+  if (!args.coordinatesFile.empty()) {
+    CUAS_INFO_RANK0("Copy coordinates from {}", args.coordinatesFile)
+    file->copyCoordinatesFrom(args.coordinatesFile);
+    file->setCoordinatesAttribute();
+  }
 
   // store initial conditions if needed
   storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, fluxMagnitude, melt, creep, cavity, effectivePressure,

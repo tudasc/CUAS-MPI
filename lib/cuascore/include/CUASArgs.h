@@ -38,6 +38,7 @@ struct CUASArgs {
   PetscScalar specificStorage;  // Ss
   PetscScalar specificYield;    // Sy
   bool noSmoothMelt;
+  std::string coordinatesFile;
   std::string forcingFile;
   bool loopForcing;
   PetscScalar basalVelocityIce;

@@ -118,6 +118,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("forcingFile",
        "forcing input file (netcdf)",
        cxxopts::value<std::string>()->default_value(""))
+      ("coordinatesFile",
+       "file containing lat/lon grids to copied into the output file (netcdf)",
+       cxxopts::value<std::string>()->default_value(""))
       ("seaLevelForcing",
        "Apply sea level forcing from netcdf scalar time series file.",
        cxxopts::value<std::string>()->default_value(""))
@@ -176,6 +179,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.specificYield = result["specificYield"].as<PetscScalar>();
   args.noSmoothMelt = result["noSmoothMelt"].as<bool>();
   args.loopForcing = result["loopForcing"].as<bool>();
+  args.coordinatesFile = result["coordinatesFile"].as<std::string>();
   args.forcingFile = result["forcingFile"].as<std::string>();
   args.basalVelocityIce = result["basalVelocityIce"].as<PetscScalar>();
   args.cavityBeta = result["cavityBeta"].as<PetscScalar>();
