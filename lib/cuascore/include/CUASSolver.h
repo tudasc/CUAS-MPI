@@ -107,6 +107,16 @@ class CUASSolver {
 
   PetscScalar eps = 0.0;   //!<  \f$ max(|h^n - h^{n-1}|)/dt \f$
   PetscScalar Teps = 0.0;  //!<  \f$ max(|T^n - T^{n-1}|)/dt \f$
+
+ private:
+  static std::pair<timeSecs, timeSecs> getTimeStepInformation(std::vector<CUAS::timeSecs> const &timeSteps,
+                                                              int timeStepIndex);
+  void prepare();
+  void preComputation();
+  void storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<CUAS::timeSecs> const &timeSteps,
+                 int timeStepIndex);
+  void updateHeadAndTransmissivity(timeSecs dt, PetscScalar theta, PETScGrid const &currentQ,
+                                   std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex);
 };
 
 }  // namespace CUAS
