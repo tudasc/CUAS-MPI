@@ -10,6 +10,7 @@
 #include "CUASKernels.h"
 #include "specialgradient.h"
 #include "systemmatrix.h"
+#include "timing.h"
 
 #include "Logger.h"
 #include "PETScSolver.h"
@@ -112,7 +113,7 @@ void CUASSolver::setup() {
   // SET PETSc Options for direct solver MUMPS+PARDISO
   if (args->directSolver) {
 #if (PETSC_HAVE_MUMPS == 1) && (PETSC_HAVE_PARMETIS == 1)
-    CUAS_INFO("CUASSolver::setup(): Setup MUMPS+PARMETIS");
+    CUAS_INFO("CUASSolver::setup(): Setup MUMPS+PARMETIS")
     // See: https://petsc.org/release/docs/manualpages/Mat/MATSOLVERMUMPS.html
     PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_type", "preonly");
     PetscOptionsSetValue(PETSC_NULLPTR, "-pc_type", "lu");
@@ -130,16 +131,50 @@ void CUASSolver::setup() {
 }
 
 void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  // Why is this not an arg?
+  // tkleiner: Because other values are not working! This indicates that the choice of initial
+  // conditions is not appropriate.
+  const PetscScalar theta = 1.0;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
+  prepare();
 
+  beginSolverTiming();
+
+  for (int timeStepIndex = 0; timeStepIndex < timeSteps.size(); ++timeStepIndex) {
+    auto [currTime, dt] = getTimeStepInformation(timeSteps, timeStepIndex);
+
+    // time dependent forcing
+    auto &currentQ = model->Q->getCurrentQ(currTime);
+    preComputation();
+
+    storeData(currentQ, dt, timeSteps, timeStepIndex);
+
+    updateHeadAndTransmissivity(dt, theta, currentQ, timeSteps, timeStepIndex);
+  }
+
+  endSolverTiming();
+}
+
+std::pair<timeSecs, timeSecs> CUASSolver::getTimeStepInformation(std::vector<CUAS::timeSecs> const &timeSteps,
+                                                                 int timeStepIndex) {
+  timeSecs dt = 0;
+  auto currTime = timeSteps[timeStepIndex];
+  if (timeSteps.size() > 1) {
+    if (timeStepIndex < timeSteps.size() - 1) {
+      auto nextTime = timeSteps[timeStepIndex + 1];
+      dt = nextTime - currTime;
+    } else {
+      // This is the last iteration only used to recompute the diagnostic fields for saving
+      dt = -9999;  // Something stupid to let the solver crash if used
+    }
+  }
+
+  return std::make_pair(currTime, dt);
+}
+
+void CUASSolver::prepare() {
   //
   // SOLVER PREPARATION
   //
-
-  // compute max digits needed for verboseSolver output format
-  auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
-  auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
 
   // after restart apply checks and set values consistent to cuas mask
   {
@@ -170,17 +205,6 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   Seff->setConst(args->layerThickness * args->specificStorage);
   Teff->copy(*currTransmissivity);
 
-  // start
-  clock_t t;
-  if (rank == 0) {
-    t = clock();
-  }
-
-  // Why is this not an arg?
-  // tkleiner: Because other values are not working! This indicates that the choice of initial
-  // conditions is not appropriate.
-  const PetscScalar theta = 1.0;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
-
   if (args->verbose) {
     CUAS_INFO_RANK0("  S = Ss * b = {}", args->specificStorage * args->layerThickness)
     CUAS_INFO_RANK0("          Sy = {}", args->specificYield)
@@ -192,140 +216,131 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
     CUAS_INFO_RANK0("      output = {}", args->output)
     CUAS_INFO_RANK0("Starting CUASSolver")
   }
+}
 
-  timeSecs dt = 0;
-  for (int timeStepIndex = 0; timeStepIndex < timeSteps.size(); ++timeStepIndex) {
-    auto currTime = timeSteps[timeStepIndex];
-    if (timeSteps.size() > 1) {
-      if (timeStepIndex < timeSteps.size() - 1) {
-        auto nextTime = timeSteps[timeStepIndex + 1];
-        dt = nextTime - currTime;
-      } else {
-        // This is the last iteration only used to recompute the diagnostic fields for saving
-        dt = -9999;  // Something stupid to let the solver crash if used
+void CUASSolver::preComputation() {
+  // TODO: basal velocity and rate factor fields are probably also time dependent
+  // auto &currentRateFactor = XXX->getCurrent(currTime);
+  // auto &currentBasalVelocity = XXX->getCurrent(currTime);
+
+  // if (args->seaLevelForcing) {
+  // TODO
+  //}
+
+  // Update Seff, Teff or both if needed.
+  updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
+                                   args->layerThickness, args->specificStorage, args->specificYield, args->unconfSmooth,
+                                   args->disableUnconfined, args->doAnyChannel);
+
+  // calculate effective pressure for diagnostic output and probably for creep opening/closure
+  headToEffectivePressure(*pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
+
+  // we need gradient of head for the flux and probably for melt opening
+  getGradHeadSQR(*gradHeadSquared, *currHead, model->dx, *gradMask);
+
+  // TODO extract?
+  // compute channel opening terms to be ready for netcdf output
+  if (args->doAnyChannel) {
+    // creep
+    if (args->doCreep) {
+      computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity);
+    }
+    // melt
+    if (args->doMelt) {
+      computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, *currTransmissivity, *gradHeadSquared);
+      if (!args->noSmoothMelt) {
+        convolveStar11411(*melt, *tmpMelt);
+        melt->copy(*tmpMelt);
       }
     }
-
-    // time dependent forcing
-    auto &currentQ = model->Q->getCurrentQ(currTime);
-
-    // TODO: basal velocity and rate factor fields are probably also time dependent
-    // auto &currentRateFactor = XXX->getCurrent(currTime);
-    // auto &currentBasalVelocity = XXX->getCurrent(currTime);
-
-    // if (args->seaLevelForcing) {
-    // TODO
-    //}
-
-    // Update Seff, Teff or both if needed.
-    updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
-                                     args->layerThickness, args->specificStorage, args->specificYield,
-                                     args->unconfSmooth, args->disableUnconfined, args->doAnyChannel);
-
-    // calculate effective pressure for diagnostic output and probably for creep opening/closure
-    headToEffectivePressure(*pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
-
-    // we need gradient of head for the flux and probably for melt opening
-    getGradHeadSQR(*gradHeadSquared, *currHead, model->dx, *gradMask);
-
-    // TODO extract?
-    // compute channel opening terms to be ready for netcdf output
-    if (args->doAnyChannel) {
-      // creep
-      if (args->doCreep) {
-        computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity);
-      }
-      // melt
-      if (args->doMelt) {
-        computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, *currTransmissivity, *gradHeadSquared);
-        if (!args->noSmoothMelt) {
-          convolveStar11411(*melt, *tmpMelt);
-          melt->copy(*tmpMelt);
-        }
-      }
-      // cavity
-      if (args->doCavity) {
-        computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce);
-      }
-    }
-
-    // TODO extract?
-    //
-    // STORE DATA, IF NEEDED
-    //
-    if (solutionHandler != nullptr) {
-      OutputReason reason = solutionHandler->getOutputReason(timeStepIndex, (int)timeSteps.size(), args->saveEvery);
-      if (reason != OutputReason::NONE) {
-        if (!args->verboseSolver && args->verbose) {
-          // show only if verboseSolver is off
-          CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt)
-        }
-        // Process diagnostic variables for output only. We don't need them in every time step
-        getFluxMagnitude(*fluxMagnitude, *gradHeadSquared, *Teff);  // was currTransmissivity for a very long time
-        // ... more
-
-        if (reason == OutputReason::INITIAL) {
-          // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
-          solutionHandler->storeInitialSetup(*currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
-                                             *cavity, *pEffective, *Seff, *Teff, currentQ, *args);
-        } else {
-          solutionHandler->storeSolution(currTime, *currHead, *currTransmissivity, *model, *fluxMagnitude, *melt,
-                                         *creep, *cavity, *pEffective, *Seff, *Teff, currentQ, eps, Teps);
-        }
-      }
-    }  // solutionHandler
-
-    //
-    // WE NEED TO SOLVE AGAIN
-    //
-    if (timeStepIndex < timeSteps.size() - 1) {
-      // Sanity check
-      if (dt <= 0) {
-        CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
-        exit(1);
-      }
-
-      //
-      // UPDATE HEAD
-      //
-      systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), theta, *currHead, currentQ,
-                   *dirichletValues, *model->bndMask, *globalIndicesBlocked);
-
-      // solve the equation A*sol = b,
-      auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
-      nextHead->copyGlobal(*solGrid);
-      // eps_head = np.max(np.abs(nextHead - currHead))
-      eps = nextHead->getMaxAbsDiff(*currHead) / static_cast<double>(dt);
-      // switch pointers
-      currHead.swap(nextHead);
-
-      //
-      // UPDATE TRANSMISSIVITY, IF NEEDED
-      //
-      if (args->doAnyChannel) {
-        doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
-                   args->Tmax, static_cast<double>(dt));
-        // eps_T = np.max(np.abs(T - currTransmissivity))
-        Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / static_cast<double>(dt);
-        // switch pointers
-        currTransmissivity.swap(nextTransmissivity);
-      }
-
-      if (args->verboseSolver) {
-        // no fmt given for res.numberOfIterations, because this is only available from PETSc
-        CUAS_INFO_RANK0("SOLVER: {:{}d} {:{}d} {:.5e} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
-                        maxDigitsTime, eps, Teps, res.residualNorm, res.numberOfIterations, res.reason)
-      }
-
-    } else {
-      // NO NEED TO UPDATE nextHead or T again
+    // cavity
+    if (args->doCavity) {
+      computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce);
     }
   }
+}
 
-  // end
-  if (rank == 0) {
-    t = clock() - t;
-    CUAS_INFO_RANK0("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC)
+void CUASSolver::storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<CUAS::timeSecs> const &timeSteps,
+                           int timeStepIndex) {
+  //
+  // STORE DATA, IF NEEDED
+  //
+  if (solutionHandler != nullptr) {
+    OutputReason reason = solutionHandler->getOutputReason(timeStepIndex, (int)timeSteps.size(), args->saveEvery);
+
+    auto currTime = timeSteps[timeStepIndex];
+
+    if (reason != OutputReason::NONE) {
+      if (!args->verboseSolver && args->verbose) {
+        // show only if verboseSolver is off
+        CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt)
+      }
+      // Process diagnostic variables for output only. We don't need them in every time step
+      getFluxMagnitude(*fluxMagnitude, *gradHeadSquared, *Teff);  // was currTransmissivity for a very long time
+      // ... more
+
+      if (reason == OutputReason::INITIAL) {
+        // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
+        solutionHandler->storeInitialSetup(*currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
+                                           *cavity, *pEffective, *Seff, *Teff, currentQ, *args);
+      } else {
+        solutionHandler->storeSolution(currTime, *currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
+                                       *cavity, *pEffective, *Seff, *Teff, currentQ, eps, Teps);
+      }
+    }
+  }
+}
+
+void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PetscScalar theta, PETScGrid const &currentQ,
+                                             std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) {
+  //
+  // WE NEED TO SOLVE AGAIN
+  //
+  if (timeStepIndex < timeSteps.size() - 1) {
+    // Sanity check
+    if (dt <= 0) {
+      CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
+      exit(1);
+    }
+
+    //
+    // UPDATE HEAD
+    //
+    systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), theta, *currHead, currentQ,
+                 *dirichletValues, *model->bndMask, *globalIndicesBlocked);
+
+    // solve the equation A*sol = b,
+    auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
+    nextHead->copyGlobal(*solGrid);
+    // eps_head = np.max(np.abs(nextHead - currHead))
+    eps = nextHead->getMaxAbsDiff(*currHead) / static_cast<double>(dt);
+    // switch pointers
+    currHead.swap(nextHead);
+
+    //
+    // UPDATE TRANSMISSIVITY, IF NEEDED
+    //
+    if (args->doAnyChannel) {
+      doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
+                 args->Tmax, static_cast<double>(dt));
+      // eps_T = np.max(np.abs(T - currTransmissivity))
+      Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / static_cast<double>(dt);
+      // switch pointers
+      currTransmissivity.swap(nextTransmissivity);
+    }
+
+    if (args->verboseSolver) {
+      // compute max digits needed for verboseSolver output format
+      auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
+      auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
+
+      auto currTime = timeSteps[timeStepIndex];
+      // no fmt given for res.numberOfIterations, because this is only available from PETSc
+      CUAS_INFO_RANK0("SOLVER: {:{}d} {:{}d} {:.5e} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
+                      maxDigitsTime, eps, Teps, res.residualNorm, res.numberOfIterations, res.reason)
+    }
+  } else {
+    // NO NEED TO UPDATE nextHead or T again
   }
 }
 
