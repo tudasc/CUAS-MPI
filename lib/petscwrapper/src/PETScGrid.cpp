@@ -56,7 +56,7 @@ PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
 
 std::array<PetscScalar, 3> PETScGrid::getErrorNorms(PETScGrid const &sub) const {
   if (!isCompatible(sub)) {
-    CUAS_ERROR("{}: input is not compatible. Exiting.", __PRETTY_FUNCTION__);
+    CUAS_ERROR("{}: input is not compatible. Exiting.", __PRETTY_FUNCTION__)
     exit(1);
   }
   PetscScalar L1, L2, Linf;

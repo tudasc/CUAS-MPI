@@ -145,15 +145,15 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   // by using explicit positional arguments for input and output this should not happen
   if (result.count("positional")) {
-    CUAS_ERROR("CUASArgs.cpp: parseArgs(): Only two positional arguments allowed.");
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): Only two positional arguments allowed.")
     CUAS_ERROR("CUASArgs.cpp: parseArgs(): input = <{}>", result["input"].as<std::string>(),
-               result["output"].as<std::string>());
-    CUAS_ERROR("CUASArgs.cpp: parseArgs(): output = <{}>", result["output"].as<std::string>());
+               result["output"].as<std::string>())
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): output = <{}>", result["output"].as<std::string>())
     auto &positional = result["positional"].as<std::vector<std::string>>();
     for (int i = 0; i < result.count("positional"); ++i) {
-      CUAS_ERROR("CUASArgs.cpp: parseArgs(): positional[{}] = <{}>", i, positional[i]);
+      CUAS_ERROR("CUASArgs.cpp: parseArgs(): positional[{}] = <{}>", i, positional[i])
     }
-    CUAS_ERROR("Exiting.");
+    CUAS_ERROR("Exiting.")
     exit(1);
   }
 
@@ -199,7 +199,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   if (args.verbose) {
     CUAS_INFO_RANK0("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
-                    result["output"].as<std::string>());
+                    result["output"].as<std::string>())
   }
 }
 

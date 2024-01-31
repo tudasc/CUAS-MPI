@@ -30,7 +30,7 @@ namespace CUAS {
 inline void headToPressure(PETScGrid &result, PETScGrid const &hydraulicHead, PETScGrid const &bedElevation,
                            PetscScalar const zw = 0.0) {
   if (!result.isCompatible(hydraulicHead) || !result.isCompatible(bedElevation)) {
-    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -60,7 +60,7 @@ inline void headToPressure(PETScGrid &result, PETScGrid const &hydraulicHead, PE
 inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydraulicHead, PETScGrid const &bedElevation,
                                     PETScGrid const &icePressure, PetscScalar const layerThickness = 0.0) {
   if (!result.isCompatible(hydraulicHead) || !result.isCompatible(bedElevation)) {
-    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -86,7 +86,7 @@ inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydrauli
  */
 inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PETScGrid const &bedElevation) {
   if (!result.isCompatible(waterPressure) || !result.isCompatible(bedElevation)) {
-    CUAS_ERROR("CUASKernels.h: pressureToHead was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: pressureToHead was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -110,7 +110,7 @@ inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PE
  */
 inline void overburdenPressure(PETScGrid &result, PETScGrid const &iceThickness) {
   if (!result.isCompatible(iceThickness)) {
-    CUAS_ERROR("CUASKernels.h: overburdenPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: overburdenPressure was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -136,7 +136,7 @@ inline void overburdenPressure(PETScGrid &result, PETScGrid const &iceThickness)
 inline void computeCavityOpening(PETScGrid &result, PetscScalar const beta, PetscScalar const hydraulicConductivity,
                                  PETScGrid const &basalVelocity) {
   if (!result.isCompatible(basalVelocity)) {
-    CUAS_ERROR("CUASKernels.h: computeCavityOpening was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: computeCavityOpening was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
   auto res = result.getWriteHandle();
@@ -163,7 +163,7 @@ inline void computeCreepOpening(PETScGrid &result, PETScGrid const &rateFactor, 
                                 PETScGrid const &hydraulicTransmissivity) {
   if (!result.isCompatible(rateFactor) || !result.isCompatible(effectivePressure) ||
       !result.isCompatible(hydraulicTransmissivity)) {
-    CUAS_ERROR("CUASKernels.h: computeCreepOpening was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: computeCreepOpening was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -191,7 +191,7 @@ inline void computeMeltOpening(PETScGrid &result, PetscScalar const roughnessFac
                                PetscScalar const hydraulicConductivity, PETScGrid const &hydraulicTransmissivity,
                                PETScGrid const &gradientHeadSquared) {
   if (!result.isCompatible(hydraulicTransmissivity) || !result.isCompatible(gradientHeadSquared)) {
-    CUAS_ERROR("CUASKernels.h: computeMeltOpening was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: computeMeltOpening was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -214,7 +214,7 @@ inline void computeMeltOpening(PETScGrid &result, PetscScalar const roughnessFac
  */
 inline void binaryDilation(PETScGrid &output, PETScGrid const &input) {
   if (!output.isCompatible(input)) {
-    CUAS_ERROR("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -267,7 +267,7 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
   if (!effectiveStorativity.isCompatible(bndMask) || !effectiveTransmissivity.isCompatible(bndMask) ||
       !hydraulicTransmissivity.isCompatible(bndMask) || !hydraulicHead.isCompatible(bndMask) ||
       !bedElevation.isCompatible(bndMask)) {
-    CUAS_ERROR("CUASKernels.h: getEffectiveAquiferProperties was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: getEffectiveAquiferProperties was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -275,7 +275,7 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
     CUAS_ERROR(
         "CUASKernels.h: getEffectiveAquiferProperties was called with incompatible parameter unconfinedSmooth={}. "
         "Exiting.",
-        unconfinedSmooth);
+        unconfinedSmooth)
     exit(1);
   }
 
@@ -358,7 +358,7 @@ inline void updateEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PE
  */
 inline void convolveStar11411(PETScGrid const &input, PETScGrid &result) {
   if (!input.isCompatible(result)) {
-    CUAS_ERROR("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -423,7 +423,7 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
   if (!aMelt.isCompatible(hydraulicTransmissivity) || !aCreep.isCompatible(hydraulicTransmissivity) ||
       !aCavity.isCompatible(hydraulicTransmissivity) ||
       !newHydraulicTransmissivity.isCompatible(hydraulicTransmissivity)) {
-    CUAS_ERROR("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -449,7 +449,7 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
           // Do nothing. If the head is as Dirichlet BC assume the transmissivity is also given.
           // T(j, i) = T_n(j, i); // fixme: here or in CUASSolver.cpp ? actual done in CUASSolver
         } else {
-          CUAS_ERROR("CUASKernels.h: doChannels was called with unknown bndMask value {}. Exiting.", mask(j, i));
+          CUAS_ERROR("CUASKernels.h: doChannels was called with unknown bndMask value {}. Exiting.", mask(j, i))
           exit(1);
         }
       }
@@ -468,7 +468,7 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
 inline void getFluxMagnitude(PETScGrid &result, PETScGrid const &gradientHeadSquared,
                              PETScGrid const &hydraulicTransmissivity) {
   if (!result.isCompatible(gradientHeadSquared) || !result.isCompatible(hydraulicTransmissivity)) {
-    CUAS_ERROR("CUASKernels.h: getFluxMagnitude() was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: getFluxMagnitude() was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -492,7 +492,7 @@ inline void getFluxMagnitude(PETScGrid &result, PETScGrid const &gradientHeadSqu
 inline void getGradHeadSQR(PETScGrid &result, PETScGrid const &hydraulicHead, PetscScalar const dx,
                            PETScGrid const &gradMask) {
   if (!result.isCompatible(hydraulicHead) || !result.isCompatible(gradMask)) {
-    CUAS_ERROR("CUASKernels.h: getGradHeadSQR was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: getGradHeadSQR was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 

@@ -70,9 +70,9 @@ class SolutionHandler {
 
   void storePETScOptions();
   // reason why we need to save this time step
-  OutputReason getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) const;
+  static OutputReason getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery);
 
-  ~SolutionHandler();
+  ~SolutionHandler() = default;
 };
 }  // namespace CUAS
 

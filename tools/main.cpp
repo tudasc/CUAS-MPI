@@ -49,7 +49,7 @@ std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args
 
   if (args.saveEvery == 0) {
     CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size())
-    args.saveEvery = time.timeSteps.size();
+    args.saveEvery = static_cast<int>(time.timeSteps.size());
   }
 
   return std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);

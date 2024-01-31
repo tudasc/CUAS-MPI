@@ -12,9 +12,9 @@
 
 namespace CUAS {
 
-void gradient2(PETScGrid &gradient, PETScGrid const &input, PetscScalar const dx) {
+void gradient2(PETScGrid &gradient, PETScGrid const &input, PetscScalar dx) {
   if (!gradient.isCompatible(input) || dx == 0) {
-    CUAS_ERROR("specialgradient.cpp: gradient2(): PETScGrids are not compatible or dx is 0. Exiting.");
+    CUAS_ERROR("specialgradient.cpp: gradient2(): PETScGrids are not compatible or dx is 0. Exiting.")
     exit(1);
   }
   auto dx_inv = 1.0 / dx;
@@ -37,7 +37,7 @@ void gradient2(PETScGrid &gradient, PETScGrid const &input, PetscScalar const dx
 
 void gradient2_central(PETScGrid &gradient, PETScGrid const &input, PetscScalar const dx) {
   if (!gradient.isCompatible(input) || dx == 0) {
-    CUAS_ERROR("specialgradient.cpp: gradient2_central(): PETScGrids are not compatible or dx is 0. Exiting.");
+    CUAS_ERROR("specialgradient.cpp: gradient2_central(): PETScGrids are not compatible or dx is 0. Exiting.")
     exit(1);
   }
   auto &localh = input.getReadHandle();  // local
