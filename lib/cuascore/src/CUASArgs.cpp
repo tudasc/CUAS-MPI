@@ -44,8 +44,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
        "Netcdf output file size. ('small', 'normal', 'large')",
         cxxopts::value<std::string>()->default_value("normal"))
       ("totaltime",
-       "Total time to run model. Example: --totaltime '4 weeks', --totaltime '3 years 6 months' or --totaltime "
-       "'50 years'",
+       "Total time to run model. Example: --totaltime '4 weeks', --totaltime '3 years 1 week'",
        cxxopts::value<std::string>()->default_value("10 years"))
       ("dt",
        "Time step length. Example: --dt '12 hours', --dt 1day", 

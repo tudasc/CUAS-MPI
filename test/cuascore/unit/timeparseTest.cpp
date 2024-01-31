@@ -15,10 +15,10 @@
 int mpiRank;
 int mpiSize;
 
-TEST(timeparseTest, parse10y1m2w15d5h) {
-  std::string inputTime = "10 years 1 month 2 weeks 15 days 5 hours";
+TEST(timeparseTest, parse10y2w15d5h) {
+  std::string inputTime = "10 years 2 weeks 15 days 5 hours";
   CUAS::timeSecs secs = CUAS::parseTime(inputTime);
-  ASSERT_EQ(secs, 320475600);
+  ASSERT_EQ(secs, 317883600);
 }
 
 TEST(timeparseTest, parse50y10h) {
@@ -33,8 +33,8 @@ TEST(timeparseTest, parse3h) {
   ASSERT_EQ(secs, 10800);
 }
 
-TEST(timeparseTest, parse1y2y1m) {
-  std::string inputTime = "1 year 2 years 1 month";
+TEST(timeparseTest, parse1y2y) {
+  std::string inputTime = "1 year 2 years";
   ASSERT_EXIT(CUAS::parseTime(inputTime), ::testing::ExitedWithCode(1),
               "timeparse.h: Wrong format! You either used a non-existing time-unit or used a time-unit multiple times "
               "in the input string! Exiting.");
@@ -46,9 +46,9 @@ TEST(timeparseTest, parseFractionalValue) {
               "timeparse.h: Wrong format for timeValue: '0.5'! Exiting.");
 }
 
-TEST(timeparseReverseTest, parse1y1mReverse) {
-  std::string inputTime = "1 year 1 month";
-  CUAS::timeSecs secs = 34128000;
+TEST(timeparseReverseTest, parse1y1dReverse) {
+  std::string inputTime = "1 year 1 day";
+  CUAS::timeSecs secs = 31622400;
   std::string compareString = CUAS::parseTime(secs);
   ASSERT_EQ(inputTime, compareString);
 }
@@ -67,9 +67,9 @@ TEST(timeparseReverseTest, parse50y10hReverse) {
   ASSERT_EQ(inputTime, compareString);
 }
 
-TEST(timeparseReverseTest, parse10y1m2w6d5hReverse) {
-  std::string inputTime = "10 years 1 month 2 weeks 6 days 5 hours";
-  CUAS::timeSecs secs = 319698000;
+TEST(timeparseReverseTest, parse10y2w6d5hReverse) {
+  std::string inputTime = "10 years 2 weeks 6 days 5 hours";
+  CUAS::timeSecs secs = 317106000;
   std::string compareString = CUAS::parseTime(secs);
   ASSERT_EQ(inputTime, compareString);
 }

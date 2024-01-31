@@ -10,6 +10,7 @@
 #include "Logger.h"
 
 #include <array>
+#include <cassert>
 #include <iostream>
 #include <map>
 #include <regex>
@@ -29,9 +30,12 @@ struct Time {
 
 // this function parses the input string timeString and returns how many seconds are in the specified time-window
 inline timeSecs parseTime(std::string const &timeString) {
+  if (timeString.empty()) {
+    return 0;
+  }
+
   // map of time-units and the amount of seconds for a single time-unit
   std::map<std::string, timeSecs> timeUnits = {{"year", 60 * 60 * 24 * 365},
-                                               {"month", 60 * 60 * 24 * 30},
                                                {"week", 60 * 60 * 24 * 7},
                                                {"day", 60 * 60 * 24},
                                                {"hour", 60 * 60},
@@ -39,7 +43,7 @@ inline timeSecs parseTime(std::string const &timeString) {
                                                {"second", 1}};
   // map for input times
   std::map<std::string, timeSecs> givenTimes;
-  // vector for splitted input timeString
+  // vector for splitting the input timeString
   std::vector<std::string> splitString;
 
   // split the timeString by ' '
@@ -100,32 +104,34 @@ inline std::string parseTime(timeSecs const secs) {
     exit(1);
   }
   // second is the smallest timeUnit
-  if (secs < 1) {
+  if (secs == 0) {
     return "0 second";  // set to zero instead of 1 to allow for runs with no time steps (input to output runs)
   }
+
   std::map<std::string, timeSecs> timeUnits = {{"year", 60 * 60 * 24 * 365},
-                                               {"month", 60 * 60 * 24 * 30},
                                                {"week", 60 * 60 * 24 * 7},
                                                {"day", 60 * 60 * 24},
                                                {"hour", 60 * 60},
                                                {"minute", 60},
                                                {"second", 1}};
-
   // this array is used to impose an order on the map.
-  std::array<std::string, 7> timeUnitStrings = {"year", "month", "week", "day", "hour", "minute", "second"};
+  std::array<std::string, 6> timeUnitStrings = {"year", "week", "day", "hour", "minute", "second"};
+  assert(timeUnits.size() == timeUnitStrings.size());
+
   std::string timeString;
   timeSecs secsToBeDistributed = secs;
-  std::string currentTimeUnit;
-  for (std::string const &i : timeUnitStrings) {
-    auto timeValue = secsToBeDistributed / timeUnits[i];
+  for (std::string const &timeUnit : timeUnitStrings) {
+    auto timeValue = secsToBeDistributed / timeUnits[timeUnit];
     if (timeValue == 0) {
       continue;
-    } else {
-      // append timeValue to timeString
-      timeString += std::to_string(timeValue) + " " + i + (timeValue > 1 ? "s" : "") + " ";
     }
+
+    // append timeValue to timeString
+    // append " ", the last " " is removed at the end of the function
+    timeString += std::to_string(timeValue) + " " + timeUnit + (timeValue > 1 ? "s" : "") + " ";
     // subtract the secs used for the current timeUnit from the seconds which are still left
-    secsToBeDistributed -= (timeValue * timeUnits[i]);
+    secsToBeDistributed -= (timeValue * timeUnits[timeUnit]);
+
     if (secsToBeDistributed <= 0) {
       break;
     }
