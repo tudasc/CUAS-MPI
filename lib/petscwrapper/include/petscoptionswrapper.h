@@ -25,8 +25,8 @@ std::string getPETScOptionsAll() {
 void getPETScOptionsAll(std::vector<std::string> &names, std::vector<std::string> &values) {
   // TODO getPETScOptionsAll --> split string
   CUAS_WARN("{} not implemented yet", __PRETTY_FUNCTION__)
-  names.push_back(__PRETTY_FUNCTION__);
-  values.push_back("not implemented yet");
+  names.emplace_back(__PRETTY_FUNCTION__);
+  values.emplace_back("not implemented yet");
 }
 
 void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::string> &values) {
@@ -84,8 +84,8 @@ std::string getPETScOptionsUnused() {
 void getPETScOptionsUsed(std::vector<std::string> &names, std::vector<std::string> &values) {
   // TODO getPETScOptionsAll and getPETScOptionsUnused --> used = all not in unused
   CUAS_WARN("{} not implemented yet", __PRETTY_FUNCTION__)
-  names.push_back(__PRETTY_FUNCTION__);
-  values.push_back("not implemented yet");
+  names.emplace_back(__PRETTY_FUNCTION__);
+  values.emplace_back("not implemented yet");
 }
 
 std::string getPETScOptionsUsed() {

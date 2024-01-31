@@ -25,7 +25,7 @@ SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY
   } else if (outputSize == "xlarge" || outputSize == "x-large") {
     osize = OutputSize::XLARGE;
   } else {
-    CUAS_ERROR("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize + "Exiting.");
+    CUAS_ERROR("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize + "Exiting.")
     exit(1);
   }
 
@@ -316,7 +316,7 @@ void SolutionHandler::storePETScOptions() {
   file->addGlobalAttribute("PETSC_OPTIONS_USED", getPETScOptionsUsed());
 }
 
-OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) const {
+OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) {
   if (timeStepIndex == 0) {
     return OutputReason::INITIAL;
   }
@@ -330,7 +330,5 @@ OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTim
     return OutputReason::NONE;
   }
 }
-
-SolutionHandler::~SolutionHandler() {}
 
 };  // namespace CUAS
