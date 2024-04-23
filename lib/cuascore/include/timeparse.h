@@ -179,20 +179,22 @@ inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTi
   }
   // nothing to do, but this could be intentional
   if (dt == 0) {
-    CUAS_WARN("{} called with dt == 0. Ignoring startTime and endTime.", __PRETTY_FUNCTION__)
+    CUAS_WARN_RANK0("{} called with dt == 0. Ignoring startTime and endTime.", __PRETTY_FUNCTION__)
     return timeSteps;
   }
   // nothing to do, but this could be intentional
   if (startTime == endTime) {
-    CUAS_WARN("{} called with startTime equal to endTime. Ignoring time step length dt.", __PRETTY_FUNCTION__)
+    CUAS_WARN_RANK0("{} called with startTime equal to endTime. Ignoring time step length dt.", __PRETTY_FUNCTION__)
     return timeSteps;
   }
 
-  // this is the normal case
-  // timeSteps.back() might be larger than endTime, if endTime % dt != 0.
-  // This ensures that endTime is included in the computation.
+  // Ensures that endTime is included, even if endTime is not an integer multiple of dt ()
+  if (endTime % dt != 0) {  // note: % 0 aka modulo(0) is invalid and thus dt == 0 is invalid here
+    CUAS_WARN_RANK0("{} endTime is not an integer multiple of dt. Reducing the last time step to match timeEnd.",
+                    __PRETTY_FUNCTION__)
+  }
   while (currTime < endTime) {
-    currTime += dt;
+    currTime = std::min(currTime + dt, endTime);  // don't overshoot the endTime
     timeSteps.push_back(currTime);
   }
   return timeSteps;
