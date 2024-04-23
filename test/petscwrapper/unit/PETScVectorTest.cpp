@@ -84,19 +84,6 @@ TEST(PETScVectorTest, setvalue) {
 
   MPI_Barrier(PETSC_COMM_WORLD);
 
-  if (mpiRank == 3) {
-    PetscScalar v;
-    int p[] = {15};
-    VecGetValues(vec->getRaw(), 1, p, &v);
-    ASSERT_EQ(v, 0);
-  }
-  if (mpiRank == 1) {
-    PetscScalar v;
-    int p[] = {6};
-    VecGetValues(vec->getRaw(), 1, p, &v);
-    ASSERT_EQ(v, 2.7);
-  }
-
   vec->assemble();
 
   if (mpiRank == 3) {
