@@ -88,11 +88,23 @@ TEST(timeparseReverseTest, wrongInput) {
 }
 
 TEST(timeStepArray, getTimeStepArray) {
-  auto timeStepArray = CUAS::getTimeStepArray(0, 23, 4);
+  auto timeStepArray = CUAS::getTimeStepArray(0, 24, 4);
   ASSERT_EQ(timeStepArray.size(), 7);
   for (int i = 0; i < timeStepArray.size(); ++i) {
     ASSERT_EQ(timeStepArray[i], 4 * i);
   }
+}
+
+TEST(timeStepArray, getTimeStepArrayWithOvershoot) {
+  auto timeStepArray = CUAS::getTimeStepArray(0, 23, 4);
+  ASSERT_EQ(timeStepArray.size(), 7);
+  ASSERT_EQ(timeStepArray.back(), 23);
+}
+
+TEST(timeStepArray, getTimeStepArrayStepSizeToLarge) {
+  auto timeStepArray = CUAS::getTimeStepArray(0, 4, 20);
+  ASSERT_EQ(timeStepArray.size(), 2);
+  ASSERT_EQ(timeStepArray.back(), 4);
 }
 
 TEST(timeparseReverseTest, lessThan1second) {
