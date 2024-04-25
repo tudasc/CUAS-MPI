@@ -31,8 +31,8 @@ TEST(CUASKernelsTest, headToPressure) {
   PETScGrid bedElevation(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid head(GRID_SIZE_Y, GRID_SIZE_X);
 
-  // Todo: update test to ensure 0 <= level <= waterLayerThickness
-  PetscScalar level = 33.5;
+  // We don't need to ensure 0 <= level <= waterLayerThickness here
+  constexpr PetscScalar level = 33.5;
 
   // setup
   {
@@ -61,8 +61,7 @@ TEST(CUASKernelsTest, headToPressure) {
       for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
         // check result
         ASSERT_EQ(pressure2d(j, i), RHO_WATER * GRAVITY * (head2d(j, i) - bedElevation2d(j, i) - level));
-
-        // check for sideeffects
+        // check for side effects
         ASSERT_EQ(bedElevation2d(j, i), level * level - 31.3);
         ASSERT_EQ(head2d(j, i), mpiRank * j + (i * 35));
       }
@@ -77,8 +76,8 @@ TEST(CUASKernelsTest, pressureToHead) {
   PETScGrid bedElevation(GRID_SIZE_Y, GRID_SIZE_X);
   PETScGrid head(GRID_SIZE_Y, GRID_SIZE_X);
 
-  // Todo: update test to reflect changes in cuas-python
-  PetscScalar seaLevel = 0.0;  // was 33.5
+  // We don't need to ensure 0 <= level <= waterLayerThickness here
+  constexpr PetscScalar level = 33.5;
 
   // setup
   {
@@ -87,15 +86,15 @@ TEST(CUASKernelsTest, pressureToHead) {
     auto head2d = head.getWriteHandle();
     for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
-        pressure2d(j, i) = seaLevel * mpiRank - 2.3;
-        bedElevation2d(j, i) = seaLevel * seaLevel - 31.3;
+        pressure2d(j, i) = level * mpiRank - 2.3;
+        bedElevation2d(j, i) = level * level - 31.3;
         head2d(j, i) = mpiRank * j + (i * 35);
       }
     }
   }
 
   // run pressureToHead
-  CUAS::pressureToHead(head, pressure, bedElevation);
+  CUAS::pressureToHead(head, pressure, bedElevation, level);
 
   // check
   {
@@ -105,13 +104,71 @@ TEST(CUASKernelsTest, pressureToHead) {
     // TODO: check ghost cells
     for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
       for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
-        double effective_bed_elevation = bedElevation2d(j, i) - seaLevel;
         // check result
-        ASSERT_EQ(head2d(j, i), pressure2d(j, i) / (RHO_WATER * GRAVITY) + bedElevation2d(j, i));
+        ASSERT_EQ(head2d(j, i), pressure2d(j, i) / (RHO_WATER * GRAVITY) + bedElevation2d(j, i) + level);
+        // check for side effects
+        ASSERT_EQ(bedElevation2d(j, i), level * level - 31.3);
+        ASSERT_EQ(pressure2d(j, i), level * mpiRank - 2.3);
+      }
+    }
+  }
+}
 
-        // check for sideeffects
-        ASSERT_EQ(bedElevation2d(j, i), seaLevel * seaLevel - 31.3);
-        ASSERT_EQ(pressure2d(j, i), seaLevel * mpiRank - 2.3);
+TEST(CUASKernelsTest, pressureToHead_ToPressure) {
+  /*
+   * Test if pressureToHead() and headToPressure() are the inverse operation
+   * of each other. Test with default and given layer thickness as last argument to both
+   * methods.
+   */
+
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  PETScGrid pressure(GRID_SIZE_Y, GRID_SIZE_X);
+  PETScGrid head(GRID_SIZE_Y, GRID_SIZE_X);
+  PETScGrid bedElevation(GRID_SIZE_Y, GRID_SIZE_X);
+  PETScGrid result(GRID_SIZE_Y, GRID_SIZE_X);
+
+  // setup
+  {
+    auto pressure2d = pressure.getWriteHandle();
+    for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
+        pressure2d(j, i) = 1.1e5 * mpiRank;
+      }
+    }
+  }
+
+  // run pressureToHead and headToPressure with defaults
+  CUAS::pressureToHead(head, pressure, bedElevation);
+  CUAS::headToPressure(result, head, bedElevation);
+
+  // check initial pressure equals final pressure
+  {
+    auto &p_org = pressure.getReadHandle();
+    auto &p_new = result.getReadHandle();
+    // TODO: check ghost cells
+    for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
+        // check result
+        ASSERT_NEAR(p_new(j, i), p_org(j, i), 1e-8);
+      }
+    }
+  }
+
+  // run pressureToHead and headToPressure with given level within aquifer
+  constexpr PetscScalar z_w = 42.0;
+  CUAS::pressureToHead(head, pressure, bedElevation, z_w);
+  CUAS::headToPressure(result, head, bedElevation, z_w);
+
+  // check initial pressure equals final pressure
+  {
+    auto &p_org = pressure.getReadHandle();
+    auto &p_new = result.getReadHandle();
+    // TODO: check ghost cells
+    for (int j = 0; j < pressure.getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < pressure.getLocalNumOfCols(); ++i) {
+        // check result
+        ASSERT_NEAR(p_new(j, i), p_org(j, i), 1e-8);
       }
     }
   }

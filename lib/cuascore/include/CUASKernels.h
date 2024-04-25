@@ -47,14 +47,14 @@ inline void headToPressure(PETScGrid &result, PETScGrid const &hydraulicHead, PE
 
 /** Converts hydraulic head to effective pressure
  *
- * This uses water pressure at the aquifer ice interface and ice pressure.
+ * This uses water pressure at the ice interface (top of aquifer) and ice pressure.
  *
- * \f$ N = p_i - p_w\f$
+ * \f$ N = p_i - p_w(z_w = layerThickness) \f$
  *
  * @param result effective pressure (Pa)
  * @param hydraulicHead  (m)
  * @param bedElevation   (m)
- * @param icePressure    (m)
+ * @param icePressure    (Pa)
  * @param layerThickness (m)
  */
 inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydraulicHead, PETScGrid const &bedElevation,
@@ -72,7 +72,7 @@ inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydrauli
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       // see headToPressure()
-      double pw = (head(j, i) - topg(j, i) - layerThickness) * RHO_WATER * GRAVITY;
+      auto pw = (head(j, i) - topg(j, i) - layerThickness) * RHO_WATER * GRAVITY;
       res(j, i) = pi(j, i) - pw;
     }
   }
@@ -80,11 +80,17 @@ inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydrauli
 
 /** Convert water pressure to hydraulic head
  *
+ *    zw = 0.0 -> water pressure at the base of the aquifer
+ *    zw = layer thickness -> ... at top of aquifer
+ *
  * @param result
  * @param waterPressure (Pa)
  * @param bedElevation (m)
+ * @param zw \f$0 \le z_w \le layerThickness\f$
+ *
  */
-inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PETScGrid const &bedElevation) {
+inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PETScGrid const &bedElevation,
+                           PetscScalar const zw = 0.0) {
   if (!result.isCompatible(waterPressure) || !result.isCompatible(bedElevation)) {
     CUAS_ERROR("CUASKernels.h: pressureToHead was called with incompatible PETScGrids. Exiting.")
     exit(1);
@@ -98,7 +104,7 @@ inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PE
 
   for (int j = 0; j < result.getLocalGhostNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalGhostNumOfCols(); ++i) {
-      res(j, i) = pw(j, i, GHOSTED) * rgMultiplicator + topg(j, i, GHOSTED);
+      res(j, i) = pw(j, i, GHOSTED) * rgMultiplicator + topg(j, i, GHOSTED) + zw;
     }
   }
 }
@@ -141,7 +147,7 @@ inline void computeCavityOpening(PETScGrid &result, PetscScalar const beta, Pets
   }
   auto res = result.getWriteHandle();
   auto &vb = basalVelocity.getReadHandle();
-  PetscScalar betaK = beta * hydraulicConductivity;
+  auto betaK = beta * hydraulicConductivity;
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       res(j, i) = betaK * vb(j, i);
@@ -198,8 +204,8 @@ inline void computeMeltOpening(PETScGrid &result, PetscScalar const roughnessFac
   auto res = result.getWriteHandle();
   auto &T = hydraulicTransmissivity.getReadHandle();
   auto &gradh2 = gradientHeadSquared.getReadHandle();
-  const PetscScalar r_g_rhow_K = roughnessFactor * GRAVITY * RHO_WATER * hydraulicConductivity;
-  const PetscScalar rhoi_L_inv = 1.0 / (RHO_ICE * LATENT_HEAT);
+  auto r_g_rhow_K = roughnessFactor * GRAVITY * RHO_WATER * hydraulicConductivity;
+  auto rhoi_L_inv = 1.0 / (RHO_ICE * LATENT_HEAT);
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       res(j, i) = r_g_rhow_K * T(j, i) * gradh2(j, i) * rhoi_L_inv;

@@ -59,7 +59,7 @@ void CUASSolver::setup() {
     currHead->setZero();
   } else if (args->initialHead == "Nzero") {
     // np.maximum(np.maximum(helpers.pressure_to_head(pwater=pice, topg=topg), topg), 0.0)
-    pressureToHead(*currHead, *model->pIce, *model->topg);
+    pressureToHead(*currHead, *model->pIce, *model->topg, args->layerThickness);
     {
       auto head = currHead->getWriteHandle();
       auto &topg = model->topg->getReadHandle();
