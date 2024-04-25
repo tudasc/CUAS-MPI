@@ -203,6 +203,7 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("Tinit", args.Tinit);
   file->addGlobalAttribute("totaltime", args.totaltime);
   file->addGlobalAttribute("dt", args.dt);
+  file->addGlobalAttribute("timeSteppingTheta", args.timeSteppingTheta);
   file->addGlobalAttribute("timeStepFile", args.timeStepFile);
   file->addGlobalAttribute("saveEvery", args.saveEvery);
   file->addGlobalAttribute("conductivity", args.conductivity);

@@ -131,10 +131,6 @@ void CUASSolver::setup() {
 }
 
 void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
-  // Why is this not an arg?
-  // tkleiner: Because other values are not working! This indicates that the choice of initial
-  // conditions is not appropriate.
-  const PetscScalar theta = 1.0;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
   prepare();
 
   beginSolverTiming();
@@ -148,7 +144,7 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
 
     storeData(currentQ, dt, timeSteps, timeStepIndex);
 
-    updateHeadAndTransmissivity(dt, theta, currentQ, timeSteps, timeStepIndex);
+    updateHeadAndTransmissivity(dt, currentQ, timeSteps, timeStepIndex);
   }
 
   endSolverTiming();
@@ -175,6 +171,13 @@ void CUASSolver::prepare() {
   //
   // SOLVER PREPARATION
   //
+
+  // only if we really want to solve something, the choice of theta is relevant
+  if (args->timeSteppingTheta < 0.0 || args->timeSteppingTheta > 1.0) {
+    CUAS_ERROR("CUASSolver::prepare(): timeSteppingTheta = {} is invalid for calling systemmatrix() . Exiting.",
+               args->timeSteppingTheta)
+    exit(1);
+  }
 
   // after restart apply checks and set values consistent to cuas mask
   {
@@ -291,7 +294,7 @@ void CUASSolver::storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<C
   }
 }
 
-void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PetscScalar theta, PETScGrid const &currentQ,
+void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PETScGrid const &currentQ,
                                              std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) {
   //
   // WE NEED TO SOLVE AGAIN
@@ -306,8 +309,8 @@ void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PetscScalar theta, PET
     //
     // UPDATE HEAD
     //
-    systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), theta, *currHead, currentQ,
-                 *dirichletValues, *model->bndMask, *globalIndicesBlocked);
+    systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), args->timeSteppingTheta, *currHead,
+                 currentQ, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
 
     // solve the equation A*sol = b,
     auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
