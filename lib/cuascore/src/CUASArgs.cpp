@@ -49,6 +49,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
       ("dt",
        "Time step length. Example: --dt '12 hours', --dt 1day", 
        cxxopts::value<std::string>()->default_value("12 hours"))
+      ("timeSteppingTheta",
+       "Time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson (0 <= theta <= 1)",
+       cxxopts::value<PetscScalar>()->default_value("1.0"))
       ("timeStepFile",
        "NetCDF input file to read a time step array",
        cxxopts::value<std::string>()->default_value(""))
@@ -190,6 +193,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   args.input = result["input"].as<std::string>();
   args.output = result["output"].as<std::string>();
   args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')
+  args.timeSteppingTheta = result["timeSteppingTheta"].as<PetscScalar>();
 
   auto doChannels = result["doChannels"].as<bool>();
   auto selectedChannels = result["selectedChannels"].as<std::string>();

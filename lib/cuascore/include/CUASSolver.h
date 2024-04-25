@@ -115,8 +115,8 @@ class CUASSolver {
   void preComputation();
   void storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<CUAS::timeSecs> const &timeSteps,
                  int timeStepIndex);
-  void updateHeadAndTransmissivity(timeSecs dt, PetscScalar theta, PETScGrid const &currentQ,
-                                   std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex);
+  void updateHeadAndTransmissivity(timeSecs dt, PETScGrid const &currentQ, std::vector<CUAS::timeSecs> const &timeSteps,
+                                   int timeStepIndex);
 };
 
 }  // namespace CUAS

@@ -19,6 +19,7 @@ struct CUASArgs {
   PetscScalar Tinit;
   std::string totaltime;
   std::string dt;
+  PetscScalar timeSteppingTheta;
   std::string timeStepFile;
   int saveEvery;
   PetscScalar conductivity;
