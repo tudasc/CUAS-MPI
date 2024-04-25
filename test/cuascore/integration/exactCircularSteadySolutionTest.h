@@ -20,7 +20,7 @@
 #include "CUASConstants.h"
 #include "CUASModel.h"
 #include "CUASSolver.h"
-#include "Forcing/ConstantForcing.h"
+#include "Forcing/SteadyForcing.h"
 #include "PETScGrid.h"
 #include "cxxopts.hpp"
 #include "timeparse.h"
@@ -109,7 +109,7 @@ std::unique_ptr<CUAS::CUASModel> fillModelData(int nx, int ny) {
 
   PETScGrid src(nx, ny);
   src.setConst(1.0);
-  model.Q = std::make_unique<CUAS::ConstantForcing>(src);
+  model.Q = std::make_unique<CUAS::SteadyForcing>(src);
 
   return pmodel;
 }

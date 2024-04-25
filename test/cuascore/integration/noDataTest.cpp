@@ -10,7 +10,7 @@
 
 #include "CUASArgs.h"
 #include "CUASSolver.h"
-#include "Forcing/ConstantForcing.h"
+#include "Forcing/SteadyForcing.h"
 
 // #define TESTS_DUMP_NETCDF
 #ifdef TESTS_DUMP_NETCDF

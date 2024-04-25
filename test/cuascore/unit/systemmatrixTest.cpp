@@ -6,10 +6,10 @@
 
 #include "systemmatrixTest.h"
 
-#include "Forcing/ConstantForcing.h"
-#include "systemmatrix.h"
-
+#include "CUASConstants.h"
+#include "Forcing/SteadyForcing.h"
 #include "fillgrid.h"
+#include "systemmatrix.h"
 
 #include "gtest/gtest.h"
 
@@ -55,7 +55,7 @@ TEST(fillMatrixTest, randomValues) {
   PETScGrid globalIndices(NX, NY);
   fillGlobalIndicesBlocked(globalIndices);
 
-  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::ConstantForcing>(QGrid);
+  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::SteadyForcing>(QGrid);
 
   PETScGrid gridB(NX, NY);
   Mat petscA;
@@ -147,7 +147,7 @@ TEST(fillMatrixTest, randomValues3x3) {
   PETScGrid globalIndices(gridedge, gridedge);
   fillGlobalIndicesBlocked(globalIndices);
 
-  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::ConstantForcing>(QGrid);
+  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::SteadyForcing>(QGrid);
 
   PETScGrid gridB(gridedge, gridedge);
   Mat petscA;
