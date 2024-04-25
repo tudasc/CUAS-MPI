@@ -12,6 +12,7 @@
 #include "PETScGrid.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace CUAS {

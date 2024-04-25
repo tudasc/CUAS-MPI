@@ -39,7 +39,7 @@ void ModelReader::restartFromFile(CUAS::CUASSolver &solver, std::string const &r
   }
 }
 
-std::unique_ptr<CUAS::TimeForcing> ModelReader::getTimeForcing(
+std::unique_ptr<CUAS::TimeDependentForcing> ModelReader::getTimeDependentForcing(
     std::string const &ncFileName, std::string const &fieldName, std::vector<PetscScalar> const &xAxis,
     std::vector<PetscScalar> const &yAxis, PetscScalar multiplier, PetscScalar offset, bool loopForcing) {
   auto ncFile = std::make_unique<NetCDFFile>(ncFileName, 'r');
@@ -49,8 +49,8 @@ std::unique_ptr<CUAS::TimeForcing> ModelReader::getTimeForcing(
   auto my = ncFile->getDimY();
 
   if (nx != mx || ny != my) {
-    CUAS_ERROR("ModelReader.cpp: getTimeForcing(): nx: {} != {} or ny: {} != {} in file '{}'. Exiting.", nx, mx, ny, my,
-               ncFileName)
+    CUAS_ERROR("ModelReader.cpp: getTimeDependentForcing(): nx: {} != {} or ny: {} != {} in file '{}'. Exiting.", nx,
+               mx, ny, my, ncFileName)
     exit(1);
   }
 
@@ -66,10 +66,10 @@ std::unique_ptr<CUAS::TimeForcing> ModelReader::getTimeForcing(
   ncFile->read("time", time);
   ncFile->read(fieldName, forcing);
 
-  return std::make_unique<CUAS::TimeForcing>(forcing, time, multiplier, offset, loopForcing);
+  return std::make_unique<CUAS::TimeDependentForcing>(forcing, time, multiplier, offset, loopForcing);
 }
 
-std::unique_ptr<CUAS::ScalarTimeForcing> ModelReader::getScalarTimeForcing(
+std::unique_ptr<CUAS::ScalarTimeDependentForcing> ModelReader::getScalarTimeDependentForcing(
     std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
     std::vector<PetscScalar> const &yAxis, PetscScalar multiplier, PetscScalar offset, bool loopForcing) {
   // expected dimension names and dimension order. Note, len(x) = 1 and len(y) = 1
@@ -77,8 +77,8 @@ std::unique_ptr<CUAS::ScalarTimeForcing> ModelReader::getScalarTimeForcing(
 
   auto ncFile = std::make_unique<NetCDFFile>(ncFileName, 'r');
   if (!ncFile->hasVariable(variableName)) {
-    CUAS_ERROR("ModelReader.cpp: getScalarTimeForcing(): Variable '{}' not found in file '{}'. Exiting.", variableName,
-               ncFileName)
+    CUAS_ERROR("ModelReader.cpp: getScalarTimeDependentForcing(): Variable '{}' not found in file '{}'. Exiting.",
+               variableName, ncFileName)
     exit(1);
   }
 
@@ -100,7 +100,8 @@ std::unique_ptr<CUAS::ScalarTimeForcing> ModelReader::getScalarTimeForcing(
   if (!ncFile->variableHasDimensionByName(variableName, "time")) {
     // has been checked already in tools/main.cpp
     CUAS_ERROR(
-        "ModelReader.cpp: getScalarTimeForcing(): Time dimension not found for variable '{}' in file '{}'. Exiting.",
+        "ModelReader.cpp: getScalarTimeDependentForcing(): Time dimension not found for variable '{}' in file '{}'. "
+        "Exiting.",
         variableName, ncFileName)
     exit(1);
   }
@@ -109,7 +110,8 @@ std::unique_ptr<CUAS::ScalarTimeForcing> ModelReader::getScalarTimeForcing(
   auto my = ncFile->getDimLength("y");
   if (mx != 1 || my != 1) {
     CUAS_ERROR(
-        "ModelReader.cpp: getScalarTimeForcing(): Incorrect number of points in x- or y-dimension (!= 1) for variable "
+        "ModelReader.cpp: getScalarTimeDependentForcing(): Incorrect number of points in x- or y-dimension (!= 1) for "
+        "variable "
         "'{}' in file "
         "'{}'. Exiting.",
         variableName, ncFileName)
@@ -139,10 +141,10 @@ std::unique_ptr<CUAS::ScalarTimeForcing> ModelReader::getScalarTimeForcing(
     auto distLower = p - xAxis[upperBound - 1];
     rowIndex = (distUpper > distLower) ? upperBound - 1 : upperBound;
     if (std::fabs(p - xAxis[rowIndex]) > allowedError) {
-      CUAS_ERROR("ModelReader.cpp: getScalarTimeForcing(): |xAxis[index] - x| > {}. Exiting.", allowedError)
+      CUAS_ERROR("ModelReader.cpp: getScalarTimeDependentForcing(): |xAxis[index] - x| > {}. Exiting.", allowedError)
       exit(1);
     }
-    CUAS_INFO_RANK0("ModelReader.cpp: getScalarTimeForcing(): Found xAxis[{}] = {} for x = {}", rowIndex,
+    CUAS_INFO_RANK0("ModelReader.cpp: getScalarTimeDependentForcing(): Found xAxis[{}] = {} for x = {}", rowIndex,
                     xAxis[rowIndex], p)
   }
 
@@ -154,22 +156,22 @@ std::unique_ptr<CUAS::ScalarTimeForcing> ModelReader::getScalarTimeForcing(
     auto distLower = p - yAxis[upperBound - 1];
     colIndex = (distUpper > distLower) ? upperBound - 1 : upperBound;
     if (std::fabs(p - yAxis[rowIndex]) > allowedError) {
-      CUAS_ERROR("ModelReader.cpp: getScalarTimeForcing(): |yAxis[index] - y| > {}. Exiting.", allowedError)
+      CUAS_ERROR("ModelReader.cpp: getScalarTimeDependentForcing(): |yAxis[index] - y| > {}. Exiting.", allowedError)
       exit(1);
     }
-    CUAS_INFO_RANK0("ModelReader.cpp: getScalarTimeForcing(): Found yAxis[{}] = {} for y = {}", colIndex,
+    CUAS_INFO_RANK0("ModelReader.cpp: getScalarTimeDependentForcing(): Found yAxis[{}] = {} for y = {}", colIndex,
                     yAxis[colIndex], p)
   }
 
-  return std::make_unique<CUAS::ScalarTimeForcing>(nx, ny, rowIndex, colIndex, timeSeries, time, multiplier, offset,
-                                                   loopForcing);
+  return std::make_unique<CUAS::ScalarTimeDependentForcing>(nx, ny, rowIndex, colIndex, timeSeries, time, multiplier,
+                                                            offset, loopForcing);
 }
 
-std::unique_ptr<CUAS::ConstantForcing> ModelReader::getConstantForcing(std::string const &ncFileName,
-                                                                       std::string const &variableName,
-                                                                       std::vector<PetscScalar> const &xAxis,
-                                                                       std::vector<PetscScalar> const &yAxis,
-                                                                       PetscScalar multiplier, PetscScalar offset) {
+std::unique_ptr<CUAS::SteadyForcing> ModelReader::getSteadyForcing(std::string const &ncFileName,
+                                                                   std::string const &variableName,
+                                                                   std::vector<PetscScalar> const &xAxis,
+                                                                   std::vector<PetscScalar> const &yAxis,
+                                                                   PetscScalar multiplier, PetscScalar offset) {
   auto ncFile = std::make_unique<NetCDFFile>(ncFileName, 'r');
   // size of the model, not size from the forcing file
   auto nx = (int)xAxis.size();
@@ -177,7 +179,7 @@ std::unique_ptr<CUAS::ConstantForcing> ModelReader::getConstantForcing(std::stri
   auto mx = ncFile->getDimX();
   auto my = ncFile->getDimY();
   if (nx != mx || ny != my) {
-    CUAS_ERROR("ModelReader.cpp: getConstantForcing(): nx: {} != {} or ny: {} != {} in file '{}'. Exiting.", nx, mx, ny,
+    CUAS_ERROR("ModelReader.cpp: getSteadyForcing(): nx: {} != {} or ny: {} != {} in file '{}'. Exiting.", nx, mx, ny,
                my, ncFileName)
     exit(1);
   }
@@ -186,7 +188,7 @@ std::unique_ptr<CUAS::ConstantForcing> ModelReader::getConstantForcing(std::stri
 
   PETScGrid forcing(nx, ny);
   ncFile->read(variableName, forcing);
-  return std::make_unique<CUAS::ConstantForcing>(forcing, multiplier, offset);
+  return std::make_unique<CUAS::SteadyForcing>(forcing, multiplier, offset);
 }
 
 bool ModelReader::isTimeDependent(std::string const &ncFileName, std::string const &variableName) {

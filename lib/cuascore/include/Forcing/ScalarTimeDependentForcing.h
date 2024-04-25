@@ -1,44 +1,44 @@
 /**
- * File: ScalarTimeForcing.h
+ * File: ScalarTimeDependentForcing.h
  * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
  * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
  */
 
-#ifndef CUAS_SCALARTIMEFORCING_H
-#define CUAS_SCALARTIMEFORCING_H
+#ifndef CUAS_SCALARTIMEDEPENDENTFORCING_H
+#define CUAS_SCALARTIMEDEPENDENTFORCING_H
 
 #include "Forcing.h"
 
-#include "timeparse.h"
-
 #include "Logger.h"
+#include "PETScGrid.h"
+
+#include "timeparse.h"
 #include "utilities.h"
 
 #include <algorithm>
-#include <cmath>
-#include <functional>  // vector times scalar or vector plus scalar
+#include <cstdlib>
 #include <memory>
 #include <vector>
 
 namespace CUAS {
 
-class ScalarTimeForcing : public Forcing {
+class ScalarTimeDependentForcing : public Forcing {
  public:
-  explicit ScalarTimeForcing(int const nx, int const ny, int const rowIndex, int const colIndex,
-                             std::vector<PetscScalar> &timeSeries, std::vector<timeSecs> const &time,
-                             const PetscScalar multiplier = 1.0, const PetscScalar offset = 0.0,
-                             const bool loopForcing = false)
+  explicit ScalarTimeDependentForcing(int const nx, int const ny, int const rowIndex, int const colIndex,
+                                      std::vector<PetscScalar> &timeSeries, std::vector<timeSecs> const &time,
+                                      const PetscScalar multiplier = 1.0, const PetscScalar offset = 0.0,
+                                      const bool loopForcing = false)
       : rowIndex(rowIndex), colIndex(colIndex), time(time), timeSeries(timeSeries), loopForcing(loopForcing) {
     if (time.size() != timeSeries.size()) {
-      CUAS_ERROR("ScalarTimeForcing.h: time and time series sizes are not compatible. Exiting.")
+      CUAS_ERROR("{}: time and time series sizes are not compatible. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
     if (time.empty()) {
-      CUAS_ERROR("ScalarTimeForcing.h: time dimension length is less than 1. Exiting.")
+      CUAS_ERROR("{}: time dimension length is less than 1. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
     if (!isIncreasing(time)) {
-      CUAS_ERROR("ScalarTimeForcing.h: time is not strictly increasing. Exiting.")
+      CUAS_ERROR("{}: time is not strictly increasing. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
 
@@ -54,29 +54,29 @@ class ScalarTimeForcing : public Forcing {
                      [&offset](auto &el) { return el + offset; });
     }
   }
-  ScalarTimeForcing(ScalarTimeForcing &) = delete;
-  ScalarTimeForcing(ScalarTimeForcing &&) = delete;
+  ScalarTimeDependentForcing(ScalarTimeDependentForcing &) = delete;
+  ScalarTimeDependentForcing(ScalarTimeDependentForcing &&) = delete;
 
   PETScGrid const &getCurrentQ(timeSecs currTime = 0) override {
     if (currTime < 0) {
-      CUAS_ERROR("ScalarTimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.")
+      CUAS_ERROR("{} was called with currTime < 0. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
 
     if (loopForcing) {
       currTime = currTime % time.back();
     } else if (currTime > time.back()) {
-      CUAS_WARN(
-          "ScalarTimeForcing.h: getCurrentQ was called with currTime > time.back(). Using last Q of forcingStack. "
+      CUAS_WARN_RANK0(
+          "{} was called with currTime > time.back(). Using last Q of forcingStack. "
           "Consider "
-          "using --loopForcing argument.")
+          "using --loopForcing argument.",
+          __PRETTY_FUNCTION__)
       auto value = timeSeries.back();
       return setValueAtPos(value);
     }
 
     if (currTime < time.front()) {
-      CUAS_WARN(
-          "ScalarTimeForcing.h: getCurrentQ was called with currTime < time.front(). Using first Q of forcingStack.")
+      CUAS_WARN_RANK0("{} was called with currTime < time.front(). Using first Q of forcingStack.", __PRETTY_FUNCTION__)
       auto value = timeSeries.front();
       return setValueAtPos(value);
     }

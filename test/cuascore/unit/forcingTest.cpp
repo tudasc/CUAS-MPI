@@ -5,8 +5,8 @@
  */
 
 #include "CUASConstants.h"
-#include "Forcing/ConstantForcing.h"
-#include "Forcing/TimeForcing.h"
+#include "Forcing/SteadyForcing.h"
+#include "Forcing/TimeDependentForcing.h"
 #include "timeparse.h"
 
 #include "gtest/gtest.h"
@@ -23,7 +23,7 @@ TEST(forcingTest, constant) {
   bmelt.setConst(1);
 
   auto supplyMultiplier = 1.2;
-  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::ConstantForcing>(bmelt, supplyMultiplier / SPY);
+  std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::SteadyForcing>(bmelt, supplyMultiplier / SPY);
   // constant forcing: 0, empty vector, false
   auto &read = forcing->getCurrentQ().getReadHandle();
   auto &readBmelt = bmelt.getReadHandle();
@@ -49,7 +49,7 @@ TEST(forcingTest, timeForcing) {
   std::vector<CUAS::timeSecs> time_forcing = {10, 20, 100, 150};
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing =
-      std::make_unique<CUAS::TimeForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, false);
+      std::make_unique<CUAS::TimeDependentForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, false);
 
   // check interpolation
   {
@@ -138,7 +138,7 @@ TEST(forcingTest, loopForcing) {
   std::vector<CUAS::timeSecs> time_forcing = {10, 20, 100, 150};
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing =
-      std::make_unique<CUAS::TimeForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, true);
+      std::make_unique<CUAS::TimeDependentForcing>(qs, time_forcing, supplyMultiplier / SPY, 0.0, true);
 
   // check interpolation within the range
   {

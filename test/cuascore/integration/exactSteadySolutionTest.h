@@ -91,22 +91,22 @@ inline PetscScalar max_Q_exact(PetscScalar const Lx, PetscScalar const Ly) {
   return 0.5 * a * T_hmean * ((Lx * Lx) + (Ly * Ly)) / c;
 }
 
-class SteadyForcing : public CUAS::Forcing {
+class SteadyTestForcing : public CUAS::Forcing {
  public:
-  explicit SteadyForcing(int const nx, int const ny, PetscScalar const res, PetscScalar const multiplier = 1.0,
-                         PetscScalar const offset = 0.0)
+  explicit SteadyTestForcing(int const nx, int const ny, PetscScalar const res, PetscScalar const multiplier = 1.0,
+                             PetscScalar const offset = 0.0)
       : resolution(res), Lx(res * (nx - 1)), Ly(res * (ny - 1)) {
     currQ = std::make_unique<PETScGrid>(nx, ny);
 
     if (multiplier != 1.0) {
-      SteadyForcing::applyMultiplier(multiplier);
+      SteadyTestForcing::applyMultiplier(multiplier);
     }
     if (offset != 0.0) {
-      SteadyForcing::applyOffset(offset);
+      SteadyTestForcing::applyOffset(offset);
     }
   }
-  SteadyForcing(SteadyForcing &) = delete;
-  SteadyForcing(SteadyForcing &&) = delete;
+  SteadyTestForcing(SteadyTestForcing &) = delete;
+  SteadyTestForcing(SteadyTestForcing &&) = delete;
 
   PETScGrid const &getCurrentQ(CUAS::timeSecs currTime) override {
     {
@@ -171,7 +171,7 @@ std::unique_ptr<CUAS::CUASModel> fillModelData(int nx, int ny, PetscScalar res) 
   model.bndMask->setConst(COMPUTE_FLAG);
   model.bndMask->setGhostBoundary(DIRICHLET_FLAG);
   model.bndMask->setRealBoundary(DIRICHLET_FLAG);
-  model.Q = std::make_unique<SteadyForcing>(nx, ny, res);
+  model.Q = std::make_unique<SteadyTestForcing>(nx, ny, res);
 
   return pmodel;
 }

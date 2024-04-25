@@ -1,42 +1,45 @@
 /**
- * File: TimeForcing.h
+ * File: TimeDependentForcing.h
  * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
  * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
  */
 
-#ifndef CUAS_TIMEFORCING_H
-#define CUAS_TIMEFORCING_H
+#ifndef CUAS_TIMEDEPENDENTFORCING_H
+#define CUAS_TIMEDEPENDENTFORCING_H
 
 #include "Forcing.h"
 
-#include "timeparse.h"
-
 #include "Logger.h"
+#include "PETScGrid.h"
+
+#include "timeparse.h"
 #include "utilities.h"
 
 #include <algorithm>
-#include <cmath>
+#include <cstdlib>   // exit
+#include <iterator>  // for std::back_inserter
 #include <memory>
 #include <vector>
 
 namespace CUAS {
 
-class TimeForcing : public Forcing {
+class TimeDependentForcing : public Forcing {
  public:
-  explicit TimeForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, std::vector<timeSecs> const &time,
-                       PetscScalar const multiplier = 1.0, PetscScalar const offset = 0.0,
-                       bool const loopForcing = false)
+  explicit TimeDependentForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, std::vector<timeSecs> const &time,
+                                PetscScalar const multiplier = 1.0, PetscScalar const offset = 0.0,
+                                bool const loopForcing = false)
       : time(time), loopForcing(loopForcing) {
     if (time.size() != forcing.size()) {
-      CUAS_ERROR("TimeForcing.h: time and forcing sizes are not compatible. Exiting.")
+      CUAS_ERROR("{}: time and forcing sizes are not compatible. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
     if (time.size() < 2) {
-      CUAS_ERROR("TimeForcing.h: time dimension length is less than 2. Did you want to use ConstantForcing? Exiting.")
+      CUAS_ERROR("{}: time dimension length is less than 2. Did you want to use ConstantForcing? Exiting.",
+                 __PRETTY_FUNCTION__)
       exit(1);
     }
     if (!isIncreasing(time)) {
-      CUAS_ERROR("TimeForcing.h: time is not strictly increasing. Exiting.")
+      CUAS_ERROR("{}: time is not strictly increasing. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
 
@@ -44,32 +47,33 @@ class TimeForcing : public Forcing {
     std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
 
     if (multiplier != 1.0) {
-      TimeForcing::applyMultiplier(multiplier);
+      TimeDependentForcing::applyMultiplier(multiplier);
     }
     if (offset != 0.0) {
-      TimeForcing::applyOffset(offset);
+      TimeDependentForcing::applyOffset(offset);
     }
   }
-  TimeForcing(TimeForcing &) = delete;
-  TimeForcing(TimeForcing &&) = delete;
+  TimeDependentForcing(TimeDependentForcing &) = delete;
+  TimeDependentForcing(TimeDependentForcing &&) = delete;
 
   PETScGrid const &getCurrentQ(timeSecs currTime = 0) override {
     if (currTime < 0) {
-      CUAS_ERROR("TimeForcing.h: getCurrentQ was called with currTime < 0. Exiting.")
+      CUAS_ERROR("{}: getCurrentQ was called with currTime < 0. Exiting.", __PRETTY_FUNCTION__)
       exit(1);
     }
 
     if (loopForcing) {
       currTime = currTime % time.back();
     } else if (currTime > time.back()) {
-      CUAS_WARN(
-          "TimeForcing.h: getCurrentQ was called with currTime > time.back(). Using last Q of forcingStack. Consider "
-          "using --loopForcing argument.")
+      CUAS_WARN_RANK0(
+          "{} was called with currTime > time.back(). Using last Q of forcingStack. Consider "
+          "using --loopForcing argument.",
+          __PRETTY_FUNCTION__)
       return *forcingStack.back();
     }
 
     if (currTime < time.front()) {
-      CUAS_WARN("TimeForcing.h: getCurrentQ was called with currTime < time.front(). Using first Q of forcingStack.")
+      CUAS_WARN_RANK0("{} was called with currTime < time.front(). Using first Q of forcingStack.", __PRETTY_FUNCTION__)
       return *forcingStack.front();
     }
 

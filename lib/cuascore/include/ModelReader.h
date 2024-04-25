@@ -9,12 +9,14 @@
 
 #include "CUASModel.h"
 #include "CUASSolver.h"
-#include "Forcing/ConstantForcing.h"
-#include "Forcing/ScalarTimeForcing.h"
-#include "Forcing/TimeForcing.h"
+#include "Forcing/ScalarTimeDependentForcing.h"
+#include "Forcing/SteadyForcing.h"
+#include "Forcing/TimeDependentForcing.h"
 #include "NetCDFFile.h"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 // example usage:
 // create a model reader
@@ -36,20 +38,21 @@ class ModelReader {
   static void restartFromFile(CUAS::CUASSolver &solver, std::string const &restartFile,
                               bool restartNoneZeroInitialGuess);
 
-  static std::unique_ptr<CUAS::TimeForcing> getTimeForcing(std::string const &ncFileName, std::string const &fieldName,
-                                                           std::vector<PetscScalar> const &xAxis,
-                                                           std::vector<PetscScalar> const &yAxis,
-                                                           PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
-                                                           bool loopForcing = false);
+  static std::unique_ptr<CUAS::TimeDependentForcing> getTimeDependentForcing(
+      std::string const &ncFileName, std::string const &fieldName, std::vector<PetscScalar> const &xAxis,
+      std::vector<PetscScalar> const &yAxis, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
+      bool loopForcing = false);
 
-  static std::unique_ptr<CUAS::ScalarTimeForcing> getScalarTimeForcing(
+  static std::unique_ptr<CUAS::ScalarTimeDependentForcing> getScalarTimeDependentForcing(
       std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
       std::vector<PetscScalar> const &yAxis, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
       bool loopForcing = false);
 
-  static std::unique_ptr<CUAS::ConstantForcing> getConstantForcing(
-      std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
-      std::vector<PetscScalar> const &yAxis, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0);
+  static std::unique_ptr<CUAS::SteadyForcing> getSteadyForcing(std::string const &ncFileName,
+                                                               std::string const &variableName,
+                                                               std::vector<PetscScalar> const &xAxis,
+                                                               std::vector<PetscScalar> const &yAxis,
+                                                               PetscScalar multiplier = 1.0, PetscScalar offset = 0.0);
 
   static bool isTimeDependent(std::string const &ncFileName, std::string const &variableName);
 
