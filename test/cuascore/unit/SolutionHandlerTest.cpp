@@ -6,6 +6,8 @@
 
 #include "SolutionHandler.h"
 
+#include "CUASModel.h"
+
 #include "gtest/gtest.h"
 
 int mpiRank;

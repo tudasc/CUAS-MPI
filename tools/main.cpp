@@ -48,9 +48,21 @@ std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args
   if (args.saveEvery < 0)
     return nullptr;
 
+  std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
+
   if (args.saveEvery == 0) {
     CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size())
     args.saveEvery = static_cast<int>(time.timeSteps.size());
+  }
+
+  solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
+
+  // TODO move to solution handler constructor?
+  if (!time.units.empty()) {
+    solutionHandler->setTimeUnits(time.units);
+  }
+  if (!time.calendar.empty()) {
+    solutionHandler->setCalendar(time.calendar);
   }
 
   return std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
@@ -100,15 +112,6 @@ int main(int argc, char *argv[]) {
     setupTime(time, args);
 
     std::unique_ptr<CUAS::SolutionHandler> solutionHandler = setupSolutionHandler(args, time, *model);
-
-    if (solutionHandler != nullptr) {
-      if (!time.units.empty()) {
-        solutionHandler->setTimeUnits(time.units);
-      }
-      if (!time.calendar.empty()) {
-        solutionHandler->setCalendar(time.calendar);
-      }
-    }
 
     auto solver = std::make_unique<CUAS::CUASSolver>(model.get(), &args, solutionHandler.get());
     solver->setup();

@@ -44,7 +44,7 @@ class CUASSolver {
     fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
     Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
-    Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effectife Transmissivity
+    Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
 
     DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
                  PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
@@ -92,7 +92,7 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> fluxMagnitude;
 
   std::unique_ptr<PETScGrid> Seff;  //!< effective Storativity
-  std::unique_ptr<PETScGrid> Teff;  //!< effectife Transmissivity
+  std::unique_ptr<PETScGrid> Teff;  //!< effective Transmissivity
 
   CUASModel *const model;
   CUASArgs const *const args;
