@@ -8,7 +8,6 @@
 #define CUAS_SOLUTION_HANDLER_H
 
 #include "CUASArgs.h"
-#include "CUASModel.h"
 #include "NetCDFFile.h"
 #include "timeparse.h"
 
@@ -17,6 +16,9 @@
 #include <vector>
 
 namespace CUAS {
+
+class CUASModel;
+class CUASSolver;
 
 enum class OutputSize { SMALL, NORMAL, LARGE, XLARGE };
 enum class OutputReason { NONE, INITIAL, NORMAL };
@@ -50,6 +52,10 @@ class SolutionHandler {
   // use this constructor if you want to determine the shape of the solution on your own
   // TODO do we need Nt and saveEvery
   SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize);
+  ~SolutionHandler() = default;
+
+  void setTimeUnits(std::string const &s);
+  void setCalendar(std::string const &s);
 
   // write the values passed as parameters to the netcdf file
   void storeInitialSetup(PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
@@ -65,14 +71,9 @@ class SolutionHandler {
                      PETScGrid const &waterSource, PetscScalar eps_inf = NC_FILL_DOUBLE,
                      PetscScalar Teps_inf = NC_FILL_DOUBLE);
 
-  void setTimeUnits(std::string const &s);
-  void setCalendar(std::string const &s);
-
   void storePETScOptions();
   // reason why we need to save this time step
   static OutputReason getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery);
-
-  ~SolutionHandler() = default;
 };
 }  // namespace CUAS
 

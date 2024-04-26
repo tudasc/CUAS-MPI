@@ -7,6 +7,8 @@
 #include "SolutionHandler.h"
 
 #include "CUASConstants.h"
+#include "CUASModel.h"
+#include "CUASSolver.h"
 #include "utilities.h"  // for CUAS::version
 
 #include "petscoptionswrapper.h"
