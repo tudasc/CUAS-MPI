@@ -7,6 +7,7 @@
 #include "SolutionHandler.h"
 
 #include "CUASConstants.h"
+#include "CUASKernels.h"
 #include "CUASModel.h"
 #include "CUASSolver.h"
 #include "utilities.h"  // for CUAS::version
@@ -38,7 +39,6 @@ void SolutionHandler::defineSolution() {
   /*
    * grid description
    */
-
   file->defineScalar("time", true);
   file->addAttributeToVariable("time", "units", "seconds since 01-01-01 00:00:00");
   file->addAttributeToVariable("time", "standard_name", "time");
@@ -174,30 +174,36 @@ void SolutionHandler::defineSolution() {
   }
 }
 
-void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
-                                        CUASModel const &model, PETScGrid const &fluxMagnitude, PETScGrid const &melt,
-                                        PETScGrid const &creep, PETScGrid const &cavity,
-                                        PETScGrid const &effectivePressure, PETScGrid const &effectiveStorativity,
-                                        PETScGrid const &effectiveTransmissivity, PETScGrid const &waterSource,
-                                        CUASArgs const &args) {
-  file->write("x", model.xAxis);
-  file->write("y", model.yAxis);
-
+void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args,
+                                PETScGrid const &currentQ, std::vector<CUAS::timeSecs> const &timeSteps,
+                                int timeStepIndex, timeSecs dt) {
   //
-  file->write("bnd_mask", *model.bndMask, nextSolution);
+  // STORE DATA, IF NEEDED
+  //
+  OutputReason reason = getOutputReason(timeStepIndex, (int)timeSteps.size(), args.saveEvery);
 
-  if (osize >= OutputSize::NORMAL) {
-    file->write("topg", *model.topg, nextSolution);
+  auto currTime = timeSteps[timeStepIndex];
+
+  if (reason != OutputReason::NONE) {
+    if (!args.verboseSolver && args.verbose) {
+      // show only if verboseSolver is off
+      CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt)
+    }
+    // Process diagnostic variables for output only. We don't need them in every time step
+    getFluxMagnitude(*solver.fluxMagnitude, *solver.gradHeadSquared,
+                     *solver.Teff);  // was currTransmissivity for a very long time
+    // ... more
+
+    if (reason == OutputReason::INITIAL) {
+      // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
+      storeInitialSetup(solver, model, currentQ, args);
+    } else {
+      storeSolution(currTime, solver, currentQ, solver.eps, solver.Teps);
+    }
   }
+}
 
-  if (osize >= OutputSize::LARGE) {
-    file->write("thk", *model.thk, nextSolution);
-  }
-
-  if (osize >= OutputSize::XLARGE) {
-    file->write("pice", *model.pIce, nextSolution);
-  }
-
+void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   // TODO: The code below will break soon or later if somebody changes CUASArgs
   //       This should be done in an automated way, e.g. by using 'reflection'.
   file->addGlobalAttribute("Tmax", args.Tmax);
@@ -253,18 +259,40 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
     file->copyCoordinatesFrom(args.coordinatesFile);
     file->setCoordinatesAttribute();
   }
-
-  // store initial conditions if needed
-  storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, fluxMagnitude, melt, creep, cavity, effectivePressure,
-                effectiveStorativity, effectiveTransmissivity, waterSource);
 }
 
-void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hydraulicHead,
-                                    PETScGrid const &hydraulicTransmissivity, CUASModel const &model,
-                                    PETScGrid const &fluxMagnitude, PETScGrid const &melt, PETScGrid const &creep,
-                                    PETScGrid const &cavity, PETScGrid const &effectivePressure,
-                                    PETScGrid const &effectiveStorativity, PETScGrid const &effectiveTransmissivity,
-                                    PETScGrid const &waterSource, PetscScalar eps_inf, PetscScalar Teps_inf) {
+void SolutionHandler::storeModelInformation(const CUAS::CUASModel &model) {
+  file->write("x", model.xAxis);
+  file->write("y", model.yAxis);
+
+  //
+  file->write("bnd_mask", *model.bndMask, nextSolution);
+
+  if (osize >= OutputSize::NORMAL) {
+    file->write("topg", *model.topg, nextSolution);
+  }
+
+  if (osize >= OutputSize::LARGE) {
+    file->write("thk", *model.thk, nextSolution);
+  }
+
+  if (osize >= OutputSize::XLARGE) {
+    file->write("pice", *model.pIce, nextSolution);
+  }
+}
+
+void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
+                                        CUASArgs const &args) {
+  storeModelInformation(model);
+
+  storeCUASArgs(args);
+
+  // store initial conditions if needed
+  storeSolution(0, solver, waterSource);
+}
+
+void SolutionHandler::storeSolution(CUAS::timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
+                                    PetscScalar eps_inf, PetscScalar Teps_inf) {
   // write scalars
   file->write("time", currTime, nextSolution);
 
@@ -273,21 +301,21 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hy
   file->write("Teps_inf", Teps_inf, nextSolution);
 
   // write grids
-  file->write("head", hydraulicHead, nextSolution);
-  file->write("transmissivity", hydraulicTransmissivity, nextSolution);
+  file->write("head", *solver.currHead, nextSolution);
+  file->write("transmissivity", *solver.currTransmissivity, nextSolution);
 
   if (osize >= OutputSize::NORMAL) {
-    file->write("a_melt", melt, nextSolution);
-    file->write("a_creep", creep, nextSolution);
-    file->write("a_cavity", cavity, nextSolution);
-    file->write("peffective", effectivePressure, nextSolution);
+    file->write("a_melt", *solver.melt, nextSolution);
+    file->write("a_creep", *solver.creep, nextSolution);
+    file->write("a_cavity", *solver.cavity, nextSolution);
+    file->write("peffective", *solver.pEffective, nextSolution);
     file->write("watersource", waterSource, nextSolution);
-    file->write("flux", fluxMagnitude, nextSolution);
+    file->write("flux", *solver.fluxMagnitude, nextSolution);
   }
 
   if (osize >= OutputSize::LARGE) {
-    file->write("effective_transmissivity", effectiveTransmissivity, nextSolution);
-    file->write("effective_storativity", effectiveStorativity, nextSolution);
+    file->write("effective_transmissivity", *solver.Teff, nextSolution);
+    file->write("effective_storativity", *solver.Seff, nextSolution);
   }
 
   if (osize >= OutputSize::XLARGE) {
@@ -334,4 +362,4 @@ OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTim
   }
 }
 
-};  // namespace CUAS
+}  // namespace CUAS
