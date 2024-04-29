@@ -19,6 +19,7 @@ namespace CUAS {
 
 class CUASModel;
 class CUASSolver;
+class CUASTimeIntegrator;
 
 enum class OutputSize { SMALL, NORMAL, LARGE, XLARGE };
 enum class OutputReason { NONE, INITIAL, NORMAL };
@@ -38,7 +39,7 @@ class SolutionHandler {
   // member functions
  public:
   void storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args, PETScGrid const &currentQ,
-                 std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex, timeSecs dt);
+                 CUASTimeIntegrator const &timeIntegrator);
   void storePETScOptions();
 
   void setTimeUnits(std::string const &s);
@@ -73,7 +74,7 @@ class SolutionHandler {
   // to the NetCDF file. This is important to get the naming for the NetCDF variables right.
   void defineSolution();
   // reason why we need to save this time step
-  OutputReason getOutputReason(std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) const;
+  OutputReason getOutputReason(CUASTimeIntegrator const &timeIntegrator) const;
 };
 
 }  // namespace CUAS

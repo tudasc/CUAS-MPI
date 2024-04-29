@@ -77,14 +77,10 @@ class CUASSolver {
 
   // member functions
  private:
-  static std::pair<timeSecs, timeSecs> getTimeStepInformation(std::vector<CUAS::timeSecs> const &timeSteps,
-                                                              int timeStepIndex);
   void prepare();
   void preComputation();
-  void storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<CUAS::timeSecs> const &timeSteps,
-                 int timeStepIndex);
-  void updateHeadAndTransmissivity(timeSecs dt, PETScGrid const &currentQ, std::vector<CUAS::timeSecs> const &timeSteps,
-                                   int timeStepIndex);
+  void storeData(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator);
+  [[nodiscard]] bool updateHeadAndTransmissivity(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator);
 };
 
 }  // namespace CUAS

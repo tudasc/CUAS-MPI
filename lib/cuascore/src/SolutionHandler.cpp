@@ -10,6 +10,7 @@
 #include "CUASKernels.h"
 #include "CUASModel.h"
 #include "CUASSolver.h"
+#include "CUASTimeIntegrator.h"
 #include "utilities.h"  // for CUAS::version
 
 #include "petscoptionswrapper.h"
@@ -175,19 +176,18 @@ void SolutionHandler::defineSolution() {
 }
 
 void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args,
-                                PETScGrid const &currentQ, std::vector<CUAS::timeSecs> const &timeSteps,
-                                int timeStepIndex, timeSecs dt) {
+                                PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator) {
   //
   // STORE DATA, IF NEEDED
   //
-  OutputReason reason = getOutputReason(timeSteps, timeStepIndex);
-
-  auto currTime = timeSteps[timeStepIndex];
+  OutputReason reason = getOutputReason(timeIntegrator);
 
   if (reason != OutputReason::NONE) {
     if (!args.verboseSolver && args.verbose) {
       // show only if verboseSolver is off
-      CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt)
+      CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeIntegrator.getTimestepIndex(),
+                      timeIntegrator.getTimesteps().size() - 1, timeIntegrator.getCurrentTime(),
+                      timeIntegrator.getCurrentDt())
     }
     // Process diagnostic variables for output only. We don't need them in every time step
     getFluxMagnitude(*solver.fluxMagnitude, *solver.gradHeadSquared,
@@ -198,7 +198,7 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
       // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
       storeInitialSetup(solver, model, currentQ, args);
     } else {
-      storeSolution(currTime, solver, currentQ, solver.eps, solver.Teps);
+      storeSolution(timeIntegrator.getCurrentTime(), solver, currentQ, solver.eps, solver.Teps);
     }
   }
 }
@@ -342,7 +342,7 @@ void SolutionHandler::setCalendar(std::string const &s) {
 }
 
 void SolutionHandler::setSaveStrategy(SaveStrategy strategy, long saveInterval, int saveEvery) {
-  // TODO do some checks
+  // TODO add sanity checks for input
 
   this->strategy = strategy;
   this->saveInterval = saveInterval;
@@ -355,18 +355,18 @@ void SolutionHandler::storePETScOptions() {
   file->addGlobalAttribute("PETSC_OPTIONS_USED", getPETScOptionsUsed());
 }
 
-OutputReason SolutionHandler::getOutputReason(std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) const {
+OutputReason SolutionHandler::getOutputReason(CUASTimeIntegrator const &timeIntegrator) const {
   // TODO clean up get output reason
+
+  auto timeStepIndex = timeIntegrator.getTimestepIndex();
 
   if (timeStepIndex == 0) {
     return OutputReason::INITIAL;
   }
 
-  auto currTime = timeSteps[timeStepIndex];
-
   if (strategy == SaveStrategy::INDEX) {
     if (saveEvery > 0) {  // avoid division by zero in modulo operation
-      if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == timeSteps.size() - 1)) {
+      if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == timeIntegrator.getTimesteps().size() - 1)) {
         return OutputReason::NORMAL;
       } else {
         return OutputReason::NONE;
@@ -376,7 +376,8 @@ OutputReason SolutionHandler::getOutputReason(std::vector<CUAS::timeSecs> const 
     }
   } else if (strategy == SaveStrategy::TIMEINTERVAL) {
     if (saveInterval > 0) {
-      if ((currTime % saveInterval == 0) || (currTime == timeSteps.back())) {
+      if ((timeIntegrator.getCurrentTime() % saveInterval == 0) ||
+          (timeIntegrator.getCurrentTime() == timeIntegrator.getTimesteps().back())) {
         return OutputReason::NORMAL;
       } else {
         return OutputReason::NONE;

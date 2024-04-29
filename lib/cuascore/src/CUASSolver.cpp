@@ -8,6 +8,7 @@
 
 #include "CUASConstants.h"
 #include "CUASKernels.h"
+#include "CUASTimeIntegrator.h"
 #include "specialgradient.h"
 #include "systemmatrix.h"
 #include "timing.h"
@@ -21,6 +22,8 @@
 #include <string>
 
 namespace CUAS {
+
+#define CUAS_MAX_TIMESTEP std::numeric_limits<typeof(CUAS::timeSecs)>::max()
 
 CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHandler *solutionHandler)
     : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
@@ -173,38 +176,27 @@ void CUASSolver::setup() {
 void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   prepare();
 
+  CUASTimeIntegrator timeIntegrator(timeSteps);
+
   beginSolverTiming();
 
-  for (int timeStepIndex = 0; timeStepIndex < timeSteps.size(); ++timeStepIndex) {
-    auto [currTime, dt] = getTimeStepInformation(timeSteps, timeStepIndex);
+  bool continueSolverLoop = true;
+
+  while (continueSolverLoop) {
+    auto [currTime, dt] = timeIntegrator.getTimestepInformation(CUAS_MAX_TIMESTEP);
 
     // time dependent forcing
     auto &currentQ = model->Q->getCurrentQ(currTime);
     preComputation();
 
-    storeData(currentQ, dt, timeSteps, timeStepIndex);
+    storeData(currentQ, timeIntegrator);
 
-    updateHeadAndTransmissivity(dt, currentQ, timeSteps, timeStepIndex);
+    continueSolverLoop = updateHeadAndTransmissivity(currentQ, timeIntegrator);
+
+    timeIntegrator.finalizeTimestep(dt);
   }
 
   endSolverTiming();
-}
-
-std::pair<timeSecs, timeSecs> CUASSolver::getTimeStepInformation(std::vector<CUAS::timeSecs> const &timeSteps,
-                                                                 int timeStepIndex) {
-  timeSecs dt = 0;
-  auto currTime = timeSteps[timeStepIndex];
-  if (timeSteps.size() > 1) {
-    if (timeStepIndex < timeSteps.size() - 1) {
-      auto nextTime = timeSteps[timeStepIndex + 1];
-      dt = nextTime - currTime;
-    } else {
-      // This is the last iteration only used to recompute the diagnostic fields for saving
-      dt = -9999;  // Something stupid to let the solver crash if used
-    }
-  }
-
-  return std::make_pair(currTime, dt);
 }
 
 void CUASSolver::prepare() {
@@ -303,28 +295,31 @@ void CUASSolver::preComputation() {
   }
 }
 
-void CUASSolver::storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<CUAS::timeSecs> const &timeSteps,
-                           int timeStepIndex) {
+void CUASSolver::storeData(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator) {
   //
   // STORE DATA, IF NEEDED
   //
   if (solutionHandler) {
-    solutionHandler->storeData(*this, *model, *args, currentQ, timeSteps, timeStepIndex, dt);
+    solutionHandler->storeData(*this, *model, *args, currentQ, timeIntegrator);
   }
 }
 
-void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PETScGrid const &currentQ,
-                                             std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) {
-  //
-  // WE NEED TO SOLVE AGAIN
-  //
-  if (timeStepIndex < timeSteps.size() - 1) {
-    // Sanity check
-    if (dt <= 0) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
-      exit(1);
-    }
+bool CUASSolver::updateHeadAndTransmissivity(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator) {
+  auto dt = timeIntegrator.getCurrentDt();
+  auto currTime = timeIntegrator.getCurrentTime();
+  auto timeSteps = timeIntegrator.getTimesteps();
+  auto timeStepIndex = timeIntegrator.getTimestepIndex();
 
+  // Sanity check
+  if (dt < 0) {
+    CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
+    exit(1);
+  }
+
+  // do we need to solve again?
+  bool solve = dt != 0;
+
+  if (solve) {
     //
     // UPDATE HEAD
     //
@@ -356,7 +351,6 @@ void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PETScGrid const &curre
       auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
       auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
 
-      auto currTime = timeSteps[timeStepIndex];
       // no fmt given for res.numberOfIterations, because this is only available from PETSc
       CUAS_INFO_RANK0("SOLVER: {:{}d} {:{}d} {:.5e} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
                       maxDigitsTime, eps, Teps, res.residualNorm, res.numberOfIterations, res.reason)
@@ -364,6 +358,8 @@ void CUASSolver::updateHeadAndTransmissivity(timeSecs dt, PETScGrid const &curre
   } else {
     // NO NEED TO UPDATE nextHead or T again
   }
+
+  return solve;
 }
 
 }  // namespace CUAS
