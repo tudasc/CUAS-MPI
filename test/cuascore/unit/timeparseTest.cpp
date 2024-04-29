@@ -6,8 +6,6 @@
 
 #include "timeparse.h"
 
-#include "Logger.h"
-
 #include "gtest/gtest.h"
 
 #include "petsc.h"

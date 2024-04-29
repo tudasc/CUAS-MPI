@@ -87,6 +87,7 @@ test-cuascore:
     - mpirun -n 4 --timeout 60 ./test-initialHead
     #- mpirun -n 1 --timeout 60 ./test-ModelReader
     #- mpirun -n 1 --timeout 60 ./test-timeForcingNetcdf
+    - mpirun -n 4 --timeout 60 ./test-TimeIntegrator
 
 test-cuas:
   stage: integration-test
