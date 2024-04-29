@@ -22,6 +22,46 @@
 
 namespace CUAS {
 
+CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHandler *solutionHandler)
+    : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
+  nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  // rate factor from flow law (ice rheology)
+  rateFactorIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  // basal velocity of ice
+  basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  melt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  tmpMelt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  creep = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  cavity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
+  gradHeadSquared = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
+  Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
+
+  DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
+               PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
+  DMSetFromOptions(dm);
+  DMSetUp(dm);
+  Mat petMat;
+  DMCreateMatrix(dm, &petMat);
+  matA = std::make_unique<PETScMatrix>(petMat);
+  bGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  solGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  globalIndicesBlocked = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fillGlobalIndicesBlocked(*globalIndicesBlocked);
+}
+
 void CUASSolver::setup() {
   melt->setZero();
   creep->setZero();
