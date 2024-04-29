@@ -22,6 +22,7 @@ struct CUASArgs {
   PetscScalar timeSteppingTheta;
   std::string timeStepFile;
   int saveEvery;
+  std::string saveInterval;
   PetscScalar conductivity;
   bool doAllChannels;
   bool doAnyChannel;

@@ -80,8 +80,11 @@ inline void defineArgs(cxxopts::Options &options) {
        "NetCDF input file to read a time step array",
        cxxopts::value<std::string>()->default_value(""))
       ("saveEvery",
-       "Save to NetCDF every nth timestep.",
+       "Save to NetCDF every nth timestep (deprecated).",
        cxxopts::value<int>()->default_value("0"))
+      ("saveInterval",
+       "Save to NetCDF whenever the interval is finished. Example: --saveInterval '5 days'",
+       cxxopts::value<std::string>()->default_value(""))
       ("conductivity",
        "Conductivity of layer.",
        cxxopts::value<PetscScalar>()->default_value("10"))
@@ -194,6 +197,7 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.dt = result["dt"].as<std::string>();
   args.timeStepFile = result["timeStepFile"].as<std::string>();
   args.saveEvery = result["saveEvery"].as<int>();
+  args.saveInterval = result["saveInterval"].as<std::string>();
   args.conductivity = result["conductivity"].as<PetscScalar>();
   args.disableUnconfined = result["disableUnconfined"].as<bool>();
   args.flowConstant = result["flowConstant"].as<PetscScalar>();
