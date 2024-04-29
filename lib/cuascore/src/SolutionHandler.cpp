@@ -180,7 +180,7 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
   //
   // STORE DATA, IF NEEDED
   //
-  OutputReason reason = getOutputReason(timeStepIndex, (int)timeSteps.size(), args.saveEvery);
+  OutputReason reason = getOutputReason(timeSteps, timeStepIndex);
 
   auto currTime = timeSteps[timeStepIndex];
 
@@ -332,13 +332,21 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, CUASSolver const &s
 }
 
 void SolutionHandler::setTimeUnits(std::string const &s) {
-  // Todo: do some checks
+  // TODO: do some checks
   file->addAttributeToVariable("time", "units", s);
 }
 
 void SolutionHandler::setCalendar(std::string const &s) {
-  // Todo: do some checks
+  // TODO: do some checks
   file->addAttributeToVariable("time", "calendar", s);
+}
+
+void SolutionHandler::setSaveStrategy(SaveStrategy strategy, long saveInterval, int saveEvery) {
+  // TODO do some checks
+
+  this->strategy = strategy;
+  this->saveInterval = saveInterval;
+  this->saveEvery = saveEvery;
 }
 
 void SolutionHandler::storePETScOptions() {
@@ -347,19 +355,40 @@ void SolutionHandler::storePETScOptions() {
   file->addGlobalAttribute("PETSC_OPTIONS_USED", getPETScOptionsUsed());
 }
 
-OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) {
+OutputReason SolutionHandler::getOutputReason(std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) const {
+  // TODO clean up get output reason
+
   if (timeStepIndex == 0) {
     return OutputReason::INITIAL;
   }
-  if (saveEvery > 0) {  // avoid division by zero in modulo operation
-    if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == numberOfTimeSteps - 1)) {
-      return OutputReason::NORMAL;
+
+  auto currTime = timeSteps[timeStepIndex];
+
+  if (strategy == SaveStrategy::INDEX) {
+    if (saveEvery > 0) {  // avoid division by zero in modulo operation
+      if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == timeSteps.size() - 1)) {
+        return OutputReason::NORMAL;
+      } else {
+        return OutputReason::NONE;
+      }
     } else {
       return OutputReason::NONE;
     }
-  } else {
-    return OutputReason::NONE;
+  } else if (strategy == SaveStrategy::TIMEINTERVAL) {
+    if (saveInterval > 0) {
+      if ((currTime % saveInterval == 0) || (currTime == timeSteps.back())) {
+        return OutputReason::NORMAL;
+      } else {
+        return OutputReason::NONE;
+      }
+    } else {
+      return OutputReason::NONE;
+    }
+  } else if (strategy == SaveStrategy::DEFAULT) {
+    return OutputReason::NORMAL;
   }
+
+  return OutputReason::NONE;
 }
 
 }  // namespace CUAS

@@ -22,6 +22,7 @@ class CUASSolver;
 
 enum class OutputSize { SMALL, NORMAL, LARGE, XLARGE };
 enum class OutputReason { NONE, INITIAL, NORMAL };
+enum class SaveStrategy { DEFAULT, TIMEINTERVAL, INDEX };
 
 class SolutionHandler {
  public:
@@ -42,6 +43,7 @@ class SolutionHandler {
 
   void setTimeUnits(std::string const &s);
   void setCalendar(std::string const &s);
+  void setSaveStrategy(SaveStrategy strategy, long saveInterval, int saveEvery);
 
  private:
   // write the values passed as parameters to the NetCDF file
@@ -60,6 +62,10 @@ class SolutionHandler {
   int nextSolution = 0;
   // output configuration
   OutputSize osize = OutputSize::SMALL;
+  // save strategy
+  SaveStrategy strategy = SaveStrategy::DEFAULT;
+  timeSecs saveInterval = 1;
+  int saveEvery = 1;
 
   // member functions
  private:
@@ -67,7 +73,7 @@ class SolutionHandler {
   // to the NetCDF file. This is important to get the naming for the NetCDF variables right.
   void defineSolution();
   // reason why we need to save this time step
-  static OutputReason getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery);
+  OutputReason getOutputReason(std::vector<CUAS::timeSecs> const &timeSteps, int timeStepIndex) const;
 };
 
 }  // namespace CUAS

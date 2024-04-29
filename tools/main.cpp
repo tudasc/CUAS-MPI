@@ -45,17 +45,30 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
 // unless saveEvery is negative --> no output
 std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args, CUAS::Time const &time,
                                                             CUAS::CUASModel const &model) {
-  if (args.saveEvery < 0)
+  if (args.saveEvery < 0 && args.saveInterval.empty()) {
     return nullptr;
+  }
+
+  // TODO we currently do not differentiate whether we run with dt, timesteparray or coupled
 
   std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
 
-  if (args.saveEvery == 0) {
-    CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size())
-    args.saveEvery = static_cast<int>(time.timeSteps.size());
+  if (!args.saveInterval.empty()) {
+    auto saveInterval = CUAS::parseTime(args.saveInterval);
+    if (args.saveEvery > 0) {
+      CUAS_WARN("Both --saveInterval and --saveEvery are used: ignoring --saveEvery.")
+    }
+    solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
+    solutionHandler->setSaveStrategy(CUAS::SaveStrategy::TIMEINTERVAL, saveInterval, -1);
+  } else {
+    auto saveEvery = args.saveEvery;
+    if (saveEvery == 0) {
+      CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size())
+      saveEvery = static_cast<int>(time.timeSteps.size());
+    }
+    solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
+    solutionHandler->setSaveStrategy(CUAS::SaveStrategy::INDEX, -1, saveEvery);
   }
-
-  solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
 
   // TODO move to solution handler constructor?
   if (!time.units.empty()) {
