@@ -308,29 +308,8 @@ void CUASSolver::storeData(PETScGrid const &currentQ, timeSecs dt, std::vector<C
   //
   // STORE DATA, IF NEEDED
   //
-  if (solutionHandler != nullptr) {
-    OutputReason reason = solutionHandler->getOutputReason(timeStepIndex, (int)timeSteps.size(), args->saveEvery);
-
-    auto currTime = timeSteps[timeStepIndex];
-
-    if (reason != OutputReason::NONE) {
-      if (!args->verboseSolver && args->verbose) {
-        // show only if verboseSolver is off
-        CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt)
-      }
-      // Process diagnostic variables for output only. We don't need them in every time step
-      getFluxMagnitude(*fluxMagnitude, *gradHeadSquared, *Teff);  // was currTransmissivity for a very long time
-      // ... more
-
-      if (reason == OutputReason::INITIAL) {
-        // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
-        solutionHandler->storeInitialSetup(*currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
-                                           *cavity, *pEffective, *Seff, *Teff, currentQ, *args);
-      } else {
-        solutionHandler->storeSolution(currTime, *currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
-                                       *cavity, *pEffective, *Seff, *Teff, currentQ, eps, Teps);
-      }
-    }
+  if (solutionHandler) {
+    solutionHandler->storeData(*this, *model, *args, currentQ, timeSteps, timeStepIndex, dt);
   }
 }
 
