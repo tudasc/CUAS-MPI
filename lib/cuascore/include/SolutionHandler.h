@@ -29,7 +29,8 @@ class SolutionHandler {
  public:
   // use this constructor if you want to determine the shape of the solution on your own
   // TODO should we base this on CUASModel?
-  SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize);
+  SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize,
+                  bool storeMutable = false);
   SolutionHandler(SolutionHandler &) = delete;
   SolutionHandler(SolutionHandler &&) = delete;
   SolutionHandler &operator=(SolutionHandler const &) = delete;
@@ -51,10 +52,12 @@ class SolutionHandler {
   void storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
                          CUASArgs const &args);
   void storeCUASArgs(CUASArgs const &args);
-  void storeModelInformation(CUASModel const &model);
+  void storeConstantModelInformation(CUASModel const &model);
+  void storeMutableModelInformation(CUASModel const &model);
   // write the values passed as parameters to the NetCDF file
   void storeSolution(CUAS::timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
                      PetscScalar eps_inf = NC_FILL_DOUBLE, PetscScalar Teps_inf = NC_FILL_DOUBLE);
+  void finalizeSolution();
 
  private:
   // NetCDF file that the SolutionHandler uses to store results
@@ -67,6 +70,9 @@ class SolutionHandler {
   SaveStrategy strategy = SaveStrategy::DEFAULT;
   timeSecs saveInterval = 1;
   int saveEvery = 1;
+  // defines if all fields are written per time step (usually coupled mode): true
+  // or only fields which change in pure CUAS-MPI: false (default)
+  const bool storeMutable;
 
   // member functions
  private:
