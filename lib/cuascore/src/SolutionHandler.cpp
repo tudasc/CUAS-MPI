@@ -17,7 +17,9 @@
 
 namespace CUAS {
 
-SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize) {
+SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize,
+                                 bool storeMutable)
+    : storeMutable(storeMutable) {
   file = std::make_unique<NetCDFFile>(fileName, dimX, dimY);
 
   if (outputSize == "small") {
@@ -40,7 +42,7 @@ void SolutionHandler::defineSolution() {
   /*
    * grid description
    */
-  file->defineScalar("time", true);
+  file->defineScalar("time", UNLIMITED);
   file->addAttributeToVariable("time", "units", "seconds since 01-01-01 00:00:00");
   file->addAttributeToVariable("time", "standard_name", "time");
   file->addAttributeToVariable("time", "calendar", "365_day");
@@ -58,7 +60,8 @@ void SolutionHandler::defineSolution() {
   file->addAttributeToVariable("y", "long_name", "Y-coordinate in Cartesian system");
   file->addAttributeToVariable("y", "axis", "Y");
 
-  file->defineGrid("bnd_mask");  // in the python version the noflow_mask was stored, here we store the bnd_mask
+  // in the python version the noflow_mask was stored, here we store the bnd_mask
+  file->defineGrid("bnd_mask", storeMutable);
   file->addAttributeToVariable("bnd_mask", "units", "1");
   file->addAttributeToVariable("bnd_mask", "flag_meanings",
                                "COMPUTE_FLAG DIRICHLET_FLAG NOFLOW_FLAG DIRICHLET_OCEAN_FLAG DIRICHLET_LAKE_FLAG");
@@ -103,7 +106,7 @@ void SolutionHandler::defineSolution() {
                                "rate of change in transmissivity inf-norm: eps_inf = max(|T^n-T^(n-1)|)/dt");
 
   if (osize >= OutputSize::NORMAL) {
-    file->defineGrid("topg", LIMITED);  // sometimes called bedrock
+    file->defineGrid("topg", storeMutable);  // sometimes called bedrock
     file->addAttributeToVariable("topg", "units", "m");
     file->addAttributeToVariable("topg", "standard_name", "land_ice_bed_elevation");
     file->addAttributeToVariable("topg", "long_name", "land_ice_bed_elevation");
@@ -151,7 +154,7 @@ void SolutionHandler::defineSolution() {
   }
 
   if (osize >= OutputSize::LARGE) {
-    file->defineGrid("thk");
+    file->defineGrid("thk", storeMutable);
     file->addAttributeToVariable("thk", "units", "m");
     file->addAttributeToVariable("thk", "standard_name", "land_ice_thickness");
     file->addAttributeToVariable("thk", "long_name", "land ice thickness");
@@ -168,7 +171,7 @@ void SolutionHandler::defineSolution() {
   }
 
   if (osize >= OutputSize::XLARGE) {
-    file->defineGrid("pice");  // direct input from ice sheet model or computed from geometry
+    file->defineGrid("pice", storeMutable);  // direct input from ice sheet model or computed from geometry
     file->addAttributeToVariable("pice", "units", "Pa");
     file->addAttributeToVariable("pice", "standard_name", "land_ice_pressure");
     file->addAttributeToVariable("pice", "long_name", "land ice pressure");
@@ -198,8 +201,13 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
       // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
       storeInitialSetup(solver, model, currentQ, args);
     } else {
+      if (storeMutable) {
+        storeMutableModelInformation(model);
+      }
       storeSolution(timeIntegrator.getCurrentTime(), solver, currentQ, solver.eps, solver.Teps);
     }
+
+    finalizeSolution();
   }
 }
 
@@ -261,11 +269,12 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   }
 }
 
-void SolutionHandler::storeModelInformation(const CUAS::CUASModel &model) {
+void SolutionHandler::storeConstantModelInformation(const CUAS::CUASModel &model) {
   file->write("x", model.xAxis);
   file->write("y", model.yAxis);
+}
 
-  //
+void SolutionHandler::storeMutableModelInformation(const CUAS::CUASModel &model) {
   file->write("bnd_mask", *model.bndMask, nextSolution);
 
   if (osize >= OutputSize::NORMAL) {
@@ -283,7 +292,9 @@ void SolutionHandler::storeModelInformation(const CUAS::CUASModel &model) {
 
 void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
                                         CUASArgs const &args) {
-  storeModelInformation(model);
+  storeConstantModelInformation(model);
+
+  storeMutableModelInformation(model);
 
   storeCUASArgs(args);
 
@@ -323,7 +334,9 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, CUASSolver const &s
     // output
     // todo: add other fields
   }
+}
 
+void SolutionHandler::finalizeSolution() {
   // Write everything to the file
   file->sync();
 
