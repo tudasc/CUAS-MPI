@@ -15,8 +15,14 @@ namespace CUAS {
 
 class Forcing {
  public:
-  virtual PETScGrid const &getCurrentQ(timeSecs currTime = 0) = 0;
-  virtual ~Forcing() = default;
+  explicit Forcing() = default;
+  Forcing(const Forcing &) = delete;
+  Forcing &operator=(Forcing const &) = delete;
+  Forcing(const Forcing &&) = delete;
+  Forcing &operator=(Forcing const &&) = delete;
+  ~Forcing() = default;
+
+  virtual PETScGrid const &getCurrentQ(timeSecs currTime) = 0;
 
  private:
   virtual void applyMultiplier(PetscScalar multiplier) = 0;

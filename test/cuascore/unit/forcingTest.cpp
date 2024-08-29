@@ -25,7 +25,7 @@ TEST(forcingTest, constant) {
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::SteadyForcing>(bmelt, supplyMultiplier / SPY);
   // constant forcing: 0, empty vector, false
-  auto &read = forcing->getCurrentQ().getReadHandle();
+  auto &read = forcing->getCurrentQ(0).getReadHandle();
   auto &readBmelt = bmelt.getReadHandle();
   for (int i = 0; i < bmelt.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < bmelt.getLocalNumOfCols(); ++j) {
