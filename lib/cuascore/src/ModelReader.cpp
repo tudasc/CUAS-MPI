@@ -40,7 +40,7 @@ void ModelReader::restartFromFile(CUAS::CUASSolver &solver, std::string const &r
 }
 
 std::unique_ptr<CUAS::TimeDependentForcing> ModelReader::getTimeDependentForcing(
-    std::string const &ncFileName, std::string const &fieldName, std::vector<PetscScalar> const &xAxis,
+    std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
     std::vector<PetscScalar> const &yAxis, PetscScalar multiplier, PetscScalar offset, bool loopForcing) {
   auto ncFile = std::make_unique<NetCDFFile>(ncFileName, 'r');
   auto nx = xAxis.size();
@@ -64,9 +64,30 @@ std::unique_ptr<CUAS::TimeDependentForcing> ModelReader::getTimeDependentForcing
   }
 
   ncFile->read("time", time);
-  ncFile->read(fieldName, forcing);
+  ncFile->read(variableName, forcing);
 
   return std::make_unique<CUAS::TimeDependentForcing>(forcing, time, multiplier, offset, loopForcing);
+}
+
+std::unique_ptr<CUAS::BufferedForcing> ModelReader::getBufferedForcing(
+    std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
+    std::vector<PetscScalar> const &yAxis, int numberOfSlicesPerLoad, PetscScalar multiplier, PetscScalar offset,
+    bool loopForcing) {
+  auto ncFile = std::make_unique<NetCDFFile>(ncFileName, 'r');
+
+  auto nx = xAxis.size();
+  auto ny = yAxis.size();
+  auto mx = ncFile->getDimX();
+  auto my = ncFile->getDimY();
+
+  if (nx != mx || ny != my) {
+    CUAS_ERROR("{}::{} {}: nx: {} != {} or ny: {} != {} in file '{}'. Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__, nx, mx, ny, my, ncFileName)
+    exit(1);
+  }
+
+  return std::make_unique<CUAS::BufferedForcing>(ncFile, variableName, nx, ny, numberOfSlicesPerLoad, multiplier,
+                                                 offset, loopForcing);
 }
 
 std::unique_ptr<CUAS::ScalarTimeDependentForcing> ModelReader::getScalarTimeDependentForcing(

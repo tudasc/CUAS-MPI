@@ -632,6 +632,65 @@ void NetCDFFile::read(std::string const &forcingName, std::vector<std::unique_pt
   }
 }
 
+void NetCDFFile::read(std::string const &forcingName, std::vector<std::unique_ptr<PETScGrid>> &forcing,
+                      int firstElement, int numberOfElementsToLoad) {
+  // firstElement + numberOfElementsToLoad > numberOfElements --> NetCDF Error
+
+  // firstElement < 0 --> NetCDF Error
+  if (firstElement < 0) {
+    CUAS_ERROR("{}::{} {} Index of first element to load is smaller than 0! Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
+  }
+  if (forcing.size() < numberOfElementsToLoad) {
+    CUAS_ERROR("{}::{} {} Number of slices to load is larger than buffer size! Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
+  }
+  if (forcing.size() != numberOfElementsToLoad) {
+    CUAS_WARN("{}::{} {} The size of the buffer is not fully utilised!.", __FILE__, __LINE__, __PRETTY_FUNCTION__)
+  }
+  if (numberOfElementsToLoad == 1) {
+    CUAS_WARN("{}::{} {} The size of the buffer is equal 1. This is an atypical use.", __FILE__, __LINE__,
+              __PRETTY_FUNCTION__)
+  }
+  if (numberOfElementsToLoad <= 0) {
+    CUAS_WARN("{}::{} {} The size of the buffer is less equal 0. Read buffered does nothing.", __FILE__, __LINE__,
+              __PRETTY_FUNCTION__)
+  }
+
+  auto varId = getVarId(forcingName);
+  int numOfDims;
+  nc_inq_varndims(fileId, varId, &numOfDims);
+  if (numOfDims != 3) {
+    CUAS_ERROR("{}::{} {} NetCDFFile.cpp: read() The forcing is not 3 dimensional! Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
+    exit(1);
+  }
+
+  // FIXME is this check useful
+  // // determine start and count of values
+  // if (!checkDimensionsTimeForcing(forcingName, forcing)) {
+  //   CUAS_ERROR("NetCDFFile.cpp: read() with std::vector of PETScGrid: sizes do not fit! Exiting.")
+  //   exit(1);
+  // }
+
+  for (int i = 0; i < numberOfElementsToLoad; ++i) {
+    PETScGrid &currentGrid = *forcing[i];
+    auto grid = currentGrid.getWriteHandle();
+    auto gridRaw = grid.getRaw();
+
+    auto nStart = static_cast<size_t>(firstElement + i);
+    auto yStart = static_cast<size_t>(currentGrid.getCornerY());
+    auto xStart = static_cast<size_t>(currentGrid.getCornerX());
+    std::array<size_t, 3> start = {nStart, yStart, xStart};
+    auto nSize = static_cast<size_t>(1);
+    auto ySize = static_cast<size_t>(currentGrid.getLocalNumOfRows());
+    auto xSize = static_cast<size_t>(currentGrid.getLocalNumOfCols());
+    std::array<size_t, 3> size = {nSize, ySize, xSize};
+
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), size.data(), &gridRaw[0][0]));
+  }
+}
+
 void NetCDFFile::write(std::string const &varName, PETScGrid const &input, int currentTimeStep) {
   auto currentVar = netcdfVars[varName];
   int varId = currentVar.varId;

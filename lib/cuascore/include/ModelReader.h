@@ -9,6 +9,7 @@
 
 #include "CUASModel.h"
 #include "CUASSolver.h"
+#include "Forcing/BufferedForcing.h"
 #include "Forcing/ScalarTimeDependentForcing.h"
 #include "Forcing/SteadyForcing.h"
 #include "Forcing/TimeDependentForcing.h"
@@ -39,9 +40,14 @@ class ModelReader {
                               bool restartNoneZeroInitialGuess);
 
   static std::unique_ptr<CUAS::TimeDependentForcing> getTimeDependentForcing(
-      std::string const &ncFileName, std::string const &fieldName, std::vector<PetscScalar> const &xAxis,
+      std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
       std::vector<PetscScalar> const &yAxis, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
       bool loopForcing = false);
+
+  static std::unique_ptr<CUAS::BufferedForcing> getBufferedForcing(
+      std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
+      std::vector<PetscScalar> const &yAxis, int numberOfSlicesPerLoad, PetscScalar multiplier = 1.0,
+      PetscScalar offset = 0.0, bool loopForcing = false);
 
   static std::unique_ptr<CUAS::ScalarTimeDependentForcing> getScalarTimeDependentForcing(
       std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
