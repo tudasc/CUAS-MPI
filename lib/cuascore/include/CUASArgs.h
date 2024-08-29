@@ -42,6 +42,7 @@ struct CUASArgs {
   bool noSmoothMelt;
   std::string coordinatesFile;
   std::string forcingFile;
+  int sizeOfForcingBuffer;
   bool loopForcing;
   PetscScalar basalVelocityIce;
   PetscScalar cavityBeta;

@@ -95,7 +95,11 @@ inline PETScGrid const &ScalarTimeDependentForcing::getCurrentQ(timeSecs currTim
   }
 
   if (loopForcing) {
+    // this condition would change the behaviour of loop forcing,
+    // keep consistent with BufferedForcing(loopForcing)
+    // if (currTime > allTime.back()) {
     currTime = currTime % time.back();
+    // }
   } else if (currTime > time.back()) {
     CUAS_WARN_RANK0(
         "{} was called with currTime > time.back(). Using last Q of forcingStack. "

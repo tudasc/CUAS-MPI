@@ -142,6 +142,9 @@ inline void defineArgs(cxxopts::Options &options) {
       ("initialHead",
        "Initial value for head. Nzero means that head is set such that effective pressure N is zero.",
        cxxopts::value<std::string>()->default_value("Nzero"))
+      ("sizeOfForcingBuffer",
+       "Time slices to use in Forcing Buffer (TimeForcing --> BufferedForcing). Value has to be -1 or >= 2 (default -1 --> load all).",
+       cxxopts::value<int>()->default_value("-1"))
       ("loopForcing",
        "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
       ("forcingFile",
@@ -210,6 +213,7 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.specificStorage = result["specificStorage"].as<PetscScalar>();
   args.specificYield = result["specificYield"].as<PetscScalar>();
   args.noSmoothMelt = result["noSmoothMelt"].as<bool>();
+  args.sizeOfForcingBuffer = result["sizeOfForcingBuffer"].as<int>();
   args.loopForcing = result["loopForcing"].as<bool>();
   args.coordinatesFile = result["coordinatesFile"].as<std::string>();
   args.forcingFile = result["forcingFile"].as<std::string>();

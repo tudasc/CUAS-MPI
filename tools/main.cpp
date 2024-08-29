@@ -95,8 +95,14 @@ void setupForcing(CUAS::CUASModel &model, CUAS::CUASArgs &args) {
   if (CUAS::ModelReader::isTimeDependent(args.forcingFile, "bmelt")) {
     if (CUAS::ModelReader::isTimeDependentField(args.forcingFile, "bmelt")) {
       CUAS_INFO_RANK0("Using time forcing with file: " + args.forcingFile)
-      model.Q = CUAS::ModelReader::getTimeDependentForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
-                                                           args.supplyMultiplier / SPY, 0.0, args.loopForcing);
+      if (args.sizeOfForcingBuffer < 2) {
+        model.Q = CUAS::ModelReader::getTimeDependentForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
+                                                             args.supplyMultiplier / SPY, 0.0, args.loopForcing);
+      } else {
+        model.Q = CUAS::ModelReader::getBufferedForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
+                                                        args.sizeOfForcingBuffer, args.supplyMultiplier / SPY, 0.0,
+                                                        args.loopForcing);
+      }
     } else {
       CUAS_INFO_RANK0("Using scalar time series forcing with file: " + args.forcingFile)
       model.Q = CUAS::ModelReader::getScalarTimeDependentForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,

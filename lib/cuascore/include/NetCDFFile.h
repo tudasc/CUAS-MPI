@@ -132,6 +132,8 @@ class NetCDFFile {
   void read(std::string const &varName, PetscScalar &dest) const;
   // writes the 3-dimensional forcing grid into a vector of grids
   void read(std::string const &forcingName, std::vector<std::unique_ptr<PETScGrid>> &forcing);
+  void read(std::string const &forcingName, std::vector<std::unique_ptr<PETScGrid>> &forcing, int firstElement,
+            int numberOfElementsToLoad);
   // flushes cached data to file
   void sync() const;
   // writes the input PETScGrid to the variable in the netcdf file with the name varName
