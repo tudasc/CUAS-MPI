@@ -24,17 +24,30 @@ class SteadyForcing : public Forcing {
     SteadyForcing::applyMultiplier(multiplier);
     SteadyForcing::applyOffset(offset);
   };
-  SteadyForcing(SteadyForcing &) = delete;
-  SteadyForcing(SteadyForcing &&) = delete;
+  SteadyForcing(const SteadyForcing &) = delete;
+  SteadyForcing &operator=(SteadyForcing const &) = delete;
+  SteadyForcing(const SteadyForcing &&) = delete;
+  SteadyForcing &operator=(SteadyForcing const &&) = delete;
+  ~SteadyForcing() = default;
 
-  PETScGrid const &getCurrentQ(timeSecs /*currTime*/ = 0) override { return forcing; }
+  PETScGrid const &getCurrentQ(timeSecs /*currTime*/) override { return forcing; }
 
  private:
   PETScGrid forcing;
 
-  void applyMultiplier(PetscScalar multiplier) override { forcing.applyMultiplier(multiplier); }
+  void applyMultiplier(PetscScalar multiplier) override {
+    if (multiplier == 1.0) {
+      return;
+    }
+    forcing.applyMultiplier(multiplier);
+  }
 
-  void applyOffset(PetscScalar offset) override { forcing.applyOffset(offset); }
+  void applyOffset(PetscScalar offset) override {
+    if (offset == 0.0) {
+      return;
+    }
+    forcing.applyOffset(offset);
+  }
 };
 
 }  // namespace CUAS
