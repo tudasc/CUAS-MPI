@@ -17,6 +17,8 @@ struct CUASArgs {
   PetscScalar Tmax;
   PetscScalar Tmin;
   PetscScalar Tinit;
+  std::string starttime;
+  std::string endtime;
   std::string totaltime;
   std::string dt;
   PetscScalar timeSteppingTheta;

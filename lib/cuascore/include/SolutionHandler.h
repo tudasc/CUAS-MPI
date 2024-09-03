@@ -50,7 +50,7 @@ class SolutionHandler {
  private:
   // write the values passed as parameters to the NetCDF file
   void storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
-                         CUASArgs const &args);
+                         CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator);
   void storeCUASArgs(CUASArgs const &args);
   void storeConstantModelInformation(CUASModel const &model);
   void storeMutableModelInformation(CUASModel const &model);
