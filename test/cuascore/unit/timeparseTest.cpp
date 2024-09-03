@@ -105,6 +105,17 @@ TEST(timeStepArray, getTimeStepArrayStepSizeToLarge) {
   ASSERT_EQ(timeStepArray.back(), 4);
 }
 
+TEST(timeStepArray, getTimeStepArrayStartTime) {
+  auto timeStepArray = CUAS::getTimeStepArray(7, 25, 4);
+  ASSERT_EQ(timeStepArray.size(), 6);
+  ASSERT_EQ(timeStepArray[0], 7);
+  ASSERT_EQ(timeStepArray[1], 11);
+  ASSERT_EQ(timeStepArray[2], 15);
+  ASSERT_EQ(timeStepArray[3], 19);
+  ASSERT_EQ(timeStepArray[4], 23);
+  ASSERT_EQ(timeStepArray[5], 25);
+}
+
 TEST(timeparseReverseTest, lessThan1second) {
   CUAS::timeSecs secs = 0;
   std::string timeString = CUAS::parseTime(secs);

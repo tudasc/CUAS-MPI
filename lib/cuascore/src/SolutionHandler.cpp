@@ -199,7 +199,7 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
 
     if (reason == OutputReason::INITIAL) {
       // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
-      storeInitialSetup(solver, model, currentQ, args);
+      storeInitialSetup(solver, model, currentQ, args, timeIntegrator);
     } else {
       if (storeMutable) {
         storeMutableModelInformation(model);
@@ -218,6 +218,8 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   file->addGlobalAttribute("Tmin", args.Tmin);
   file->addGlobalAttribute("Tinit", args.Tinit);
   file->addGlobalAttribute("totaltime", args.totaltime);
+  file->addGlobalAttribute("starttime", args.starttime);
+  file->addGlobalAttribute("endtime", args.endtime);
   file->addGlobalAttribute("dt", args.dt);
   file->addGlobalAttribute("timeSteppingTheta", args.timeSteppingTheta);
   file->addGlobalAttribute("timeStepFile", args.timeStepFile);
@@ -291,7 +293,7 @@ void SolutionHandler::storeMutableModelInformation(const CUAS::CUASModel &model)
 }
 
 void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
-                                        CUASArgs const &args) {
+                                        CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator) {
   storeConstantModelInformation(model);
 
   storeMutableModelInformation(model);
@@ -299,7 +301,7 @@ void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel cons
   storeCUASArgs(args);
 
   // store initial conditions if needed
-  storeSolution(0, solver, waterSource);
+  storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource);
 }
 
 void SolutionHandler::storeSolution(CUAS::timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,

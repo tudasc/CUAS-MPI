@@ -68,11 +68,17 @@ inline void defineArgs(cxxopts::Options &options) {
        "Netcdf output file size. ('small', 'normal', 'large')",
         cxxopts::value<std::string>()->default_value("normal"))
       ("totaltime",
-       "Total time to run model. Example: --totaltime '4 weeks' or --totaltime '3 years 1 week'",
-       cxxopts::value<std::string>()->default_value("10 years"))
+       "The total time, which is simulated (starttime + totaltime == endtime). Use either totaltime or endtime. Example: --totaltime '3 years 1 week'",
+       cxxopts::value<std::string>()->default_value(""))
+      ("starttime",
+       "The time of the first point in time. Example: --starttime '3 years 1 week'",
+       cxxopts::value<std::string>()->default_value(""))
+      ("endtime",
+       "The last point in time (starttime + totaltime == endtime). Use either totaltime or endtime. Example: --endtime '3 years 1 week'",
+       cxxopts::value<std::string>()->default_value(""))
       ("dt",
        "Time step length. Example: --dt '12 hours', --dt 1 day",
-       cxxopts::value<std::string>()->default_value("12 hours"))
+       cxxopts::value<std::string>()->default_value(""))
       ("timeSteppingTheta",
        "Time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson (0 <= theta <= 1)",
        cxxopts::value<PetscScalar>()->default_value("1.0"))
@@ -197,6 +203,8 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
 
   // need to be parsed
   args.totaltime = result["totaltime"].as<std::string>();
+  args.starttime = result["starttime"].as<std::string>();
+  args.endtime = result["endtime"].as<std::string>();
   args.dt = result["dt"].as<std::string>();
   args.timeStepFile = result["timeStepFile"].as<std::string>();
   args.saveEvery = result["saveEvery"].as<int>();

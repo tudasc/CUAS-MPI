@@ -29,7 +29,27 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
     if (args.verbose) {
       CUAS_INFO_RANK0("generates time step array using command line parameters")
     }
-    time.timeSteps = CUAS::getTimeStepArray(0, CUAS::parseTime(args.totaltime), CUAS::parseTime(args.dt));
+    auto starttime = CUAS::parseTime(args.starttime);
+    auto endtime = CUAS::parseTime(args.endtime);
+    auto totaltime = CUAS::parseTime(args.totaltime);
+    auto dt = CUAS::parseTime(args.dt);
+
+    if (totaltime > 0 && endtime > 0) {
+      CUAS_WARN_RANK0("endtime and totaltime are defined, totaltime '{}' is ignored, endtime '{}' is used.",
+                      args.totaltime, args.endtime)
+    }
+    if (totaltime <= 0 && endtime <= 0) {
+      CUAS_WARN_RANK0("neither totaltime nor endtime are defined.")
+    }
+
+    if (endtime <= 0 && totaltime > 0) {
+      endtime = starttime + totaltime;
+    }
+
+    CUAS_INFO_RANK0("generating time step array starttime {}, endtime {}, totaltime {}, dt {}.",
+                    CUAS::parseTime(starttime), CUAS::parseTime(endtime), CUAS::parseTime(totaltime),
+                    CUAS::parseTime(dt))
+    time.timeSteps = CUAS::getTimeStepArray(starttime, endtime, dt);
   }
 
   if (args.verbose) {
