@@ -35,30 +35,30 @@ class ModelReader {
 
  public:
   explicit ModelReader(std::string const &fileName);
-  std::unique_ptr<CUAS::CUASModel> fillModelFromNetcdf();
-  static void restartFromFile(CUAS::CUASSolver &solver, std::string const &restartFile,
-                              bool restartNoneZeroInitialGuess);
+  std::unique_ptr<CUASModel> fillModelFromNetcdf();
+  static void restartFromFile(CUASSolver &solver, std::string const &restartFile, bool restartNoneZeroInitialGuess);
 
-  static std::unique_ptr<CUAS::TimeDependentForcing> getTimeDependentForcing(
+  static std::unique_ptr<TimeDependentForcing> getTimeDependentForcing(
       std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
       std::vector<PetscScalar> const &yAxis, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
       bool loopForcing = false);
 
-  static std::unique_ptr<CUAS::BufferedForcing> getBufferedForcing(
-      std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
-      std::vector<PetscScalar> const &yAxis, int numberOfSlicesPerLoad, PetscScalar multiplier = 1.0,
-      PetscScalar offset = 0.0, bool loopForcing = false);
+  static std::unique_ptr<BufferedForcing> getBufferedForcing(std::string const &ncFileName,
+                                                             std::string const &variableName,
+                                                             std::vector<PetscScalar> const &xAxis,
+                                                             std::vector<PetscScalar> const &yAxis,
+                                                             int numberOfSlicesPerLoad, PetscScalar multiplier = 1.0,
+                                                             PetscScalar offset = 0.0, bool loopForcing = false);
 
-  static std::unique_ptr<CUAS::ScalarTimeDependentForcing> getScalarTimeDependentForcing(
+  static std::unique_ptr<ScalarTimeDependentForcing> getScalarTimeDependentForcing(
       std::string const &ncFileName, std::string const &variableName, std::vector<PetscScalar> const &xAxis,
       std::vector<PetscScalar> const &yAxis, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
       bool loopForcing = false);
 
-  static std::unique_ptr<CUAS::SteadyForcing> getSteadyForcing(std::string const &ncFileName,
-                                                               std::string const &variableName,
-                                                               std::vector<PetscScalar> const &xAxis,
-                                                               std::vector<PetscScalar> const &yAxis,
-                                                               PetscScalar multiplier = 1.0, PetscScalar offset = 0.0);
+  static std::unique_ptr<SteadyForcing> getSteadyForcing(std::string const &ncFileName, std::string const &variableName,
+                                                         std::vector<PetscScalar> const &xAxis,
+                                                         std::vector<PetscScalar> const &yAxis,
+                                                         PetscScalar multiplier = 1.0, PetscScalar offset = 0.0);
 
   static bool isTimeDependent(std::string const &ncFileName, std::string const &variableName);
 

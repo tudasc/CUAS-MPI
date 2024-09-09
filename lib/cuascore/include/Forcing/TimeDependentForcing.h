@@ -31,15 +31,26 @@ class TimeDependentForcing : public Forcing {
   TimeDependentForcing &operator=(TimeDependentForcing const &) = delete;
   TimeDependentForcing(const TimeDependentForcing &&) = delete;
   TimeDependentForcing &operator=(TimeDependentForcing const &&) = delete;
-  ~TimeDependentForcing() = default;
+  ~TimeDependentForcing() override = default;
 
+  // member functions
+ public:
   PETScGrid const &getCurrentQ(timeSecs currTime) override;
 
+  // member
+ public:
+  // member
  private:
   std::vector<timeSecs> const time;
   std::vector<std::unique_ptr<PETScGrid>> forcingStack;
+
+  PetscScalar const multiplier;
+  PetscScalar const offset;
   bool const loopForcing;
-  std::unique_ptr<PETScGrid> currQ;
+
+  // member functions
+ private:
+  void loadSlices(std::vector<std::unique_ptr<PETScGrid>> &forcing);
 
   void applyMultiplier(PetscScalar multiplier) override {
     if (multiplier == 1.0) {
@@ -63,7 +74,7 @@ class TimeDependentForcing : public Forcing {
 inline TimeDependentForcing::TimeDependentForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing,
                                                   std::vector<timeSecs> const &time, PetscScalar multiplier,
                                                   PetscScalar offset, bool loopForcing)
-    : time(time), loopForcing(loopForcing) {
+    : time(time), multiplier(multiplier), offset(offset), loopForcing(loopForcing) {
   if (time.size() != forcing.size()) {
     CUAS_ERROR("{}: time and forcing sizes are not compatible. Exiting.", __PRETTY_FUNCTION__)
     exit(1);
@@ -78,11 +89,9 @@ inline TimeDependentForcing::TimeDependentForcing(std::vector<std::unique_ptr<PE
     exit(1);
   }
 
-  currQ = std::make_unique<PETScGrid>(forcing[0]->getTotalNumOfCols(), forcing[0]->getTotalNumOfRows());
-  std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
+  loadSlices(forcing);
 
-  TimeDependentForcing::applyMultiplier(multiplier);
-  TimeDependentForcing::applyOffset(offset);
+  currQ = std::make_unique<PETScGrid>(forcingStack[0]->getTotalNumOfCols(), forcingStack[0]->getTotalNumOfRows());
 }
 
 inline PETScGrid const &TimeDependentForcing::getCurrentQ(timeSecs currTime) {
@@ -134,6 +143,14 @@ inline PETScGrid const &TimeDependentForcing::getCurrentQ(timeSecs currTime) {
     }
   }
   return *currQ;
+}
+
+inline void TimeDependentForcing::loadSlices(std::vector<std::unique_ptr<PETScGrid>> &forcing) {
+  forcingStack.reserve(forcing.size());
+  std::move(begin(forcing), end(forcing), std::back_inserter(forcingStack));
+
+  TimeDependentForcing::applyMultiplier(multiplier);
+  TimeDependentForcing::applyOffset(offset);
 }
 
 }  // namespace CUAS

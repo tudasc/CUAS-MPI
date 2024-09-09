@@ -235,16 +235,22 @@ inline void binaryDilation(PETScGrid &output, PETScGrid const &input) {
 
   for (int i = 0; i < iter_rows; ++i) {
     for (int j = 0; j < iter_cols; ++j) {
-      if (in(index_rows, index_cols, GHOSTED))
+      // TODO we only have to evaluate this until we found one true
+      if (0.0 != in(index_rows, index_cols, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows + 1, index_cols, GHOSTED))
+      }
+      if (0.0 != in(index_rows + 1, index_cols, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows - 1, index_cols, GHOSTED))
+      }
+      if (0.0 != in(index_rows - 1, index_cols, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows, index_cols + 1, GHOSTED))
+      }
+      if (0.0 != in(index_rows, index_cols + 1, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows, index_cols - 1, GHOSTED))
+      }
+      if (0.0 != in(index_rows, index_cols - 1, GHOSTED)) {
         out(i, j) = true;
+      }
       ++index_cols;
     }
     index_cols = 1;

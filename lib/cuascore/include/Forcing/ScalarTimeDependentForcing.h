@@ -31,16 +31,26 @@ class ScalarTimeDependentForcing : public Forcing {
   ScalarTimeDependentForcing &operator=(ScalarTimeDependentForcing const &) = delete;
   ScalarTimeDependentForcing(const ScalarTimeDependentForcing &&) = delete;
   ScalarTimeDependentForcing &operator=(ScalarTimeDependentForcing const &&) = delete;
-  ~ScalarTimeDependentForcing() = default;
+  ~ScalarTimeDependentForcing() override = default;
 
+  // member functions
+ public:
   PETScGrid const &getCurrentQ(timeSecs currTime) override;
 
+  // member
+ public:
+  // member
  private:
-  std::unique_ptr<PETScGrid> currQ;
   std::vector<timeSecs> const time;
   std::vector<PetscScalar> timeSeries;
+
   bool const loopForcing;
-  int rowIndex, colIndex;
+  int const rowIndex;
+  int const colIndex;
+
+  // member functions
+ private:
+  PETScGrid const &setValueAtPos(PetscScalar value);
 
   // Note, we apply the multiplier directly on the scalar time series input.
   void applyMultiplier(PetscScalar multiplier) override {
@@ -59,8 +69,6 @@ class ScalarTimeDependentForcing : public Forcing {
     std::transform(this->timeSeries.begin(), this->timeSeries.end(), this->timeSeries.begin(),
                    [&offset](auto &el) { return el + offset; });
   }
-
-  PETScGrid const &setValueAtPos(PetscScalar value);
 };
 
 inline ScalarTimeDependentForcing::ScalarTimeDependentForcing(int nx, int const ny, int rowIndex, int colIndex,
