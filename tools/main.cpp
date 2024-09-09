@@ -5,9 +5,9 @@
  */
 
 #include "CUASArgs.h"
-#include "CUASConstants.h"
 #include "CUASModel.h"
 #include "CUASSolver.h"
+#include "Forcing/setup.h"
 #include "ModelReader.h"
 #include "SolutionHandler.h"
 #include "timeparse.h"
@@ -103,36 +103,6 @@ std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args
 
 void restartFromNetCDF(CUAS::CUASSolver &solver, std::string const &restartFile, bool restartNoneZeroInitialGuess) {
   CUAS::ModelReader::restartFromFile(solver, restartFile, restartNoneZeroInitialGuess);
-}
-
-void setupForcing(CUAS::CUASModel &model, CUAS::CUASArgs &args) {
-  if (args.forcingFile.empty()) {
-    CUAS_WARN_RANK0("no forcing file given --> try to use input file as forcing file")
-    args.forcingFile = args.input;
-  }
-
-  // Note, bmelt is still in units m.a-1, but needs to be m.s-1
-  if (CUAS::ModelReader::isTimeDependent(args.forcingFile, "bmelt")) {
-    if (CUAS::ModelReader::isTimeDependentField(args.forcingFile, "bmelt")) {
-      CUAS_INFO_RANK0("Using time forcing with file: " + args.forcingFile)
-      if (args.sizeOfForcingBuffer < 2) {
-        model.Q = CUAS::ModelReader::getTimeDependentForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
-                                                             args.supplyMultiplier / SPY, 0.0, args.loopForcing);
-      } else {
-        model.Q = CUAS::ModelReader::getBufferedForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
-                                                        args.sizeOfForcingBuffer, args.supplyMultiplier / SPY, 0.0,
-                                                        args.loopForcing);
-      }
-    } else {
-      CUAS_INFO_RANK0("Using scalar time series forcing with file: " + args.forcingFile)
-      model.Q = CUAS::ModelReader::getScalarTimeDependentForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
-                                                                 args.supplyMultiplier / SPY, 0.0, args.loopForcing);
-    }
-  } else {
-    CUAS_INFO_RANK0("Using constant forcing with file: " + args.forcingFile)
-    model.Q = CUAS::ModelReader::getSteadyForcing(args.forcingFile, "bmelt", model.xAxis, model.yAxis,
-                                                  args.supplyMultiplier / SPY, 0.0);
-  }
 }
 
 int main(int argc, char *argv[]) {
