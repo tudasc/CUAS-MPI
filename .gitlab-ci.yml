@@ -97,6 +97,7 @@ test-cuascore:
     - cd $CUAS_INSTALL_DIR/test/cuascore/unit
     - mpirun -n 1 --timeout 60 ./test-CUASArgs
     - mpirun -n 1 --timeout 60 ./test-timeparse
+    - mpirun -n 1 --timeout 60 ./test-utilities
     - mpirun -n 9 --timeout 60 ./test-CUASKernels
     - mpirun -n 6 --timeout 60 ./test-specialgradient
     - mpirun -n 6 --timeout 60 ./test-forcing

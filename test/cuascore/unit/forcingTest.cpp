@@ -5,6 +5,7 @@
  */
 
 #include "CUASConstants.h"
+#include "Forcing/MultiForcing.h"
 #include "Forcing/SteadyForcing.h"
 #include "Forcing/TimeDependentForcing.h"
 #include "timeparse.h"
@@ -222,6 +223,42 @@ TEST(forcingTest, loopForcing) {
       }
     }
   }
+}
+
+TEST(forcingTest, multiForcing) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  CUAS::MultiForcing multiForcing(20, 10);
+  {
+    std::vector<std::unique_ptr<PETScGrid>> forcingStack;
+    std::vector<CUAS::timeSecs> time;
+    for (int i = 0; i < 3; ++i) {
+      forcingStack.push_back(std::make_unique<PETScGrid>(20, 10));
+      forcingStack[i]->setConst(i + 1);
+      time.push_back((i + 1) * 10);
+    }
+    std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::TimeDependentForcing>(forcingStack, time);
+    multiForcing.registerNewForcing(forcing);
+  }
+
+  {
+    PETScGrid bmelt(20, 10);
+    bmelt.setConst(3.14);
+    std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::SteadyForcing>(bmelt);
+    multiForcing.registerNewForcing(forcing);
+  }
+
+  auto &t1 = multiForcing.getCurrentQ(15);
+  auto &t1Read = t1.getReadHandle();
+  ASSERT_DOUBLE_EQ(t1Read(0, 0), 3.14 + 1.5);
+
+  auto &t2 = multiForcing.getCurrentQ(23);
+  auto &t2Read = t1.getReadHandle();
+  ASSERT_DOUBLE_EQ(t1Read(0, 0), 3.14 + 2.3);
+
+  auto &t3 = multiForcing.getCurrentQ(33);
+  auto &t3Read = t1.getReadHandle();
+  ASSERT_DOUBLE_EQ(t1Read(0, 0), 3.14 + 3);
 }
 
 int main(int argc, char *argv[]) {

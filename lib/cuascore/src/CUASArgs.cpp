@@ -154,7 +154,10 @@ inline void defineArgs(cxxopts::Options &options) {
       ("loopForcing",
        "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
       ("forcingFile",
-       "forcing input file (NetCDF)",
+       "Defines an input file (NetCDF) to create a forcing. "
+       "A list of multiple files is possible (Separator ;). "
+       "Each file has to provide a field named 'bmelt'. "
+       "Example: --forcingFile 'filepath;filepath'",
        cxxopts::value<std::string>()->default_value(""))
       ("coordinatesFile",
        "file containing lat/lon grids to copied into the output file (NetCDF)",
