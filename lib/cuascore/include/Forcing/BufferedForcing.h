@@ -31,7 +31,7 @@ class BufferedForcing : public Forcing {
   BufferedForcing &operator=(BufferedForcing const &) = delete;
   BufferedForcing(const BufferedForcing &&) = delete;
   BufferedForcing &operator=(BufferedForcing const &&) = delete;
-  ~BufferedForcing() = default;
+  ~BufferedForcing() override = default;
 
   // member functions
  public:
@@ -41,8 +41,6 @@ class BufferedForcing : public Forcing {
  public:
   // member
  private:
-  std::unique_ptr<PETScGrid> currQ;
-
   std::vector<timeSecs> allTime;
   std::vector<timeSecs> time;
   std::vector<std::unique_ptr<PETScGrid>> forcingStack;
@@ -136,7 +134,7 @@ inline BufferedForcing::BufferedForcing(std::unique_ptr<NetCDFFile> &ncFile, std
   }
 
   // resize time and forcingStack as a buffer
-  time.resize(numberOfSlicesPerLoad, 0.0);
+  time.resize(numberOfSlicesPerLoad, 0);
   forcingStack.resize(numberOfSlicesPerLoad);
 
   for (std::unique_ptr<PETScGrid> &grid : forcingStack) {

@@ -159,7 +159,6 @@ inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTi
     exit(1);
   }
 
-  // relationship between beginning and end
   // end has to be larger than start
   if (startTime > endTime) {
     CUAS_ERROR("{} called with invalid startTime = {} > endTime = {}. Exiting.",  //

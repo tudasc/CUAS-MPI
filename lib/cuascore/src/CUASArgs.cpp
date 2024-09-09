@@ -38,7 +38,7 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   if (args.verbose) {
     CUAS_INFO_RANK0("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
-                    result["output"].as<std::string>());
+                    result["output"].as<std::string>())
   }
 }
 
@@ -77,7 +77,7 @@ inline void defineArgs(cxxopts::Options &options) {
        "The last point in time (starttime + totaltime == endtime). Use either totaltime or endtime. Example: --endtime '3 years 1 week'",
        cxxopts::value<std::string>()->default_value(""))
       ("dt",
-       "Time step length. Example: --dt '12 hours', --dt 1 day",
+       "Time step length. Example: --dt '12 hours' or --dt 1 day",
        cxxopts::value<std::string>()->default_value(""))
       ("timeSteppingTheta",
        "Time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson (0 <= theta <= 1)",
@@ -154,13 +154,13 @@ inline void defineArgs(cxxopts::Options &options) {
       ("loopForcing",
        "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
       ("forcingFile",
-       "forcing input file (netcdf)",
+       "forcing input file (NetCDF)",
        cxxopts::value<std::string>()->default_value(""))
       ("coordinatesFile",
-       "file containing lat/lon grids to copied into the output file (netcdf)",
+       "file containing lat/lon grids to copied into the output file (NetCDF)",
        cxxopts::value<std::string>()->default_value(""))
       ("seaLevelForcing",
-       "Apply sea level forcing from netcdf scalar time series file.",
+       "Apply sea level forcing from NetCDF scalar time series file.",
        cxxopts::value<std::string>()->default_value(""))
       ("positional",
        "Positional arguments: these are the arguments that are entered without an option.",

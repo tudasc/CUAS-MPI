@@ -17,36 +17,42 @@ namespace CUAS {
 
 class SteadyForcing : public Forcing {
  public:
-  explicit SteadyForcing(PETScGrid const &m_forcing, PetscScalar const multiplier = 1.0, PetscScalar const offset = 0.0)
-      : forcing(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows()) {
-    forcing.copy(m_forcing);
+  explicit SteadyForcing(PETScGrid const &m_forcing, PetscScalar const multiplier = 1.0,
+                         PetscScalar const offset = 0.0) {
+    currQ = std::make_unique<PETScGrid>(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows());
+    currQ->copy(m_forcing);
 
     SteadyForcing::applyMultiplier(multiplier);
     SteadyForcing::applyOffset(offset);
-  };
+  }
   SteadyForcing(const SteadyForcing &) = delete;
   SteadyForcing &operator=(SteadyForcing const &) = delete;
   SteadyForcing(const SteadyForcing &&) = delete;
   SteadyForcing &operator=(SteadyForcing const &&) = delete;
-  ~SteadyForcing() = default;
+  ~SteadyForcing() override = default;
 
-  PETScGrid const &getCurrentQ(timeSecs /*currTime*/) override { return forcing; }
+  // member functions
+ public:
+  PETScGrid const &getCurrentQ(timeSecs /*currTime*/) override { return *currQ; }
 
+  // member
+ public:
+  // member
  private:
-  PETScGrid forcing;
-
+  // member functions
+ private:
   void applyMultiplier(PetscScalar multiplier) override {
     if (multiplier == 1.0) {
       return;
     }
-    forcing.applyMultiplier(multiplier);
+    currQ->applyMultiplier(multiplier);
   }
 
   void applyOffset(PetscScalar offset) override {
     if (offset == 0.0) {
       return;
     }
-    forcing.applyOffset(offset);
+    currQ->applyOffset(offset);
   }
 };
 

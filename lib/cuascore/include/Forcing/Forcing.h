@@ -20,10 +20,18 @@ class Forcing {
   Forcing &operator=(Forcing const &) = delete;
   Forcing(const Forcing &&) = delete;
   Forcing &operator=(Forcing const &&) = delete;
-  ~Forcing() = default;
+  virtual ~Forcing() = default;
 
+  // member functions
+ public:
   virtual PETScGrid const &getCurrentQ(timeSecs currTime) = 0;
 
+  // member
+ public:
+  // member
+ protected:
+  std::unique_ptr<PETScGrid> currQ;
+  // member functions
  private:
   virtual void applyMultiplier(PetscScalar multiplier) = 0;
   virtual void applyOffset(PetscScalar offset) = 0;

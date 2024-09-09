@@ -68,7 +68,6 @@ inline std::string getPETScConfiguration() { return CUAS::vformat("PETSc configu
 inline std::string getNetCDFInformation() { return CUAS::vformat("NetCDF %s.", nc_inq_libvers()); }
 
 std::string version() {
-  char buffer[TEMPORARY_STRING_LENGTH];
   std::string result;
 
   result += CUAS::vformat("CUAS-MPI (branch: %s, tag: %s, commit: %s)", GIT_BRANCH, GIT_TAG, GIT_REV);
@@ -100,7 +99,7 @@ std::string vformat(const char *const zcFormat, ...) {
   // and a functionally reliable call to mock the formatting
   va_list vaArgsCopy;
   va_copy(vaArgsCopy, vaArgs);
-  const int iLen = std::vsnprintf(NULL, 0, zcFormat, vaArgsCopy);
+  auto iLen = std::vsnprintf(nullptr, 0, zcFormat, vaArgsCopy);
   va_end(vaArgsCopy);
 
   // return a formatted string without risking memory mismanagement
