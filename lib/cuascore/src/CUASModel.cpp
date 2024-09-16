@@ -13,7 +13,7 @@
 
 namespace CUAS {
 
-CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(numOfRows) {
+CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(numOfRows), waterSource(nullptr) {
   xAxis.resize(Ncols);
   yAxis.resize(Nrows);
   dx = 0.0;
@@ -22,9 +22,6 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   topg = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   thk = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  PETScGrid zeroGrid(numOfCols, numOfRows);
-  zeroGrid.setZero();
-  waterSource = std::make_unique<SteadyForcing>(zeroGrid);
   pIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 }
 
@@ -57,7 +54,20 @@ void CUASModel::init() {
   bndMask->findAndReplaceRealBoundary((PetscScalar)COMPUTE_FLAG, (PetscScalar)NOFLOW_FLAG);
 }
 
-PETScGrid const &CUASModel::getCurrentWaterSource(timeSecs currTime) { return waterSource->getCurrentQ(currTime); }
+bool CUASModel::providesWaterSource() const { return waterSource != nullptr; }
+
+PETScGrid const &CUASModel::getCurrentWaterSource(timeSecs currTime) {
+  if (!providesWaterSource()) {
+    CUAS_WARN(
+        "Called CUASModel::getCurrentWaterSource, but no WaterSource initialized, we create a default 0 WaterSource. "
+        "This causes overhead, please check providesWaterSource, before calling getCurrentWaterSource.")
+    PETScGrid zeroGrid(Ncols, Nrows);
+    zeroGrid.setZero();
+    waterSource = std::make_unique<SteadyForcing>(zeroGrid);
+  }
+
+  return waterSource->getCurrentQ(currTime);
+}
 
 void CUASModel::setWaterSource(std::unique_ptr<Forcing> waterSource) { this->waterSource = std::move(waterSource); }
 

@@ -8,6 +8,7 @@
 #define CUAS_MODEL_H
 
 #include "Forcing/Forcing.h"
+#include "WaterSource.h"
 
 #include "PETScGrid.h"
 
@@ -17,7 +18,7 @@
 
 namespace CUAS {
 
-class CUASModel {
+class CUASModel : public WaterSource {
  public:
   explicit CUASModel(int numOfCols, int numOfRows);
   CUASModel(CUASModel &) = delete;
@@ -30,7 +31,8 @@ class CUASModel {
  public:
   void init();
 
-  PETScGrid const &getCurrentWaterSource(timeSecs currTime);
+  [[nodiscard]] bool providesWaterSource() const override;
+  PETScGrid const &getCurrentWaterSource(timeSecs currTime) override;
   void setWaterSource(std::unique_ptr<Forcing> waterSource);
 
   // member

@@ -50,6 +50,7 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHan
 
   /***** setup water source *****/
   waterSource = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  addWaterSource(dynamic_cast<WaterSource *>(model));
 
   /***** setup equation system *****/
   DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
@@ -256,7 +257,39 @@ void CUASSolver::prepare() {
   }
 }
 
-void CUASSolver::updateWaterSource(timeSecs currTime) { waterSource->copy(model->getCurrentWaterSource(currTime)); }
+void CUASSolver::updateWaterSource(timeSecs currTime) {
+  if (waterSources.empty()) {
+    // if we do not have a water source in water sources, water source is set to 0
+    waterSource->setZero();
+  } else if (waterSources.size() == 1) {
+    // if we have one water source, we only check this water source
+    // if it provides a water source, we copy the current field in water source
+    // if it does not provide a water source, we set wat source to 0
+    if (waterSources[0]->providesWaterSource()) {
+      waterSource->copy(waterSources[0]->getCurrentWaterSource(currTime));
+    } else {
+      waterSource->setZero();
+    }
+  } else {
+    // if multiple water sources are provided we iterate all of them
+    // all water sources are checked if they provide a water source
+    // if they do not provide a water source they are skipped
+    waterSource->setZero();
+    auto writeHandle = waterSource->getWriteHandle();
+    for (auto w : waterSources) {
+      if (!w->providesWaterSource()) {
+        continue;
+      }
+      auto &curr = w->getCurrentWaterSource(currTime);
+      auto &readHandle = curr.getReadHandle();
+      for (int i = 0; i < waterSource->getLocalNumOfRows(); ++i) {
+        for (int j = 0; j < waterSource->getLocalNumOfCols(); ++j) {
+          writeHandle(i, j) = writeHandle(i, j) + readHandle(i, j);
+        }
+      }
+    }
+  }
+}
 
 void CUASSolver::preComputation() {
   // TODO: basal velocity and rate factor fields are probably also time dependent
@@ -365,6 +398,14 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
   }
 
   return solve;
+}
+
+void CUASSolver::addWaterSource(WaterSource *newWaterSource) {
+  if (std::find(waterSources.begin(), waterSources.end(), newWaterSource) != waterSources.end()) {
+    CUAS_WARN("New water source was already added to the CUAS Solver before and is refused to be added again.")
+    return;
+  }
+  waterSources.emplace_back(newWaterSource);
 }
 
 }  // namespace CUAS
