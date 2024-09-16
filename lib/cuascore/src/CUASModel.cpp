@@ -7,6 +7,7 @@
 #include "CUASModel.h"
 
 #include "CUASConstants.h"
+#include "Forcing/SteadyForcing.h"
 
 #include "Logger.h"
 
@@ -21,7 +22,9 @@ CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(num
   topg = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   thk = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  Q = nullptr;
+  PETScGrid zeroGrid(numOfCols, numOfRows);
+  zeroGrid.setZero();
+  waterSource = std::make_unique<SteadyForcing>(zeroGrid);
   pIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 }
 
@@ -53,6 +56,10 @@ void CUASModel::init() {
   // require that the outer (ghost) nodes are no-flow in cuas-mpi.
   bndMask->findAndReplaceRealBoundary((PetscScalar)COMPUTE_FLAG, (PetscScalar)NOFLOW_FLAG);
 }
+
+PETScGrid const &CUASModel::getCurrentWaterSource(timeSecs currTime) { return waterSource->getCurrentQ(currTime); }
+
+void CUASModel::setWaterSource(std::unique_ptr<Forcing> waterSource) { this->waterSource = std::move(waterSource); }
 
 PetscScalar CUASModel::getAxisSpacing(std::vector<PetscScalar> const &axis, const std::string &axisName) {
   auto n = axis.size();

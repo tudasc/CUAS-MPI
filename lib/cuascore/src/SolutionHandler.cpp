@@ -179,7 +179,7 @@ void SolutionHandler::defineSolution() {
 }
 
 void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args,
-                                PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator) {
+                                PETScGrid const &waterSource, CUASTimeIntegrator const &timeIntegrator) {
   //
   // STORE DATA, IF NEEDED
   //
@@ -199,12 +199,12 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
 
     if (reason == OutputReason::INITIAL) {
       // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
-      storeInitialSetup(solver, model, currentQ, args, timeIntegrator);
+      storeInitialSetup(solver, model, waterSource, args, timeIntegrator);
     } else {
       if (storeMutable) {
         storeMutableModelInformation(model);
       }
-      storeSolution(timeIntegrator.getCurrentTime(), solver, currentQ, solver.eps, solver.Teps);
+      storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource, solver.eps, solver.Teps);
     }
 
     finalizeSolution();

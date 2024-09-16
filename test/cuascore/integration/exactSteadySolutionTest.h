@@ -171,7 +171,7 @@ std::unique_ptr<CUAS::CUASModel> fillModelData(int nx, int ny, PetscScalar res) 
   model.bndMask->setConst(COMPUTE_FLAG);
   model.bndMask->setGhostBoundary(DIRICHLET_FLAG);
   model.bndMask->setRealBoundary(DIRICHLET_FLAG);
-  model.Q = std::make_unique<SteadyTestForcing>(nx, ny, res);
+  model.setWaterSource(std::make_unique<SteadyTestForcing>(nx, ny, res));
 
   return pmodel;
 }

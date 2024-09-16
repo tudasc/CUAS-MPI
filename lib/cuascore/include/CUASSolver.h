@@ -75,12 +75,15 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> rateFactorIce;
   std::unique_ptr<PETScGrid> basalVelocityIce;
 
+  std::unique_ptr<PETScGrid> waterSource;
+
   // member functions
  private:
   void prepare();
+  void updateWaterSource(timeSecs currTime);
   void preComputation();
-  void storeData(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator);
-  [[nodiscard]] bool updateHeadAndTransmissivity(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator);
+  void storeData(CUASTimeIntegrator const &timeIntegrator);
+  [[nodiscard]] bool updateHeadAndTransmissivity(CUASTimeIntegrator const &timeIntegrator);
 };
 
 }  // namespace CUAS

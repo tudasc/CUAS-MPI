@@ -14,14 +14,14 @@ inline PetscScalar hmean(PetscScalar x1, PetscScalar x2) { return 2.0 * x1 * x2 
 
 void systemmatrix(PETScMatrix &A, PETScGrid &b, PETScGrid const &hydraulicStorativity,
                   PETScGrid const &hydraulicTransmissivity, PetscScalar dx, PetscScalar dt, PetscScalar theta,
-                  PETScGrid const &hydraulicHead, PETScGrid const &Q, PETScGrid const &dirichletValues,
+                  PETScGrid const &hydraulicHead, PETScGrid const &waterSource, PETScGrid const &dirichletValues,
                   PETScGrid const &bndMask, PETScGrid const &globalIndices) {
   auto &mask = bndMask.getReadHandle();
   auto &values = dirichletValues.getReadHandle();
   auto &storativity = hydraulicStorativity.getReadHandle();
   auto &transmissivity = hydraulicTransmissivity.getReadHandle();
   auto &head = hydraulicHead.getReadHandle();
-  auto &source = Q.getReadHandle();
+  auto &source = waterSource.getReadHandle();
   auto &globalIndicesHandle = globalIndices.getReadHandle();
 
   auto bHandle = b.getWriteHandle();

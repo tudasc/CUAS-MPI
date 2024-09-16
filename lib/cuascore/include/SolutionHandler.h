@@ -39,7 +39,7 @@ class SolutionHandler {
 
   // member functions
  public:
-  void storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args, PETScGrid const &currentQ,
+  void storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args, PETScGrid const &waterSource,
                  CUASTimeIntegrator const &timeIntegrator);
   void storePETScOptions();
 

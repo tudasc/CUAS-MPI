@@ -15,7 +15,7 @@ namespace CUAS {
 
 void systemmatrix(PETScMatrix &A, PETScGrid &b, PETScGrid const &hydraulicStorativity,
                   PETScGrid const &hydraulicTransmissivity, PetscScalar dx, PetscScalar dt, PetscScalar theta,
-                  PETScGrid const &hydraulicHead, PETScGrid const &Q, PETScGrid const &dirichletValues,
+                  PETScGrid const &hydraulicHead, PETScGrid const &waterSource, PETScGrid const &dirichletValues,
                   PETScGrid const &bndMask, PETScGrid const &globalIndices);
 }  // namespace CUAS
 
