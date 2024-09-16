@@ -134,7 +134,7 @@ TEST(noDataTest, compareModelToPython) {
   }
 
   // take zero here for constant forcing
-  auto &Q = model.Q->getCurrentQ(0);
+  auto &Q = model.getCurrentWaterSource(0);
   auto &QGlob = Q.getReadHandle();
   for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {

@@ -61,7 +61,7 @@ std::unique_ptr<CUAS::CUASModel> fillNoData() {
   // TODO bmelt vs Q
   PETScGrid bmelt(NODATA_COLS, NODATA_ROWS);
   bmelt.setConst(1);
-  model.Q = std::make_unique<CUAS::SteadyForcing>(bmelt, 1.0 / SPY);
+  model.setWaterSource(std::make_unique<CUAS::SteadyForcing>(bmelt, 1.0 / SPY));
 
   return pmodel;
 }

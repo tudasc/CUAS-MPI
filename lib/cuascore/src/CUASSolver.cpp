@@ -27,19 +27,17 @@ namespace CUAS {
 
 CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHandler *solutionHandler)
     : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
+  /***** setup grids to work with *****/
   nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
   gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
   // rate factor from flow law (ice rheology)
   rateFactorIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   // basal velocity of ice
   basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
   melt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   tmpMelt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   creep = std::make_unique<PETScGrid>(numOfCols, numOfRows);
@@ -47,10 +45,13 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHan
   pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
   gradHeadSquared = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
   Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
   Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
 
+  /***** setup water source *****/
+  waterSource = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  /***** setup equation system *****/
   DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
                PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
   DMSetFromOptions(dm);
@@ -61,6 +62,7 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHan
   bGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   solGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
+  /***** setup helper global indices *****/
   globalIndicesBlocked = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   fillGlobalIndicesBlocked(*globalIndicesBlocked);
 }
@@ -72,6 +74,7 @@ void CUASSolver::setup() {
   pEffective->setZero();
   gradHeadSquared->setZero();
   fluxMagnitude->setZero();
+  waterSource->setZero();
 
   rateFactorIce->setConst(args->flowConstant);         // todo: read 2d field from file (optional)
   basalVelocityIce->setConst(args->basalVelocityIce);  // todo: read 2d field from file (optional)
@@ -185,13 +188,13 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
   while (continueSolverLoop) {
     auto [currTime, dt] = timeIntegrator.getTimestepInformation(CUAS_MAX_TIMESTEP);
 
-    // time dependent forcing
-    auto &currentQ = model->Q->getCurrentQ(currTime);
+    updateWaterSource(currTime);
+
     preComputation();
 
-    storeData(currentQ, timeIntegrator);
+    storeData(timeIntegrator);
 
-    continueSolverLoop = updateHeadAndTransmissivity(currentQ, timeIntegrator);
+    continueSolverLoop = updateHeadAndTransmissivity(timeIntegrator);
 
     timeIntegrator.finalizeTimestep(dt);
   }
@@ -253,6 +256,8 @@ void CUASSolver::prepare() {
   }
 }
 
+void CUASSolver::updateWaterSource(timeSecs currTime) { waterSource->copy(model->getCurrentWaterSource(currTime)); }
+
 void CUASSolver::preComputation() {
   // TODO: basal velocity and rate factor fields are probably also time dependent
   // auto &currentRateFactor = XXX->getCurrent(currTime);
@@ -295,16 +300,16 @@ void CUASSolver::preComputation() {
   }
 }
 
-void CUASSolver::storeData(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator) {
+void CUASSolver::storeData(CUASTimeIntegrator const &timeIntegrator) {
   //
   // STORE DATA, IF NEEDED
   //
   if (solutionHandler) {
-    solutionHandler->storeData(*this, *model, *args, currentQ, timeIntegrator);
+    solutionHandler->storeData(*this, *model, *args, *waterSource, timeIntegrator);
   }
 }
 
-bool CUASSolver::updateHeadAndTransmissivity(PETScGrid const &currentQ, CUASTimeIntegrator const &timeIntegrator) {
+bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeIntegrator) {
   auto dt = timeIntegrator.getCurrentDt();
   auto currTime = timeIntegrator.getCurrentTime();
   auto timeSteps = timeIntegrator.getTimesteps();
@@ -324,7 +329,7 @@ bool CUASSolver::updateHeadAndTransmissivity(PETScGrid const &currentQ, CUASTime
     // UPDATE HEAD
     //
     systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), args->timeSteppingTheta, *currHead,
-                 currentQ, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
+                 *waterSource, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
 
     // solve the equation A*sol = b,
     auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);

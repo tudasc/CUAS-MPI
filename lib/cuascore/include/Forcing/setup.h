@@ -30,16 +30,16 @@ void setupForcing(CUASModel &model, CUASArgs &args, std::string const &fieldName
     if (args.forcingFile.find(delimiter) != std::string::npos) {
       CUAS_INFO_RANK0("Using multi forcing: {}.", args.forcingFile)
       auto fileNames = split(args.forcingFile, delimiter);
-      model.Q = createMultiForcing(fileNames, model, args, fieldName);
+      model.setWaterSource(createMultiForcing(fileNames, model, args, fieldName));
     } else {
       CUAS_INFO_RANK0("Using forcing: {}.", args.forcingFile)
-      model.Q = createForcing(args.forcingFile, model, args, fieldName);
+      model.setWaterSource(createForcing(args.forcingFile, model, args, fieldName));
     }
   } else {
     CUAS_WARN_RANK0("no forcing file given --> try to use input file as forcing file")
     args.forcingFile = args.input;
 
-    model.Q = createForcing(args.forcingFile, model, args, fieldName);
+    model.setWaterSource(createForcing(args.forcingFile, model, args, fieldName));
   }
 }
 

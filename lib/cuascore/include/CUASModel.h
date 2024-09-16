@@ -21,9 +21,20 @@ class CUASModel {
  public:
   explicit CUASModel(int numOfCols, int numOfRows);
   CUASModel(CUASModel &) = delete;
+  CUASModel &operator=(CUASModel const &) = delete;
   CUASModel(CUASModel &&) = delete;
-  //~CUASModel();
+  CUASModel &operator=(CUASModel const &&) = delete;
+  ~CUASModel() = default;
 
+  // member functions
+ public:
+  void init();
+
+  PETScGrid const &getCurrentWaterSource(timeSecs currTime);
+  void setWaterSource(std::unique_ptr<Forcing> waterSource);
+
+  // member
+ public:
   // x = cols, y = rows
   int const Ncols, Nrows;  // TODO equivalent xAxis.size() and yAxis.size()
   PetscScalar dx, dy;
@@ -32,10 +43,11 @@ class CUASModel {
   std::unique_ptr<PETScGrid> thk;
   std::unique_ptr<PETScGrid> bndMask;
   std::unique_ptr<PETScGrid> pIce;
-  std::unique_ptr<Forcing> Q;
 
-  void init();
-
+  // member
+ private:
+  std::unique_ptr<Forcing> waterSource;
+  // member functions
  private:
   static PetscScalar getAxisSpacing(std::vector<PetscScalar> const &axis, const std::string &attName);
 };
