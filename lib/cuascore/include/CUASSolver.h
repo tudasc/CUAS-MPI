@@ -76,6 +76,7 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> basalVelocityIce;
 
   std::unique_ptr<PETScGrid> waterSource;
+  std::vector<WaterSource *> waterSources;
 
   // member functions
  private:
@@ -84,6 +85,7 @@ class CUASSolver {
   void preComputation();
   void storeData(CUASTimeIntegrator const &timeIntegrator);
   [[nodiscard]] bool updateHeadAndTransmissivity(CUASTimeIntegrator const &timeIntegrator);
+  void addWaterSource(WaterSource *newWaterSource);
 };
 
 }  // namespace CUAS
