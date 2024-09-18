@@ -35,7 +35,7 @@ class ScalarTimeDependentForcing : public Forcing {
 
   // member functions
  public:
-  PETScGrid const &getCurrentQ(timeSecs currTime) override;
+  PETScGrid const &getCurrent(timeSecs currentTime) override;
 
   // member
  public:
@@ -89,75 +89,76 @@ inline ScalarTimeDependentForcing::ScalarTimeDependentForcing(int nx, int const 
     exit(1);
   }
 
-  currQ = std::make_unique<PETScGrid>(nx, ny);
-  currQ->setZero();
+  current = std::make_unique<PETScGrid>(nx, ny);
+  current->setZero();
 
   ScalarTimeDependentForcing::applyMultiplier(multiplier);
   ScalarTimeDependentForcing::applyOffset(offset);
 }
 
-inline PETScGrid const &ScalarTimeDependentForcing::getCurrentQ(timeSecs currTime) {
-  if (currTime < 0) {
-    CUAS_ERROR("{} was called with currTime < 0. Exiting.", __PRETTY_FUNCTION__)
+inline PETScGrid const &ScalarTimeDependentForcing::getCurrent(timeSecs currentTime) {
+  if (currentTime < 0) {
+    CUAS_ERROR("{} was called with currentTime < 0. Exiting.", __PRETTY_FUNCTION__)
     exit(1);
   }
 
   if (loopForcing) {
     // this condition would change the behaviour of loop forcing,
     // keep consistent with BufferedForcing(loopForcing)
-    // if (currTime > allTime.back()) {
-    currTime = currTime % time.back();
+    // if (currentTime > allTime.back()) {
+    currentTime = currentTime % time.back();
     // }
-  } else if (currTime > time.back()) {
+  } else if (currentTime > time.back()) {
     CUAS_WARN_RANK0(
-        "{} was called with currTime > time.back(). Using last Q of forcingStack. "
-        "Consider "
-        "using --loopForcing argument.",
+        "{} was called with currentTime > time.back(). Using last slice of forcingStack. "
+        "Consider using --loopForcing argument.",
         __PRETTY_FUNCTION__)
     auto value = timeSeries.back();
     return setValueAtPos(value);
   }
 
-  if (currTime < time.front()) {
-    CUAS_WARN_RANK0("{} was called with currTime < time.front(). Using first Q of forcingStack.", __PRETTY_FUNCTION__)
+  if (currentTime < time.front()) {
+    CUAS_WARN_RANK0("{} was called with currentTime < time.front(). Using first slice of forcingStack.",
+                    __PRETTY_FUNCTION__)
     auto value = timeSeries.front();
     return setValueAtPos(value);
   }
 
   // this requires time to be sorted
-  auto upperBound = std::upper_bound(time.begin(), time.end(), currTime) - time.begin();
+  auto upperBound = std::upper_bound(time.begin(), time.end(), currentTime) - time.begin();
   auto lowerBound = upperBound - 1;
 
-  if (time[lowerBound] == currTime) {
+  if (time[lowerBound] == currentTime) {
     auto value = timeSeries[lowerBound];
     return setValueAtPos(value);
   }
 
   // compute weights for linear interpolation
   auto diff = time[upperBound] - time[lowerBound];
-  auto wUpper = (PetscScalar)(currTime - time[lowerBound]) / (PetscScalar)diff;
-  auto wLower = (PetscScalar)(time[upperBound] - currTime) / (PetscScalar)diff;
+  auto wUpper = (PetscScalar)(currentTime - time[lowerBound]) / (PetscScalar)diff;
+  auto wLower = (PetscScalar)(time[upperBound] - currentTime) / (PetscScalar)diff;
   auto value = timeSeries[upperBound] * wUpper + timeSeries[lowerBound] * wLower;
 
   return setValueAtPos(value);
 }
 
 inline PETScGrid const &ScalarTimeDependentForcing::setValueAtPos(PetscScalar value) {
-  auto rows = currQ->getLocalNumOfRows();
-  auto cols = currQ->getLocalNumOfCols();
-  auto cornerX = currQ->getCornerX();
-  auto cornerY = currQ->getCornerY();
-  auto currQWrite = currQ->getWriteHandle();
+  auto rows = current->getLocalNumOfRows();
+  auto cols = current->getLocalNumOfCols();
+  auto cornerX = current->getCornerX();
+  auto cornerY = current->getCornerY();
 
-  // target point belongs to one processor only
-  auto row = rowIndex - cornerY;
-  auto col = colIndex - cornerX;
-  if (row >= 0 && row < rows && col >= 0 && col < cols) {
-    currQWrite(row, col) = value;
+  {
+    auto currentWrite = current->getWriteHandle();
+    // target point belongs to one processor only
+    auto row = rowIndex - cornerY;
+    auto col = colIndex - cornerX;
+    if (row >= 0 && row < rows && col >= 0 && col < cols) {
+      currentWrite(row, col) = value;
+    }
   }
-  currQWrite.setValues();
 
-  return *currQ;
+  return *current;
 }
 
 }  // namespace CUAS

@@ -66,7 +66,7 @@ PETScGrid const &CUASModel::getCurrentWaterSource(timeSecs currTime) {
     waterSource = std::make_unique<SteadyForcing>(zeroGrid);
   }
 
-  return waterSource->getCurrentQ(currTime);
+  return waterSource->getCurrent(currTime);
 }
 
 void CUASModel::setWaterSource(std::unique_ptr<Forcing> waterSource) { this->waterSource = std::move(waterSource); }

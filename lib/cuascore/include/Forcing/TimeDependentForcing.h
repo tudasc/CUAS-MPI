@@ -35,7 +35,7 @@ class TimeDependentForcing : public Forcing {
 
   // member functions
  public:
-  PETScGrid const &getCurrentQ(timeSecs currTime) override;
+  PETScGrid const &getCurrent(timeSecs currentTime) override;
 
   // member
  public:
@@ -91,35 +91,36 @@ inline TimeDependentForcing::TimeDependentForcing(std::vector<std::unique_ptr<PE
 
   loadSlices(forcing);
 
-  currQ = std::make_unique<PETScGrid>(forcingStack[0]->getTotalNumOfCols(), forcingStack[0]->getTotalNumOfRows());
+  current = std::make_unique<PETScGrid>(forcingStack[0]->getTotalNumOfCols(), forcingStack[0]->getTotalNumOfRows());
 }
 
-inline PETScGrid const &TimeDependentForcing::getCurrentQ(timeSecs currTime) {
-  if (currTime < 0) {
-    CUAS_ERROR("{}: getCurrentQ was called with currTime < 0. Exiting.", __PRETTY_FUNCTION__)
+inline PETScGrid const &TimeDependentForcing::getCurrent(timeSecs currentTime) {
+  if (currentTime < 0) {
+    CUAS_ERROR("{}: getCurrent was called with currentTime < 0. Exiting.", __PRETTY_FUNCTION__)
     exit(1);
   }
 
   if (loopForcing) {
-    currTime = currTime % time.back();
-  } else if (currTime > time.back()) {
+    currentTime = currentTime % time.back();
+  } else if (currentTime > time.back()) {
     CUAS_WARN_RANK0(
-        "{} was called with currTime > time.back(). Using last Q of forcingStack. Consider "
+        "{} was called with currentTime > time.back(). Using last slice of forcingStack. Consider "
         "using --loopForcing argument.",
         __PRETTY_FUNCTION__)
     return *forcingStack.back();
   }
 
-  if (currTime < time.front()) {
-    CUAS_WARN_RANK0("{} was called with currTime < time.front(). Using first Q of forcingStack.", __PRETTY_FUNCTION__)
+  if (currentTime < time.front()) {
+    CUAS_WARN_RANK0("{} was called with currentTime < time.front(). Using first slice of forcingStack.",
+                    __PRETTY_FUNCTION__)
     return *forcingStack.front();
   }
 
   // this requires time to be sorted
-  auto upperBound = std::upper_bound(time.begin(), time.end(), currTime) - time.begin();
+  auto upperBound = std::upper_bound(time.begin(), time.end(), currentTime) - time.begin();
   auto lowerBound = upperBound - 1;
 
-  if (time[lowerBound] == currTime) {
+  if (time[lowerBound] == currentTime) {
     return *forcingStack[lowerBound];
   }
 
@@ -127,22 +128,22 @@ inline PETScGrid const &TimeDependentForcing::getCurrentQ(timeSecs currTime) {
   // diff must a real type (double|float); with "auto" diff would be of type timeSecs aka long
   // and division later would fail.
   auto diff = time[upperBound] - time[lowerBound];
-  auto wUpper = (PetscScalar)(currTime - time[lowerBound]) / (PetscScalar)diff;
-  auto wLower = (PetscScalar)(time[upperBound] - currTime) / (PetscScalar)diff;
+  auto wUpper = (PetscScalar)(currentTime - time[lowerBound]) / (PetscScalar)diff;
+  auto wLower = (PetscScalar)(time[upperBound] - currentTime) / (PetscScalar)diff;
 
   {
     auto &fLower = forcingStack[lowerBound]->getReadHandle();
     auto &fUpper = forcingStack[upperBound]->getReadHandle();
     auto rows = forcingStack[lowerBound]->getLocalNumOfRows();
     auto cols = forcingStack[lowerBound]->getLocalNumOfCols();
-    auto currQWrite = currQ->getWriteHandle();
+    auto currentWrite = current->getWriteHandle();
     for (int i = 0; i < rows; ++i) {
       for (int j = 0; j < cols; ++j) {
-        currQWrite(i, j) = fUpper(i, j) * wUpper + fLower(i, j) * wLower;
+        currentWrite(i, j) = fUpper(i, j) * wUpper + fLower(i, j) * wLower;
       }
     }
   }
-  return *currQ;
+  return *current;
 }
 
 inline void TimeDependentForcing::loadSlices(std::vector<std::unique_ptr<PETScGrid>> &forcing) {

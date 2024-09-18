@@ -35,7 +35,7 @@ class BufferedForcing : public Forcing {
 
   // member functions
  public:
-  PETScGrid const &getCurrentQ(timeSecs currTime) override;
+  PETScGrid const &getCurrent(timeSecs currentTime) override;
 
   // member
  public:
@@ -143,52 +143,54 @@ inline BufferedForcing::BufferedForcing(std::unique_ptr<NetCDFFile> &ncFile, std
 
   loadSlices(0);
 
-  currQ = std::make_unique<PETScGrid>(forcingStack[0]->getTotalNumOfCols(), forcingStack[0]->getTotalNumOfRows());
+  current = std::make_unique<PETScGrid>(forcingStack[0]->getTotalNumOfCols(), forcingStack[0]->getTotalNumOfRows());
 }
 
-inline PETScGrid const &BufferedForcing::getCurrentQ(timeSecs currTime) {
-  if (currTime < 0) {
-    CUAS_ERROR("{}::{} {} getCurrentQ was called with currTime < 0. Exiting.", __FILE__, __LINE__, __PRETTY_FUNCTION__)
+inline PETScGrid const &BufferedForcing::getCurrent(timeSecs currentTime) {
+  if (currentTime < 0) {
+    CUAS_ERROR("{}::{} {} getCurrent was called with currentTime < 0. Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
     exit(1);
   }
 
-  if (currTime < time.front()) {
-    CUAS_WARN("BufferedForcing.h: getCurrentQ was called with currTime < time.front(). Using first Q of forcingStack.")
+  if (currentTime < time.front()) {
+    CUAS_WARN(
+        "BufferedForcing.h: getCurrent was called with currentTime < time.front(). Using first slice of forcingStack.")
     return *forcingStack.front();
   }
 
   if (loopForcing) {
     // this condition would change the behaviour of loop forcing,
     // keep consistent with SclarTimeDependentForcing(loopForcing))
-    // if (currTime > allTime.back() {
-    currTime = currTime % allTime.back();
+    // if (currentTime > allTime.back() {
+    currentTime = currentTime % allTime.back();
     // }
-    if (currTime < time.front() || currTime > time[endOfBuffer]) {
-      CUAS_INFO("BufferedForcing.h: getCurrentQ out of current scope, triggering load of slices (loop forcing).")
+    if (currentTime < time.front() || currentTime > time[endOfBuffer]) {
+      CUAS_INFO("BufferedForcing.h: getCurrent out of current scope, triggering load of slices (loop forcing).")
       // this requires time to be sorted
-      auto upperBound = std::upper_bound(allTime.begin(), allTime.end(), currTime) - allTime.begin();
+      auto upperBound = std::upper_bound(allTime.begin(), allTime.end(), currentTime) - allTime.begin();
       auto lowerBound = upperBound - 1;
       loadSlices(lowerBound);
     }
   } else {
-    if (currTime > time[endOfBuffer]) {
-      CUAS_INFO("BufferedForcing.h: getCurrentQ was called with currTime > time.back().")
+    if (currentTime > time[endOfBuffer]) {
+      CUAS_INFO("BufferedForcing.h: getCurrent was called with currentTime > time.back().")
       if (reachedEndOfFile) {
         CUAS_WARN("Return last slice, because loop forcing is disabled.")
         return *forcingStack[endOfBuffer];
       } else {
         CUAS_INFO("Triggering load of slices.")
         loadSlices(indexOfLastSliceInBuffer);
-        return getCurrentQ(currTime);
+        return getCurrent(currentTime);
       }
     }
   }
 
   // this requires time to be sorted
-  auto upperBound = std::upper_bound(time.begin(), time.begin() + endOfBuffer + 1, currTime) - time.begin();
+  auto upperBound = std::upper_bound(time.begin(), time.begin() + endOfBuffer + 1, currentTime) - time.begin();
   auto lowerBound = upperBound - 1;
 
-  if (time[lowerBound] == currTime) {
+  if (time[lowerBound] == currentTime) {
     return *forcingStack[lowerBound];
   }
 
@@ -196,22 +198,22 @@ inline PETScGrid const &BufferedForcing::getCurrentQ(timeSecs currTime) {
   // diff must a real type (double|float); with "auto" diff would be of type timeSecs aka long
   // and division later would fail.
   auto diff = time[upperBound] - time[lowerBound];
-  auto wUpper = static_cast<PetscScalar>(currTime - time[lowerBound]) / static_cast<PetscScalar>(diff);
-  auto wLower = static_cast<PetscScalar>(time[upperBound] - currTime) / static_cast<PetscScalar>(diff);
+  auto wUpper = static_cast<PetscScalar>(currentTime - time[lowerBound]) / static_cast<PetscScalar>(diff);
+  auto wLower = static_cast<PetscScalar>(time[upperBound] - currentTime) / static_cast<PetscScalar>(diff);
 
   {
     auto &fLower = forcingStack[lowerBound]->getReadHandle();
     auto &fUpper = forcingStack[upperBound]->getReadHandle();
     auto rows = forcingStack[lowerBound]->getLocalNumOfRows();
     auto cols = forcingStack[lowerBound]->getLocalNumOfCols();
-    auto currQWrite = currQ->getWriteHandle();
+    auto currentWrite = current->getWriteHandle();
     for (int i = 0; i < rows; ++i) {
       for (int j = 0; j < cols; ++j) {
-        currQWrite(i, j) = fUpper(i, j) * wUpper + fLower(i, j) * wLower;
+        currentWrite(i, j) = fUpper(i, j) * wUpper + fLower(i, j) * wLower;
       }
     }
   }
-  return *currQ;
+  return *current;
 }
 
 inline void BufferedForcing::loadSlices(int first) {

@@ -17,7 +17,7 @@ namespace CUAS {
 
 class MultiForcing : public Forcing {
  public:
-  explicit MultiForcing(int nCols, int nRows) : currQ(std::make_unique<PETScGrid>(nCols, nRows)) {}
+  explicit MultiForcing(int nCols, int nRows) { current = std::make_unique<PETScGrid>(nCols, nRows); }
   MultiForcing(const MultiForcing &) = delete;
   MultiForcing &operator=(MultiForcing const &) = delete;
   MultiForcing(const MultiForcing &&) = delete;
@@ -26,7 +26,7 @@ class MultiForcing : public Forcing {
 
   // member functions
  public:
-  PETScGrid const &getCurrentQ(timeSecs currTime) override;
+  PETScGrid const &getCurrent(timeSecs currentTime) override;
 
   void registerNewForcing(std::unique_ptr<Forcing> &forcing);
 
@@ -34,7 +34,6 @@ class MultiForcing : public Forcing {
  public:
   // member
  private:
-  std::unique_ptr<PETScGrid> currQ;
   std::vector<std::unique_ptr<Forcing>> forcings;
 
   // member functions
@@ -44,37 +43,37 @@ class MultiForcing : public Forcing {
   void applyOffset(PetscScalar offset) override {}
 };
 
-inline PETScGrid const &MultiForcing::getCurrentQ(timeSecs currTime) {
+inline PETScGrid const &MultiForcing::getCurrent(timeSecs currentTime) {
   if (forcings.size() == 1) {
     CUAS_WARN("MultiForcing contains only one forcing.")
-    return forcings[0]->getCurrentQ(currTime);
+    return forcings[0]->getCurrent(currentTime);
   }
 
-  currQ->setZero();
+  current->setZero();
 
   if (forcings.empty()) {
     CUAS_WARN("MultiForcing does not contain any forcings.")
-    return *currQ;
+    return *current;
   }
 
-  auto writeHandle = currQ->getWriteHandle();
+  auto writeHandle = current->getWriteHandle();
 
   for (auto &f : forcings) {
-    auto &data = f->getCurrentQ(currTime);
+    auto &data = f->getCurrent(currentTime);
     auto &readHandle = data.getReadHandle();
-    // currQ += data;
-    for (int j = 0; j < currQ->getLocalNumOfRows(); ++j) {
-      for (int i = 0; i < currQ->getLocalNumOfCols(); ++i) {
+    // current += data;
+    for (int j = 0; j < current->getLocalNumOfRows(); ++j) {
+      for (int i = 0; i < current->getLocalNumOfCols(); ++i) {
         writeHandle(j, i) = writeHandle(j, i) + readHandle(j, i);
       }
     }
   }
 
-  return *currQ;
+  return *current;
 }
 
 inline void MultiForcing::registerNewForcing(std::unique_ptr<Forcing> &forcing) {
-  if (!currQ->isCompatible(forcing->getCurrentQ(0))) {
+  if (!current->isCompatible(forcing->getCurrent(0))) {
     CUAS_ERROR("{}::{} {} Forcing is incompatible! Exiting.", __FILE__, __LINE__, __PRETTY_FUNCTION__)
     exit(1);
   }

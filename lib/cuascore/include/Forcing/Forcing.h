@@ -24,13 +24,13 @@ class Forcing {
 
   // member functions
  public:
-  virtual PETScGrid const &getCurrentQ(timeSecs currTime) = 0;
+  virtual PETScGrid const &getCurrent(timeSecs currentTime) = 0;
 
   // member
  public:
   // member
  protected:
-  std::unique_ptr<PETScGrid> currQ;
+  std::unique_ptr<PETScGrid> current;
   // member functions
  private:
   virtual void applyMultiplier(PetscScalar multiplier) = 0;

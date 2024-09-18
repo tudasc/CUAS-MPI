@@ -54,7 +54,7 @@ TEST(exactSteadySolutionTest, steadyForcingTest) {
   CUAS_INFO_RANK0("{}: res={}, nx={}, ny={}, Lx={}, Ly={}, Q_max={}", __PRETTY_FUNCTION__, res, nx, ny, Lx, Ly, Q_max)
 
   for (auto &t_secs : time.timeSteps) {
-    auto maxQ = forcing->getCurrentQ(t_secs).getMax();
+    auto maxQ = forcing->getCurrent(t_secs).getMax();
     ASSERT_DOUBLE_EQ(Q_max * SPY, maxQ * SPY) << "at t = " << t_secs << " seconds";
   }
 }

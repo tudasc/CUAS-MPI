@@ -26,7 +26,7 @@ TEST(forcingTest, constant) {
   auto supplyMultiplier = 1.2;
   std::unique_ptr<CUAS::Forcing> forcing = std::make_unique<CUAS::SteadyForcing>(bmelt, supplyMultiplier / SPY);
   // constant forcing: 0, empty vector, false
-  auto &read = forcing->getCurrentQ(0).getReadHandle();
+  auto &read = forcing->getCurrent(0).getReadHandle();
   auto &readBmelt = bmelt.getReadHandle();
   for (int i = 0; i < bmelt.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < bmelt.getLocalNumOfCols(); ++j) {
@@ -57,7 +57,7 @@ TEST(forcingTest, timeForcing) {
     auto temp1 = 1.0 / SPY * supplyMultiplier;
     auto temp2 = 7.0 / SPY * supplyMultiplier;
     auto result = 0.5 * temp1 + 0.5 * temp2;
-    auto &Q = forcing->getCurrentQ(15);
+    auto &Q = forcing->getCurrent(15);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -69,7 +69,7 @@ TEST(forcingTest, timeForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.8 * temp1 + 0.2 * temp2;
-    auto &Q = forcing->getCurrentQ(36);
+    auto &Q = forcing->getCurrent(36);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -81,7 +81,7 @@ TEST(forcingTest, timeForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.4375 * temp1 + 0.5625 * temp2;
-    auto &Q = forcing->getCurrentQ(65);
+    auto &Q = forcing->getCurrent(65);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -92,7 +92,7 @@ TEST(forcingTest, timeForcing) {
   // check exact hit
   {
     auto result = 5.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(100);
+    auto &Q = forcing->getCurrent(100);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -103,7 +103,7 @@ TEST(forcingTest, timeForcing) {
   // check higher currTime
   {
     auto result = 11.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(1000);
+    auto &Q = forcing->getCurrent(1000);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -114,7 +114,7 @@ TEST(forcingTest, timeForcing) {
   // check lower currTime
   {
     auto result = 1.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(1);
+    auto &Q = forcing->getCurrent(1);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -146,7 +146,7 @@ TEST(forcingTest, loopForcing) {
     auto temp1 = 1.0 / SPY * supplyMultiplier;
     auto temp2 = 7.0 / SPY * supplyMultiplier;
     auto result = 0.5 * temp1 + 0.5 * temp2;
-    auto &Q = forcing->getCurrentQ(15);
+    auto &Q = forcing->getCurrent(15);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -158,7 +158,7 @@ TEST(forcingTest, loopForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.8 * temp1 + 0.2 * temp2;
-    auto &Q = forcing->getCurrentQ(36);
+    auto &Q = forcing->getCurrent(36);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -170,7 +170,7 @@ TEST(forcingTest, loopForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.4375 * temp1 + 0.5625 * temp2;
-    auto &Q = forcing->getCurrentQ(65);
+    auto &Q = forcing->getCurrent(65);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -181,7 +181,7 @@ TEST(forcingTest, loopForcing) {
   // check exact hit
   {
     auto result = 5.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(100);
+    auto &Q = forcing->getCurrent(100);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -194,7 +194,7 @@ TEST(forcingTest, loopForcing) {
     auto temp1 = 7.0 / SPY * supplyMultiplier;
     auto temp2 = 5.0 / SPY * supplyMultiplier;
     auto result = 0.5 * temp1 + 0.5 * temp2;
-    auto &Q = forcing->getCurrentQ(210);
+    auto &Q = forcing->getCurrent(210);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -204,7 +204,7 @@ TEST(forcingTest, loopForcing) {
   }
   {
     auto result = 7.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(470);
+    auto &Q = forcing->getCurrent(470);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -215,7 +215,7 @@ TEST(forcingTest, loopForcing) {
   // check lower currTime
   {
     auto result = 1.0 / SPY * supplyMultiplier;
-    auto &Q = forcing->getCurrentQ(1);
+    auto &Q = forcing->getCurrent(1);
     auto &read1 = Q.getReadHandle();
     for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
       for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {
@@ -248,15 +248,15 @@ TEST(forcingTest, multiForcing) {
     multiForcing.registerNewForcing(forcing);
   }
 
-  auto &t1 = multiForcing.getCurrentQ(15);
+  auto &t1 = multiForcing.getCurrent(15);
   auto &t1Read = t1.getReadHandle();
   ASSERT_DOUBLE_EQ(t1Read(0, 0), 3.14 + 1.5);
 
-  auto &t2 = multiForcing.getCurrentQ(23);
+  auto &t2 = multiForcing.getCurrent(23);
   auto &t2Read = t1.getReadHandle();
   ASSERT_DOUBLE_EQ(t1Read(0, 0), 3.14 + 2.3);
 
-  auto &t3 = multiForcing.getCurrentQ(33);
+  auto &t3 = multiForcing.getCurrent(33);
   auto &t3Read = t1.getReadHandle();
   ASSERT_DOUBLE_EQ(t1Read(0, 0), 3.14 + 3);
 }

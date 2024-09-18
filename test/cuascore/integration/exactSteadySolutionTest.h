@@ -108,7 +108,7 @@ class SteadyTestForcing : public CUAS::Forcing {
   SteadyTestForcing(SteadyTestForcing &) = delete;
   SteadyTestForcing(SteadyTestForcing &&) = delete;
 
-  PETScGrid const &getCurrentQ(CUAS::timeSecs currTime) override {
+  PETScGrid const &getCurrent(CUAS::timeSecs currTime) override {
     {
       // some abbreviations
       constexpr PetscScalar T = EXACT_STEADY_SOLUTION_TRANSMISSIVITY;

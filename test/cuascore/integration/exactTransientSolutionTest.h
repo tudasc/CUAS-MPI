@@ -117,9 +117,9 @@ class TransientTestForcing : public CUAS::Forcing {
   TransientTestForcing(TransientTestForcing &) = delete;
   TransientTestForcing(TransientTestForcing &&) = delete;
 
-  PETScGrid const &getCurrentQ(CUAS::timeSecs currTime) override {
+  PETScGrid const &getCurrent(CUAS::timeSecs currTime) override {
     if (currTime < 0) {
-      CUAS_ERROR("getCurrentQ was called with currTime < 0. Exiting.")
+      CUAS_ERROR("getCurrent was called with currTime < 0. Exiting.")
       exit(1);
     }
 

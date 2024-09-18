@@ -52,7 +52,7 @@ TEST(exactTransientSolutionTest, transientForcingTest) {
   const PetscScalar Ly = (ny - 1) * res;
   for (auto &t_secs : time.timeSteps) {
     auto Q_max = max_Q_exact((PetscScalar)t_secs, Lx, Ly);
-    auto maxQ = forcing->getCurrentQ(t_secs).getMax();
+    auto maxQ = forcing->getCurrent(t_secs).getMax();
     ASSERT_DOUBLE_EQ(Q_max * SPY, maxQ * SPY) << "at t = " << t_secs << " seconds";
   }
 }
