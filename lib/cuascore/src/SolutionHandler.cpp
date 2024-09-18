@@ -11,7 +11,7 @@
 #include "CUASModel.h"
 #include "CUASSolver.h"
 #include "CUASTimeIntegrator.h"
-#include "utilities.h"  // for CUAS::version
+#include "utilities.h"  // for version
 
 #include "petscoptionswrapper.h"
 
@@ -257,7 +257,7 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   file->addGlobalAttribute("outputSize", args.outputSize);
 
   // compile time CUASConstants
-  file->addGlobalAttribute("version", CUAS::version());
+  file->addGlobalAttribute("version", version());
   file->addGlobalAttribute("TINY", TINY);
   file->addGlobalAttribute("NOFLOW_VALUE", NOFLOW_VALUE);
   file->addGlobalAttribute("RHO_ICE", RHO_ICE);
@@ -271,12 +271,12 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   }
 }
 
-void SolutionHandler::storeConstantModelInformation(const CUAS::CUASModel &model) {
+void SolutionHandler::storeConstantModelInformation(const CUASModel &model) {
   file->write("x", model.xAxis);
   file->write("y", model.yAxis);
 }
 
-void SolutionHandler::storeMutableModelInformation(const CUAS::CUASModel &model) {
+void SolutionHandler::storeMutableModelInformation(const CUASModel &model) {
   file->write("bnd_mask", *model.bndMask, nextSolution);
 
   if (osize >= OutputSize::NORMAL) {
@@ -304,7 +304,7 @@ void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel cons
   storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource);
 }
 
-void SolutionHandler::storeSolution(CUAS::timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
+void SolutionHandler::storeSolution(timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
                                     PetscScalar eps_inf, PetscScalar Teps_inf) {
   // write scalars
   file->write("time", currTime, nextSolution);

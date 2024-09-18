@@ -23,9 +23,9 @@
 
 namespace CUAS {
 
-#define CUAS_MAX_TIMESTEP std::numeric_limits<typeof(CUAS::timeSecs)>::max()
+#define CUAS_MAX_TIMESTEP std::numeric_limits<typeof(timeSecs)>::max()
 
-CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHandler *solutionHandler)
+CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *solutionHandler)
     : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
   /***** setup grids to work with *****/
   nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
@@ -177,7 +177,7 @@ void CUASSolver::setup() {
   }
 }
 
-void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
+void CUASSolver::solve(std::vector<timeSecs> &timeSteps) {
   prepare();
 
   CUASTimeIntegrator timeIntegrator(timeSteps);

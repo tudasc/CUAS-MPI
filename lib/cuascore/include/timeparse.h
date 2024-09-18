@@ -167,7 +167,7 @@ inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTi
   }
 
   // create vector and insert default value startTime
-  std::vector<CUAS::timeSecs> timeSteps;
+  std::vector<timeSecs> timeSteps;
   auto currTime = startTime;
   timeSteps.push_back(currTime);
 

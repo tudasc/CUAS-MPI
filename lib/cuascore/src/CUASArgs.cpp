@@ -180,7 +180,7 @@ inline void handleHelpAndVersion(cxxopts::Options const &options, cxxopts::Parse
   }
 
   if (result.count("version")) {
-    std::cout << CUAS::version() << std::endl;
+    std::cout << version() << std::endl;
     exit(0);
   }
 }

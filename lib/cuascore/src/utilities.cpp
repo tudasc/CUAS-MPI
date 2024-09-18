@@ -44,7 +44,7 @@ inline std::string getCompilerInformation() {
       "";
 #endif
 
-  return CUAS::vformat("Compiler: %s %s", cxx.c_str(), cxx_ver.c_str());
+  return vformat("Compiler: %s %s", cxx.c_str(), cxx_ver.c_str());
 }
 
 inline std::string getMPIInformation() {
@@ -63,14 +63,14 @@ inline std::string getPETScInformation() {
   return buffer;
 }
 
-inline std::string getPETScConfiguration() { return CUAS::vformat("PETSc configure: %s", petscconfigureoptions); }
+inline std::string getPETScConfiguration() { return vformat("PETSc configure: %s", petscconfigureoptions); }
 
-inline std::string getNetCDFInformation() { return CUAS::vformat("NetCDF %s.", nc_inq_libvers()); }
+inline std::string getNetCDFInformation() { return vformat("NetCDF %s.", nc_inq_libvers()); }
 
 std::string version() {
   std::string result;
 
-  result += CUAS::vformat("CUAS-MPI (branch: %s, tag: %s, commit: %s)", GIT_BRANCH, GIT_TAG, GIT_REV);
+  result += vformat("CUAS-MPI (branch: %s, tag: %s, commit: %s)", GIT_BRANCH, GIT_TAG, GIT_REV);
   result += "\n";
   result += getCompilerInformation();
   result += "\n";
