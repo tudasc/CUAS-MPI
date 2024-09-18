@@ -62,7 +62,7 @@ TEST(fillMatrixTest, randomValues) {
   DMCreateMatrix(gridB.dm, &petscA);
   PETScMatrix matA(petscA);
 
-  CUAS::systemmatrix(matA, gridB, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrentQ(0),
+  CUAS::systemmatrix(matA, gridB, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrent(0),
                      dirichValGrid, bndMaskGrid, globalIndices);
 
   // compare nnz of Matrix A with nnz of python
@@ -154,7 +154,7 @@ TEST(fillMatrixTest, randomValues3x3) {
   DMCreateMatrix(gridB.dm, &petscA);
   PETScMatrix matA(petscA);
 
-  CUAS::systemmatrix(matA, gridB, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrentQ(0),
+  CUAS::systemmatrix(matA, gridB, SeGrid, TeffPowGrid, dx, dtsecs, theta, u_nGrid, forcing->getCurrent(0),
                      dirichValGrid, bndMaskGrid, globalIndices);
 
   // check equality of sum(A*b)

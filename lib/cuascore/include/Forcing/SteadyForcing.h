@@ -19,8 +19,8 @@ class SteadyForcing : public Forcing {
  public:
   explicit SteadyForcing(PETScGrid const &m_forcing, PetscScalar const multiplier = 1.0,
                          PetscScalar const offset = 0.0) {
-    currQ = std::make_unique<PETScGrid>(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows());
-    currQ->copy(m_forcing);
+    current = std::make_unique<PETScGrid>(m_forcing.getTotalNumOfCols(), m_forcing.getTotalNumOfRows());
+    current->copy(m_forcing);
 
     SteadyForcing::applyMultiplier(multiplier);
     SteadyForcing::applyOffset(offset);
@@ -33,7 +33,7 @@ class SteadyForcing : public Forcing {
 
   // member functions
  public:
-  PETScGrid const &getCurrentQ(timeSecs /*currTime*/) override { return *currQ; }
+  PETScGrid const &getCurrent(timeSecs /*currentTime*/) override { return *current; }
 
   // member
  public:
@@ -45,14 +45,14 @@ class SteadyForcing : public Forcing {
     if (multiplier == 1.0) {
       return;
     }
-    currQ->applyMultiplier(multiplier);
+    current->applyMultiplier(multiplier);
   }
 
   void applyOffset(PetscScalar offset) override {
     if (offset == 0.0) {
       return;
     }
-    currQ->applyOffset(offset);
+    current->applyOffset(offset);
   }
 };
 
