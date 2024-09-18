@@ -55,7 +55,7 @@ class SolutionHandler {
   void storeConstantModelInformation(CUASModel const &model);
   void storeMutableModelInformation(CUASModel const &model);
   // write the values passed as parameters to the NetCDF file
-  void storeSolution(CUAS::timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
+  void storeSolution(timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
                      PetscScalar eps_inf = NC_FILL_DOUBLE, PetscScalar Teps_inf = NC_FILL_DOUBLE);
   void finalizeSolution();
 

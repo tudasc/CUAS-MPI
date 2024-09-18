@@ -16,7 +16,7 @@ namespace CUAS {
 
 class CUASTimeIntegrator {
  public:
-  explicit CUASTimeIntegrator(std::vector<CUAS::timeSecs> const &timeSteps)
+  explicit CUASTimeIntegrator(std::vector<timeSecs> const &timeSteps)
       : timeSteps(timeSteps), timeStepIndex(0), currTime(0), currDt(0), maxNextDt(0) {
     if (!timeSteps.empty() && timeSteps[0] < 0) {
       CUAS_ERROR("{}::{}: first time step is smaller than 0: {}.", __PRETTY_FUNCTION__, __LINE__, timeSteps[0])
@@ -46,15 +46,15 @@ class CUASTimeIntegrator {
 
   // member
  private:
-  const std::vector<CUAS::timeSecs> timeSteps;
+  const std::vector<timeSecs> timeSteps;
   decltype(timeSteps)::size_type timeStepIndex;
-  CUAS::timeSecs currTime;
-  CUAS::timeSecs currDt;
-  CUAS::timeSecs maxNextDt;
+  timeSecs currTime;
+  timeSecs currDt;
+  timeSecs maxNextDt;
 
   // member functions
  public:
-  void finalizeTimestep(CUAS::timeSecs sizeOfComputedTimeStep) {
+  void finalizeTimestep(timeSecs sizeOfComputedTimeStep) {
     if (sizeOfComputedTimeStep < 0) {
       CUAS_ERROR("{}::{}: sizeOfComputedTimeStep {} is smaller than 0.", __PRETTY_FUNCTION__, __LINE__,
                  sizeOfComputedTimeStep)
@@ -90,7 +90,7 @@ class CUASTimeIntegrator {
     currDt = 0;
   }
 
-  std::pair<timeSecs, timeSecs> getTimestepInformation(CUAS::timeSecs input) {
+  std::pair<timeSecs, timeSecs> getTimestepInformation(timeSecs input) {
     if (currDt != 0) {
       CUAS_ERROR("{}::{}: new time step information generated, while currDt is not 0. Call finalizeTimestep first.",
                  __PRETTY_FUNCTION__, __LINE__)
@@ -101,14 +101,14 @@ class CUASTimeIntegrator {
     return std::make_pair(currTime, currDt);
   }
 
-  [[nodiscard]] CUAS::timeSecs getCurrentTime() const { return currTime; }
-  [[nodiscard]] CUAS::timeSecs getCurrentDt() const { return currDt; }
+  [[nodiscard]] timeSecs getCurrentTime() const { return currTime; }
+  [[nodiscard]] timeSecs getCurrentDt() const { return currDt; }
   [[nodiscard]] decltype(timeSteps) const &getTimesteps() const { return timeSteps; }
   [[nodiscard]] decltype(timeSteps)::size_type getTimestepIndex() const { return timeStepIndex; }
 };
 
 // deprecated
-/*std::pair<timeSecs, timeSecs> getTimestepInformation(std::vector<CUAS::timeSecs> const &timeSteps,
+/*std::pair<timeSecs, timeSecs> getTimestepInformation(std::vector<timeSecs> const &timeSteps,
                                                                  int timeStepIndex) {
   timeSecs dt = 0;
   auto currTime = timeSteps[timeStepIndex];

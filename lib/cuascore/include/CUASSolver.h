@@ -20,7 +20,7 @@ namespace CUAS {
 
 class CUASSolver {
  public:
-  explicit CUASSolver(CUASModel *model, CUASArgs const *args, CUAS::SolutionHandler *solutionHandler = nullptr);
+  explicit CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *solutionHandler = nullptr);
   CUASSolver(CUASSolver &) = delete;
   CUASSolver(CUASSolver &&) = delete;
   CUASSolver &operator=(CUASSolver const &) = delete;
@@ -29,7 +29,7 @@ class CUASSolver {
 
   // member functions
  public:
-  void solve(std::vector<CUAS::timeSecs> &timeSteps);
+  void solve(std::vector<timeSecs> &timeSteps);
   void setup();
 
   // member
@@ -57,7 +57,7 @@ class CUASSolver {
  private:
   CUASModel *const model;
   CUASArgs const *const args;
-  CUAS::SolutionHandler *const solutionHandler;
+  SolutionHandler *const solutionHandler;
 
   DM dm;
   std::unique_ptr<PETScMatrix> matA;
