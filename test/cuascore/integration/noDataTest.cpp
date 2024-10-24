@@ -95,7 +95,7 @@ TEST(noDataTest, compareModelToPython) {
     file.write("thk", *model.thk, 0);
     file.write("topg", *model.topg, 0);
     file.write("bnd_mask", *model.bndMask, 0);
-    file.write("bmelt", model.Q->getCurrentQ(0), 0);  // m/s
+    file.write("bmelt", model.getCurrentWaterSource(0), 0);  // m/s
   }
 #endif
 

@@ -137,8 +137,11 @@ inline void defineArgs(cxxopts::Options &options) {
       ("specificYield",
        "Specific yield, Sy (unit: 1)",
        cxxopts::value<PetscScalar>()->default_value("0.4"))
-      ("noSmoothMelt",
-       "Smooth melt term before computing change in T?")
+      ("enableUDS",
+       "Enable upwind difference scheme (UDS). The default is the central difference scheme (CDS).")
+      ("thresholdThicknessUDS",
+       "Threshold for UDS scheme (m). Common choices are zero or layer thickness.",
+        cxxopts::value<PetscScalar>()->default_value("0.0"))
       ("basalVelocityIce",
        "Basal velocity of the ice (m/s)",
        cxxopts::value<PetscScalar>()->default_value("1e-6"))
@@ -223,7 +226,6 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.restartNoneZeroInitialGuess = result["restartNoneZeroInitialGuess"].as<bool>();
   args.specificStorage = result["specificStorage"].as<PetscScalar>();
   args.specificYield = result["specificYield"].as<PetscScalar>();
-  args.noSmoothMelt = result["noSmoothMelt"].as<bool>();
   args.sizeOfForcingBuffer = result["sizeOfForcingBuffer"].as<int>();
   args.loopForcing = result["loopForcing"].as<bool>();
   args.coordinatesFile = result["coordinatesFile"].as<std::string>();
@@ -239,6 +241,8 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.output = result["output"].as<std::string>();
   args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')
   args.timeSteppingTheta = result["timeSteppingTheta"].as<PetscScalar>();
+  args.enableUDS = result["enableUDS"].as<bool>();
+  args.thresholdThicknessUDS = result["thresholdThicknessUDS"].as<PetscScalar>();
 }
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result) {

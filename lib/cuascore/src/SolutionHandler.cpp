@@ -168,6 +168,16 @@ void SolutionHandler::defineSolution() {
     file->addAttributeToVariable("effective_storativity", "units", "1");
     file->addAttributeToVariable("effective_storativity", "standard_name", "effective_storativity");
     file->addAttributeToVariable("effective_storativity", "long_name", "Effective layer storativity");
+
+    file->defineGrid("fluxXDir", UNLIMITED);  // could be derived from head and geometry in post-processing
+    file->addAttributeToVariable("fluxXDir", "units", "m2 s-1");
+    file->addAttributeToVariable("fluxXDir", "standard_name", "flux_x_dir");
+    file->addAttributeToVariable("fluxXDir", "long_name", "x-component of the flux");
+
+    file->defineGrid("fluxYDir", UNLIMITED);  // could be derived from head and geometry in post-processing
+    file->addAttributeToVariable("fluxYDir", "units", "m2 s-1");
+    file->addAttributeToVariable("fluxYDir", "standard_name", "flux_y_dir");
+    file->addAttributeToVariable("fluxYDir", "long_name", "y-component of the flux");
   }
 
   if (osize >= OutputSize::XLARGE) {
@@ -192,10 +202,9 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
                       timeIntegrator.getTimesteps().size() - 1, timeIntegrator.getCurrentTime(),
                       timeIntegrator.getCurrentDt())
     }
-    // Process diagnostic variables for output only. We don't need them in every time step
-    getFluxMagnitude(*solver.fluxMagnitude, *solver.gradHeadSquared,
-                     *solver.Teff);  // was currTransmissivity for a very long time
-    // ... more
+
+    // enhancement: Process diagnostic variables that are for output only here
+    // instead of in CUASSolver. We don't need them for every time step
 
     if (reason == OutputReason::INITIAL) {
       // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
@@ -240,7 +249,6 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   file->addGlobalAttribute("restartNoneZeroInitialGuess", args.restartNoneZeroInitialGuess);
   file->addGlobalAttribute("specificStorage", args.specificStorage);
   file->addGlobalAttribute("specificYield", args.specificYield);
-  file->addGlobalAttribute("noSmoothMelt", args.noSmoothMelt);
   file->addGlobalAttribute("loopForcing", args.loopForcing);
   file->addGlobalAttribute("coordinatesFile", args.coordinatesFile);
   file->addGlobalAttribute("forcingFile", args.forcingFile);
@@ -255,6 +263,9 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   file->addGlobalAttribute("input", args.input);
   file->addGlobalAttribute("output", args.output);
   file->addGlobalAttribute("outputSize", args.outputSize);
+
+  file->addGlobalAttribute("enableUDS", args.enableUDS);
+  file->addGlobalAttribute("thresholdThicknessUDS", args.thresholdThicknessUDS);
 
   // compile time CUASConstants
   file->addGlobalAttribute("version", version());
@@ -329,6 +340,8 @@ void SolutionHandler::storeSolution(timeSecs currTime, CUASSolver const &solver,
   if (osize >= OutputSize::LARGE) {
     file->write("effective_transmissivity", *solver.Teff, nextSolution);
     file->write("effective_storativity", *solver.Seff, nextSolution);
+    file->write("fluxXDir", *solver.fluxXDir, nextSolution);
+    file->write("fluxYDir", *solver.fluxYDir, nextSolution);
   }
 
   if (osize >= OutputSize::XLARGE) {

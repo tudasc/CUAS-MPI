@@ -99,7 +99,6 @@ test-cuascore:
     - mpirun -n 1 --timeout 60 ./test-timeparse
     - mpirun -n 1 --timeout 60 ./test-utilities
     - mpirun -n 9 --timeout 60 ./test-CUASKernels
-    - mpirun -n 6 --timeout 60 ./test-specialgradient
     - mpirun -n 6 --timeout 60 ./test-forcing
     - mpirun -n 1 --timeout 60 ./test-systemmatrix
     - mpirun -n 4 --timeout 60 ./test-systemmatrix
@@ -140,6 +139,8 @@ test-cuas:
     - mpirun -n 4 --timeout 60 ./test-exactSteadySolution 2000.0  51  51 31 86400
     - mpirun -n 4 --timeout 60 ./test-exactSteadySolution 1000.0 101 101 31 86400
     - mpirun -n 4 --timeout 60 ./test-exactSteadySolution  500.0 201 201 31 86400
+    # exact solution with varying transmissivity
+    - mpirun -n 1 -timeout 60 ./test-exactPiecewiseConstantSteadySolution 101 11 86400
 
 
 run-clang-format:
