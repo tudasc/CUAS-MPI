@@ -10,6 +10,7 @@
 #include "CUASConstants.h"
 #include "specialgradient.h"
 
+#include "CUASArgs.h"
 #include "Logger.h"
 #include "PETScGrid.h"
 
@@ -517,6 +518,110 @@ inline void getGradHeadSQR(PETScGrid &result, PETScGrid const &hydraulicHead, Pe
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       if (gmask(j, i) == 1.0) {  // gradMask has inverted meaning
         res(j, i) = 0.0;
+      }
+    }
+  }
+}
+
+// args.initialHead == 'Nopc':
+//  See issm v4.23: trunk/src/c/classes/Loads/Friction.cpp:
+// 			p_water = max(0.,rho_water*gravity*(sealevel-base));
+//			Neff = p_ice - p_water;
+//
+//  Note, ISSM uses the base = iceSurface - iceThickness and base = bed only for grounded ice
+//
+inline void setInitialHeadFromArgs(PETScGrid &result, PETScGrid const &bndMask, PETScGrid const &bedElevation,
+                                   PETScGrid const &icePressure, CUASArgs const &args, PETScGrid &workSpace) {
+  if (!result.isCompatible(bedElevation) || !result.isCompatible(bndMask) || !result.isCompatible(icePressure) ||
+      !result.isCompatible(workSpace)) {
+    CUAS_ERROR("{}:was called with incompatible PETScGrids. Exiting.", __PRETTY_FUNCTION__)
+    exit(1);
+  }
+
+  // Use this to keep the implementation consistent with all the post-EGU runs for Greenland
+  // This might be changed in the future
+  bool positivePreserving = false;
+  constexpr PetscScalar seaLevel = 0.0;  // sea level with respect to datum. This may change in future applications.
+
+  //
+  // fixme: I would like to write pressureToHead(result, 0.1 * icePressure, ...)
+  //
+  if (args.initialHead == "topg") {
+    result.copy(bedElevation);
+    // positivePreserving = true;  // if true -> this would be the same as Nopc
+  } else if (args.initialHead == "low") {
+    workSpace.copy(icePressure);  // store waterPressure = icePressure in workSpace
+    workSpace.applyMultiplier(0.1);
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // 10% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "mid") {
+    workSpace.copy(icePressure);
+    workSpace.applyMultiplier(0.5);
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // 50% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "high") {
+    workSpace.copy(icePressure);
+    workSpace.applyMultiplier(0.9);
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // 90% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "Nzero") {
+    pressureToHead(result, icePressure, bedElevation, args.layerThickness);  // 100% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "Nopc") {
+    // implements Wolovick et al., 2023, eq.6 (doi: 10.5194/tc-17-5027-2023)
+    {
+      auto waterPressure = workSpace.getWriteHandle();
+      auto &topg = bedElevation.getReadHandle();
+      for (int row = 0; row < workSpace.getLocalNumOfRows(); ++row) {
+        for (int col = 0; col < workSpace.getLocalNumOfCols(); ++col) {
+          waterPressure(row, col) = std::max(0.0, RHO_WATER * GRAVITY * (seaLevel - topg(row, col)));
+        }
+      }
+    }
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // Nopc
+    positivePreserving = true;
+  } else {
+    // set from numeric value
+    try {
+      auto initialHeadValue = (PetscScalar)std::stod(args.initialHead);
+      result.setConst(initialHeadValue);
+    } catch (std::invalid_argument const &ex) {
+      CUAS_ERROR("{}: args->initialHead invalid_argument: {}. Exiting.", __PRETTY_FUNCTION__, args.initialHead)
+      exit(1);
+    } catch (std::out_of_range const &ex) {
+      CUAS_ERROR("{}: args->initialHead out_of_range: {}. Exiting.", __PRETTY_FUNCTION__, args.initialHead)
+      exit(1);
+    } catch (...) {
+      CUAS_ERROR(
+          "{}: args->initialHead needs to be 'Nzero', 'Nopc', 'low', 'mid', 'high', 'topg' or valid number. Exiting.",
+          __PRETTY_FUNCTION__)
+      exit(1);
+    }
+  }
+
+  // positive preserving (head => 0, psi => 0)
+  if (positivePreserving) {
+    auto head = result.getWriteHandle();
+    auto &topg = bedElevation.getReadHandle();
+    for (int row = 0; row < result.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result.getLocalNumOfCols(); ++col) {
+        head(row, col) = std::max({head(row, col), topg(row, col), 0.0});  // positive preserving head
+      }
+    }
+  } else {
+    CUAS_WARN_RANK0("{}: positivePreserving is false (off)", __PRETTY_FUNCTION__)
+  }
+
+  // duplicate some code from prepare() to make sure the ocean head is at sea level
+  {
+    auto head = result.getWriteHandle();
+    auto &mask = bndMask.getReadHandle();
+    for (int row = 0; row < result.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result.getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
+          // ensure proper ocean bc's after restart
+          head(row, col) = seaLevel;
+        }
       }
     }
   }
