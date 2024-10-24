@@ -44,12 +44,23 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> creep;
   std::unique_ptr<PETScGrid> cavity;
   std::unique_ptr<PETScGrid> pEffective;
-  std::unique_ptr<PETScGrid> gradHeadSquared;
-  std::unique_ptr<PETScGrid> fluxMagnitude;
+  std::unique_ptr<PETScGrid> fluxXDir;       //!< water flux in x-direction
+  std::unique_ptr<PETScGrid> fluxYDir;       //!< water flux in y-direction
+  std::unique_ptr<PETScGrid> fluxMagnitude;  //!< water flux magnitude
+
+  std::unique_ptr<PETScGrid> rateFactorIce;
+  std::unique_ptr<PETScGrid> basalVelocityIce;
 
   std::unique_ptr<PETScGrid> Seff;       //!< effective Storativity
   std::unique_ptr<PETScGrid> Teff;       //!< effective Transmissivity
   std::unique_ptr<PETScGrid> workSpace;  //!< a temporary grid to store e.g. waterPressure
+
+  std::unique_ptr<PETScGrid> effTransEast;   //!< effective transmissivity at the eastern (i + 1/2) boundary
+  std::unique_ptr<PETScGrid> effTransWest;   //!< effective transmissivity at the western (i - 1/2) boundary
+  std::unique_ptr<PETScGrid> effTransNorth;  //!< effective transmissivity at the norther (j + 1/2) boundary
+  std::unique_ptr<PETScGrid> effTransSouth;  //!< effective transmissivity at the southern (j - 1/2) boundary
+
+  std::unique_ptr<PETScGrid> dirichletValues;  // public to be used in the coupler
 
   PetscScalar eps = 0.0;   //!<  \f$ max(|h^n - h^{n-1}|)/dt \f$
   PetscScalar Teps = 0.0;  //!<  \f$ max(|T^n - T^{n-1}|)/dt \f$
@@ -68,13 +79,7 @@ class CUASSolver {
   int const numOfCols;
   int const numOfRows;
 
-  std::unique_ptr<PETScGrid> gradMask;
-  std::unique_ptr<PETScGrid> dirichletValues;
-
   std::unique_ptr<PETScGrid> globalIndicesBlocked;
-
-  std::unique_ptr<PETScGrid> rateFactorIce;
-  std::unique_ptr<PETScGrid> basalVelocityIce;
 
   std::unique_ptr<PETScGrid> waterSource;
   std::vector<WaterSource *> waterSources;

@@ -45,6 +45,12 @@
 
 class PETScGrid {
  public:
+  /** directions used e.g. to set boundary conditions */
+  enum class Direction : unsigned char { All = 0, North, East, South, West };
+
+  /** PETScGridMemFn points to a const member-function of PETScGrid that takes (int, int) */
+  typedef bool (PETScGrid::*PETScGridMemFn)(int, int) const;
+
   /** Use ReadHandle to only read values of the grid.
    *
    * If ghosted: GhostValues are being read as well.
@@ -192,10 +198,14 @@ class PETScGrid {
 
   bool isOnGhostBoundary(int row, int col) const;
   bool isOnRealBoundary(int row, int col) const;
+  bool isOnRealBoundaryEast(int row, int col) const;
+  bool isOnRealBoundaryWest(int row, int col) const;
+  bool isOnRealBoundaryNorth(int row, int col) const;
+  bool isOnRealBoundarySouth(int row, int col) const;
 
   // sets the outer boundaries (ghost-cells) of the grid
   void setGhostBoundary(PetscScalar value);
-  void setRealBoundary(PetscScalar value);
+  void setRealBoundary(PetscScalar value, Direction direction = Direction::All);
   void findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar newValue);
   void findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar newValue);
 

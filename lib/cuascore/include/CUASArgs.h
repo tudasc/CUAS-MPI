@@ -41,7 +41,6 @@ struct CUASArgs {
   bool restartNoneZeroInitialGuess;
   PetscScalar specificStorage;  // Ss
   PetscScalar specificYield;    // Sy
-  bool noSmoothMelt;
   std::string coordinatesFile;
   std::string forcingFile;
   int sizeOfForcingBuffer;
@@ -56,6 +55,8 @@ struct CUASArgs {
   std::string input;
   std::string output;
   std::string outputSize;
+  bool enableUDS;  // upwind scheme
+  PetscScalar thresholdThicknessUDS;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);

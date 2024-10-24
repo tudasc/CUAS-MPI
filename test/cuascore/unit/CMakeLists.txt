@@ -6,10 +6,6 @@ add_executable(test-CUASKernels CUASKernelsTest.cpp)
 target_link_libraries(test-CUASKernels cuascore)
 target_link_libraries(test-CUASKernels gtest)
 
-add_executable(test-specialgradient specialgradientTest.cpp)
-target_link_libraries(test-specialgradient cuascore)
-target_link_libraries(test-specialgradient gtest)
-
 add_executable(test-fillNoData fillNoDataTest.cpp)
 target_link_libraries(test-fillNoData cuascore)
 target_link_libraries(test-fillNoData gtest)
@@ -56,7 +52,6 @@ target_link_libraries(test-TimeIntegrator gtest)
 
 install(TARGETS test-systemmatrix DESTINATION test/cuascore/unit)
 install(TARGETS test-CUASKernels DESTINATION test/cuascore/unit)
-install(TARGETS test-specialgradient DESTINATION test/cuascore/unit)
 install(TARGETS test-fillNoData DESTINATION test/cuascore/unit)
 install(TARGETS test-CUASArgs DESTINATION test/cuascore/unit)
 install(TARGETS test-timeparse DESTINATION test/cuascore/unit)

@@ -9,7 +9,6 @@
 #include "CUASConstants.h"
 #include "CUASKernels.h"
 #include "CUASTimeIntegrator.h"
-#include "specialgradient.h"
 #include "systemmatrix.h"
 #include "timing.h"
 
@@ -32,7 +31,7 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *
   currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
   dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   // rate factor from flow law (ice rheology)
   rateFactorIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
@@ -43,12 +42,18 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *
   creep = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   cavity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
-  gradHeadSquared = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fluxXDir = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fluxYDir = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   workSpace = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
   Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
   Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
+
+  effTransEast = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  effTransWest = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  effTransNorth = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  effTransSouth = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 
   /***** setup water source *****/
   waterSource = std::make_unique<PETScGrid>(numOfCols, numOfRows);
@@ -75,7 +80,6 @@ void CUASSolver::setup() {
   creep->setZero();
   cavity->setZero();
   pEffective->setZero();
-  gradHeadSquared->setZero();
   fluxMagnitude->setZero();
   waterSource->setZero();
   workSpace->setZero();
@@ -105,25 +109,6 @@ void CUASSolver::setup() {
   //
   // initialize the head
   setInitialHeadFromArgs(*currHead, *model->bndMask, *model->topg, *model->pIce, *args, *workSpace);
-
-  // local noFlowMask
-  {
-    auto cols = model->bndMask->getTotalNumOfCols();
-    auto rows = model->bndMask->getTotalNumOfRows();
-    auto grid = std::make_unique<PETScGrid>(cols, rows);
-    auto glob = grid->getWriteHandle();
-    auto &mask = model->bndMask->getReadHandle();
-
-    for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
-        // should we use true = 1.0 and false = 0.0 to match type of PetscScalar?
-        glob(i, j) = (mask(i, j) == (PetscScalar)NOFLOW_FLAG);
-      }
-    }
-    glob.setValues();
-    binaryDilation(*gradMask, *grid);  // fixme: check gradMask for all Dirichlet BCs in Poisson Test
-    gradMask->setRealBoundary(1.0);    // do not allow the gradient at the outermost grid points
-  }
 
   // TODO: Time dependent forcing (Interpolierung)
   //
@@ -276,31 +261,39 @@ void CUASSolver::preComputation() {
   updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
                                    args->layerThickness, args->specificStorage, args->specificYield, args->unconfSmooth,
                                    args->disableUnconfined, args->doAnyChannel);
+  if (args->enableUDS) {
+    // experimental for unconfined flow mainly
+    updateInterfaceTransmissivityUDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
+                                     *model->topg, *currHead, *Teff, args->thresholdThicknessUDS);
+  } else {
+    // this is the unmodified old scheme
+    updateInterfaceTransmissivityCDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
+                                     *model->topg, *currHead, *Teff);
+  }
+
+  // Use unified version for the flux (CDS and UDS). So far only needed for output.
+  getFlux(*fluxMagnitude, *fluxXDir, *fluxYDir, *model->bndMask, *currHead, *effTransEast, *effTransWest,
+          *effTransNorth, *effTransSouth, model->dx);
+  // ... more diagnostic variables ?
 
   // calculate effective pressure for diagnostic output and probably for creep opening/closure
   headToEffectivePressure(*pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
 
-  // we need gradient of head for the flux and probably for melt opening
-  getGradHeadSQR(*gradHeadSquared, *currHead, model->dx, *gradMask);
-
-  // TODO extract?
   // compute channel opening terms to be ready for netcdf output
   if (args->doAnyChannel) {
     // creep
     if (args->doCreep) {
-      computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity);
+      computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity, *model->bndMask);
     }
     // melt
     if (args->doMelt) {
-      computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, *currTransmissivity, *gradHeadSquared);
-      if (!args->noSmoothMelt) {
-        convolveStar11411(*melt, *tmpMelt);
-        melt->copy(*tmpMelt);
-      }
+      // use unified version of computeMeltOpening
+      computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, model->dx, *effTransEast, *effTransWest,
+                         *effTransNorth, *effTransSouth, *currHead, *model->topg, *model->bndMask);
     }
     // cavity
     if (args->doCavity) {
-      computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce);
+      computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce, *model->bndMask);
     }
   }
 }
@@ -333,8 +326,12 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
     //
     // UPDATE HEAD
     //
-    systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt), args->timeSteppingTheta, *currHead,
-                 *waterSource, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
+    //    systemmatrixDeprecated(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt),
+    //    args->timeSteppingTheta,
+    //                           *currHead, *waterSource, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
+    systemmatrix(*matA, *bGrid, *Seff, *effTransEast, *effTransWest, *effTransNorth, *effTransSouth, model->dx,
+                 static_cast<double>(dt), args->timeSteppingTheta, *currHead, *waterSource, *dirichletValues,
+                 *model->bndMask, *globalIndicesBlocked);
 
     // solve the equation A*sol = b,
     auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);

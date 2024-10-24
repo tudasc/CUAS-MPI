@@ -108,10 +108,24 @@ bool PETScGrid::isOnGhostBoundary(int row, int col) const {
 }
 
 bool PETScGrid::isOnRealBoundary(int row, int col) const {
-  return cornerYGhost == -1 && row == 0 || cornerXGhost == -1 && col == 0 ||
-         cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localNumOfRows - 1 ||
-         cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localNumOfCols - 1;
+  //  return cornerYGhost == -1 && row == 0 || cornerXGhost == -1 && col == 0 ||
+  //         cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localNumOfRows - 1 ||
+  //         cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localNumOfCols - 1;
+  return isOnRealBoundaryEast(row, col) || isOnRealBoundaryWest(row, col) || isOnRealBoundaryNorth(row, col) ||
+         isOnRealBoundarySouth(row, col);
 }
+
+bool PETScGrid::isOnRealBoundaryEast(int row, int col) const {
+  return cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localNumOfCols - 1;
+}
+
+bool PETScGrid::isOnRealBoundaryWest(int row, int col) const { return cornerXGhost == -1 && col == 0; }
+
+bool PETScGrid::isOnRealBoundaryNorth(int row, int col) const {
+  return cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localNumOfRows - 1;
+}
+
+bool PETScGrid::isOnRealBoundarySouth(int row, int col) const { return cornerYGhost == -1 && row == 0; }
 
 void PETScGrid::setGhostBoundary(PetscScalar value) {
   auto handle = getWriteHandleGhost();
@@ -124,11 +138,34 @@ void PETScGrid::setGhostBoundary(PetscScalar value) {
   }
 }
 
-void PETScGrid::setRealBoundary(PetscScalar value) {
+// See https://isocpp.org/wiki/faq/pointers-to-members
+void PETScGrid::setRealBoundary(PetscScalar value, Direction direction) {
+  PETScGridMemFn isOnBoundaryFunc;
+  switch (direction) {
+    case Direction::All:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundary;
+      break;
+    case Direction::North:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundaryNorth;
+      break;
+    case Direction::East:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundaryEast;
+      break;
+    case Direction::South:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundarySouth;
+      break;
+    case Direction::West:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundaryWest;
+      break;
+    default:
+      CUAS_ERROR("Error: PETScGrid::setRealBoundary() with unknown direction. Exiting.")
+      exit(1);
+  }
+
   auto handle = getWriteHandle();
   for (int row = 0; row < localNumOfRows; ++row) {
     for (int col = 0; col < localNumOfCols; ++col) {
-      if (isOnRealBoundary(row, col)) {
+      if ((this->*isOnBoundaryFunc)(row, col)) {
         handle(row, col) = value;
       }
     }
