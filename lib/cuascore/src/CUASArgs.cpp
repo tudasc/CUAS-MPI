@@ -146,7 +146,7 @@ inline void defineArgs(cxxopts::Options &options) {
        "cavity opening parameter",
        cxxopts::value<PetscScalar>()->default_value("5e-4"))
       ("initialHead",
-       "Initial value for head. Nzero means that head is set such that effective pressure N is zero.",
+       "Initial value for head. Argument must be 'Nzero', 'Nopc', 'low', 'mid', 'high', 'topg' or a valid number",
        cxxopts::value<std::string>()->default_value("Nzero"))
       ("sizeOfForcingBuffer",
        "Time slices to use in Forcing Buffer (TimeForcing --> BufferedForcing). Value has to be -1 or >= 2 (default -1 --> load all).",

@@ -45,6 +45,8 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *
   pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
   gradHeadSquared = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  workSpace = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
   Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
   Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
 
@@ -76,6 +78,7 @@ void CUASSolver::setup() {
   gradHeadSquared->setZero();
   fluxMagnitude->setZero();
   waterSource->setZero();
+  workSpace->setZero();
 
   rateFactorIce->setConst(args->flowConstant);         // todo: read 2d field from file (optional)
   basalVelocityIce->setConst(args->basalVelocityIce);  // todo: read 2d field from file (optional)
@@ -101,38 +104,7 @@ void CUASSolver::setup() {
 
   //
   // initialize the head
-  //
-  if (args->initialHead == "zero") {
-    currHead->setZero();
-  } else if (args->initialHead == "Nzero") {
-    // np.maximum(np.maximum(helpers.pressure_to_head(pwater=pice, topg=topg), topg), 0.0)
-    pressureToHead(*currHead, *model->pIce, *model->topg, args->layerThickness);
-    {
-      auto head = currHead->getWriteHandle();
-      auto &topg = model->topg->getReadHandle();
-      for (int j = 0; j < currHead->getLocalNumOfRows(); ++j) {
-        for (int i = 0; i < currHead->getLocalNumOfCols(); ++i) {
-          head(j, i) = std::max({head(j, i), topg(j, i), 0.0});
-        }
-      }
-    }
-  } else if (args->initialHead == "topg") {
-    currHead->copy(*model->topg);
-  } else {
-    try {
-      auto initialHeadValue = (PetscScalar)std::stod(args->initialHead);
-      currHead->setConst(initialHeadValue);
-    } catch (std::invalid_argument const &ex) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead invalid_argument: '" + args->initialHead + "'. Exiting.")
-      exit(1);
-    } catch (std::out_of_range const &ex) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead out_of_range: '" + args->initialHead + "'. Exiting.")
-      exit(1);
-    } catch (...) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero, topg or valid number. Exiting.")
-      exit(1);
-    }
-  }
+  setInitialHeadFromArgs(*currHead, *model->bndMask, *model->topg, *model->pIce, *args, *workSpace);
 
   // local noFlowMask
   {

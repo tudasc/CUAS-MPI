@@ -43,12 +43,13 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> tmpMelt;
   std::unique_ptr<PETScGrid> creep;
   std::unique_ptr<PETScGrid> cavity;
-  std::unique_ptr<PETScGrid> pEffective;  // same as model->pIce
+  std::unique_ptr<PETScGrid> pEffective;
   std::unique_ptr<PETScGrid> gradHeadSquared;
   std::unique_ptr<PETScGrid> fluxMagnitude;
 
-  std::unique_ptr<PETScGrid> Seff;  //!< effective Storativity
-  std::unique_ptr<PETScGrid> Teff;  //!< effective Transmissivity
+  std::unique_ptr<PETScGrid> Seff;       //!< effective Storativity
+  std::unique_ptr<PETScGrid> Teff;       //!< effective Transmissivity
+  std::unique_ptr<PETScGrid> workSpace;  //!< a temporary grid to store e.g. waterPressure
 
   PetscScalar eps = 0.0;   //!<  \f$ max(|h^n - h^{n-1}|)/dt \f$
   PetscScalar Teps = 0.0;  //!<  \f$ max(|T^n - T^{n-1}|)/dt \f$
