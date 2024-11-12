@@ -65,25 +65,22 @@ mpirun -n $NN  $cuas --totaltime '15 days' --dt '1 hour' --saveEvery 1 --verbose
 
 ### Build
 
-We expect that *PETSC_ROOT* and *LIBNETCDF_ROOT* are set, being the path to the toplevel diretory of your PETSc and NetCDF installation.
-And `<prefix>` is the path which you want to use for the CUAS-MPI installation.
-Fullfilling these requirements, you should be able to run:
-
+Starting from the CUAS-MPI directory:
 ```
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCMAKE_INSTALL_PREFIX=<prefix>
-cmake --build build
-cmake --install build
-```
-You don't need to use *CMAKE_INSTALL_PREFIX* and decide your preferred prefix later using:
-```
-# alternative without using CMAKE_INSTALL_PREFIX 
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DPETSC_DIR=<petsc-root-directory> -DNETCDF_DIR=<netcdf-root-directory>
 cmake --build build
 cmake --install build --prefix <prefix>
 ```
+You may want to use legacy cmake calls to generate Makefiles and build CUAS-MPI:
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DPETSC_DIR=<petsc-root-directory> -DNETCDF_DIR=<netcdf-root-directory> -DCMAKE_INSTALL_PREFIX=<prefix>
+make
+make install
+```
 
-
-Beside the default cmake options like *CMAKE_BUILD_TYPE* we use the following options:
+CUAS-MPI makes use of the following options:
 | Option | Default | Description                                                                                                  |
 | --- | :---: |--------------------------------------------------------------------------------------------------------------|
 | `CUAS_ENABLE_TESTS` | `OFF` | Enables targets building tests. |
@@ -101,11 +98,17 @@ Beside the default cmake options like *CMAKE_BUILD_TYPE* we use the following op
 </tr>
 <tr>
     <td valign="top"><a name="ref-CUAS-2023"></a>[CUAS23]</td>
-    <td>Fischler, Yannic and Kleiner, Thomas and Bischof, Christian and Schmiedel, Jeremie and Sayag, Roiy and 
+    <td>Fischler, Yannic and Kleiner, Thomas and Bischof, Christian and Schmiedel, Jeremie and Sayag, Roiy and
         Emunds, Raban and Oestreich, Lennart Frederik and Humbert, Angelika
     <a href=https://doi.org/10.5194/gmd-16-5305-2023>
-    A parallel implementation of the confined–unconfined aquifer system model for subglacial hydrology: design, 
+    A parallel implementation of the confined–unconfined aquifer system model for subglacial hydrology: design,
     verification, and performance analysis (CUAS-MPI v0.1.0) </a>.
     In <i>Geoscientific Model Development</i>, pages 5305-5322, 2023.</td>
 </tr>
 </table>
+
+## CUAS-MPI Applications
+
+- Wolovick, Micheal and Humbert, Angelika and Kleiner, Thomas and Rückamp, Martin
+  [Regularization and L-curves in ice sheet inverse models: a case study in the Filchner-Ronne catchment](https://doi.org/10.5194/tc-17-5027-2023),
+  <i>The Cryosphere</i>, vol. 17, no. 12, pages 5027–5060, 2023.
