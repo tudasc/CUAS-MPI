@@ -86,7 +86,7 @@ cmake --install build --prefix <prefix>
 Beside the default cmake options like *CMAKE_BUILD_TYPE* we use the following options:
 | Option | Default | Description                                                                                                  |
 | --- | :---: |--------------------------------------------------------------------------------------------------------------|
-| `BUILD_TESTS` | `OFF` | Enables build of unit and integration tests |
+| `CUAS_ENABLE_TESTS` | `OFF` | Enables targets building tests. |
 
 ## References
 
