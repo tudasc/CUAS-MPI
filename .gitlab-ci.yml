@@ -64,7 +64,7 @@ build-cuas:
   needs: ["download-cuas"]
   script:
     - cd $CUAS_WORK_PATH
-    - cmake -B $CUAS_BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
+    - cmake -B $CUAS_BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
     - cmake --build $CUAS_BUILD_DIR --verbose --parallel $(cat /proc/cpuinfo | grep processor | wc -l)
 
 

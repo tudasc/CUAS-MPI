@@ -17,8 +17,9 @@ include(ToolchainOptions)
 add_subdirectory(lib)
 add_subdirectory(tools)
 
-option(BUILD_TESTS "enables building tests" OFF)
+# The default options cache
+option(CUAS_ENABLE_TESTS "Enables targets building tests." OFF)
 
-if(BUILD_TESTS)
+if(CUAS_ENABLE_TESTS)
   add_subdirectory(test)
 endif()
