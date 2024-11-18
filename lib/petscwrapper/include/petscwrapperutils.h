@@ -1,5 +1,11 @@
-#ifndef CUAS_PETSCUTIL_H
-#define CUAS_PETSCUTIL_H
+/**
+ * File: petscwrapperutils.h
+ * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
+ * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
+ */
+
+#ifndef CUAS_PETSCWRAPPERUTIL_H
+#define CUAS_PETSCWRAPPERUTIL_H
 
 #include "petsc.h"
 
@@ -7,4 +13,4 @@
 #define PETSC_NULLPTR nullptr
 #endif
 
-#endif  // CUAS_PETSCUTIL_H
+#endif  // CUAS_PETSCWRAPPERUTIL_H

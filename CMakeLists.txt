@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(CUAS-MPI)
+project(
+  CUAS-MPI
+  VERSION 0.2.0
+  LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
