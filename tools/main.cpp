@@ -12,6 +12,17 @@
 #include "SolutionHandler.h"
 #include "timeparse.h"
 
+/**
+ * setup of CUAS-MPI main application
+ */
+namespace CUASSetup {
+
+/**
+ * differs different ways of defining the time in CUAS-MPI and sets the variables
+ *
+ * @param time
+ * @param args
+ */
 void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
   if (!args.timeStepFile.empty()) {
     if (args.verbose) {
@@ -61,8 +72,16 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
   }
 }
 
-// store at least initial conditions and the final results
-// unless saveEvery is negative --> no output
+/**
+ * setup of the CUAS SolutionHandler
+ *
+ * store at least initial conditions and the final results
+ * unless saveEvery is negative --> no output
+ *
+ * @param args
+ * @param time
+ * @param model
+ */
 std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args, CUAS::Time const &time,
                                                             CUAS::CUASModel const &model) {
   if (args.saveEvery < 0 && args.saveInterval.empty()) {
@@ -101,10 +120,22 @@ std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args
   return solutionHandler;
 }
 
+/**
+ * setup to restart CUAS from an existing solution in NetCDF
+ *
+ * @param solver
+ * @param restartFile
+ * @param restartNoneZeroInitialGuess
+ */
 void restartFromNetCDF(CUAS::CUASSolver &solver, std::string const &restartFile, bool restartNoneZeroInitialGuess) {
   CUAS::ModelReader::restartFromFile(solver, restartFile, restartNoneZeroInitialGuess);
 }
 
+}  // namespace CUASSetup
+
+/**
+ * CUAS-MPI main function
+ */
 int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   {
@@ -118,15 +149,15 @@ int main(int argc, char *argv[]) {
     setupForcing(*model, args);
 
     CUAS::Time time;
-    setupTime(time, args);
+    CUASSetup::setupTime(time, args);
 
-    std::unique_ptr<CUAS::SolutionHandler> solutionHandler = setupSolutionHandler(args, time, *model);
+    std::unique_ptr<CUAS::SolutionHandler> solutionHandler = CUASSetup::setupSolutionHandler(args, time, *model);
 
     auto solver = std::make_unique<CUAS::CUASSolver>(model.get(), &args, solutionHandler.get());
     solver->setup();
 
     if (!args.restart.empty()) {
-      restartFromNetCDF(*solver, args.restart, args.restartNoneZeroInitialGuess);
+      CUASSetup::restartFromNetCDF(*solver, args.restart, args.restartNoneZeroInitialGuess);
     }
 
     solver->solve(time.timeSteps);
