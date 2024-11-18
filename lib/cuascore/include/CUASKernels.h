@@ -578,8 +578,15 @@ inline void setInitialHeadFromArgs(PETScGrid &result, PETScGrid const &bndMask, 
  *
  *
  * @param fluxMagnitude (m^2/s)
+ * @param fluxXDir
+ * @param fluxYDir
+ * @param bndMask
  * @param hydraulicHead (1)
- * @param hydraulicTransmissivity (m^2/s)
+ * @param effTransEast
+ * @param effTransWest
+ * @param effTransNorth
+ * @param effTransSouth
+ * @param dx
  */
 inline void getFlux(PETScGrid &fluxMagnitude, PETScGrid &fluxXDir, PETScGrid &fluxYDir, PETScGrid const &bndMask,
                     PETScGrid const &hydraulicHead, PETScGrid const &effTransEast, PETScGrid const &effTransWest,

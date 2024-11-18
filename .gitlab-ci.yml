@@ -192,3 +192,17 @@ build-cuas-docs-doxygen:
     - cd $CUAS_WORK_PATH
     - cmake -B $CUAS_DOCS_DIR/doxygen -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCUAS_ENABLE_DOCS=Doxygen
     - cmake --build $CUAS_DOCS_DIR/doxygen --target docs
+
+
+build-cuas-docs-doxygensphinxbreathe:
+  stage: docs
+  needs: ["install-cuas"]
+  before_script:
+    - *output-directories
+    - *lb-setup
+    - module load doxygen
+    - module load python/$PYTHON_VERSION
+  script:
+    - cd $CUAS_WORK_PATH
+    - cmake -B $CUAS_DOCS_DIR/doxygensphinxbreathe -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCUAS_ENABLE_DOCS=DoxygenSphinxBreathe
+    - cmake --build $CUAS_DOCS_DIR/doxygensphinxbreathe --target docs
