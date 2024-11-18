@@ -87,6 +87,7 @@ Beside the default cmake options like *CMAKE_BUILD_TYPE* we use the following op
 | Option | Default | Description                                                                                                  |
 | --- | :---: |--------------------------------------------------------------------------------------------------------------|
 | `CUAS_ENABLE_TESTS` | `OFF` | Enables targets building tests. |
+| `CUAS_ENABLE_DOCS` | `OFF` | Enables targets building documentation. |
 
 ## References
 

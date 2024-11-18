@@ -29,6 +29,7 @@ variables:
   CUAS_WORK_PATH: $CI_BUILDS_DIR/$CI_PROJECT_ID/$CI_PIPELINE_ID/$CI_COMMIT_SHORT_SHA/cuas-mpi
   CUAS_BUILD_DIR: build
   CUAS_INSTALL_DIR: install
+  CUAS_DOCS_DIR: build-docs
 
   GCC_VERSION: 10.2
   OPENMPI_VERSION: 4.0
@@ -45,6 +46,7 @@ stages:
   - unit-test
   - integration-test
   - linting
+  - docs
 
 
 download-cuas:
@@ -177,3 +179,16 @@ run-cmake-format:
   script:
     - cd $CUAS_WORK_PATH
     - ./utils/checkCmakeFormat.sh
+
+
+build-cuas-docs-doxygen:
+  stage: docs
+  needs: ["install-cuas"]
+  before_script:
+    - *output-directories
+    - *lb-setup
+    - module load doxygen
+  script:
+    - cd $CUAS_WORK_PATH
+    - cmake -B $CUAS_DOCS_DIR/doxygen -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCUAS_ENABLE_DOCS=Doxygen
+    - cmake --build $CUAS_DOCS_DIR/doxygen --target docs
