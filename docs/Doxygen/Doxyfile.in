@@ -1,0 +1,3 @@
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/docs/
+INPUT                  = @PROJECT_SOURCE_DIR@/lib/ @PROJECT_SOURCE_DIR@/tools/ @PROJECT_SOURCE_DIR@/test/ @PROJECT_SOURCE_DIR@/docs/Doxygen/
+RECURSIVE              = YES

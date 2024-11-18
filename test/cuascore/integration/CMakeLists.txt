@@ -16,3 +16,19 @@ target_link_libraries(test-exactSteadySolution cuascore)
 target_link_libraries(test-exactSteadySolution gtest)
 
 install(TARGETS test-exactSteadySolution DESTINATION test/cuascore/integration)
+
+add_executable(test-exactCircularSteadySolution
+               exactCircularSteadySolutionTest.cpp)
+target_link_libraries(test-exactCircularSteadySolution cuascore)
+target_link_libraries(test-exactCircularSteadySolution gtest)
+
+install(TARGETS test-exactCircularSteadySolution
+        DESTINATION test/cuascore/integration)
+
+add_executable(test-exactPiecewiseConstantSteadySolution
+               exactPiecewiseConstantSteadySolutionTest.cpp)
+target_link_libraries(test-exactPiecewiseConstantSteadySolution cuascore)
+target_link_libraries(test-exactPiecewiseConstantSteadySolution gtest)
+
+install(TARGETS test-exactPiecewiseConstantSteadySolution
+        DESTINATION test/cuascore/integration)

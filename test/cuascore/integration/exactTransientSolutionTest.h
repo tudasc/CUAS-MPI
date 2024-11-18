@@ -100,26 +100,26 @@ inline PetscScalar max_Q_exact(PetscScalar const t, PetscScalar const Lx, PetscS
   return 1.0 / 16.0 * a * (8.0 * t * T_hmean * (1.0 / (Lx * Lx) + 1.0 / (Ly * Ly)) + S);
 }
 
-class TransientForcing : public CUAS::Forcing {
+class TransientTestForcing : public CUAS::Forcing {
  public:
-  explicit TransientForcing(int const nx, int const ny, PetscScalar const res, PetscScalar const multiplier = 1.0,
-                            PetscScalar const offset = 0.0)
+  explicit TransientTestForcing(int const nx, int const ny, PetscScalar const res, PetscScalar const multiplier = 1.0,
+                                PetscScalar const offset = 0.0)
       : resolution(res), Lx(res * (nx - 1)), Ly(res * (ny - 1)) {
     currQ = std::make_unique<PETScGrid>(nx, ny);
 
     if (multiplier != 1.0) {
-      TransientForcing::applyMultiplier(multiplier);
+      TransientTestForcing::applyMultiplier(multiplier);
     }
     if (offset != 0.0) {
-      TransientForcing::applyOffset(offset);
+      TransientTestForcing::applyOffset(offset);
     }
   }
-  TransientForcing(TransientForcing &) = delete;
-  TransientForcing(TransientForcing &&) = delete;
+  TransientTestForcing(TransientTestForcing &) = delete;
+  TransientTestForcing(TransientTestForcing &&) = delete;
 
-  PETScGrid const &getCurrentQ(CUAS::timeSecs currTime) override {
+  PETScGrid const &getCurrent(CUAS::timeSecs currTime) override {
     if (currTime < 0) {
-      CUAS_ERROR("getCurrentQ was called with currTime < 0. Exiting.")
+      CUAS_ERROR("getCurrent was called with currTime < 0. Exiting.")
       exit(1);
     }
 
@@ -188,7 +188,7 @@ std::unique_ptr<CUAS::CUASModel> fillModelData(int nx, int ny, PetscScalar res) 
   model.bndMask->setConst(COMPUTE_FLAG);
   model.bndMask->setGhostBoundary(DIRICHLET_FLAG);
   model.bndMask->setRealBoundary(DIRICHLET_FLAG);
-  model.Q = std::make_unique<TransientForcing>(nx, ny, res);
+  model.setWaterSource(std::make_unique<TransientTestForcing>(nx, ny, res));
 
   return pmodel;
 }

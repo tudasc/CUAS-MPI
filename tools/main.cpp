@@ -7,10 +7,22 @@
 #include "CUASArgs.h"
 #include "CUASModel.h"
 #include "CUASSolver.h"
+#include "Forcing/setup.h"
 #include "ModelReader.h"
 #include "SolutionHandler.h"
 #include "timeparse.h"
 
+/**
+ * setup of CUAS-MPI main application
+ */
+namespace CUASSetup {
+
+/**
+ * differs different ways of defining the time in CUAS-MPI and sets the variables
+ *
+ * @param time
+ * @param args
+ */
 void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
   if (!args.timeStepFile.empty()) {
     if (args.verbose) {
@@ -28,7 +40,27 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
     if (args.verbose) {
       CUAS_INFO_RANK0("generates time step array using command line parameters")
     }
-    time.timeSteps = CUAS::getTimeStepArray(0, CUAS::parseTime(args.totaltime), CUAS::parseTime(args.dt));
+    auto starttime = CUAS::parseTime(args.starttime);
+    auto endtime = CUAS::parseTime(args.endtime);
+    auto totaltime = CUAS::parseTime(args.totaltime);
+    auto dt = CUAS::parseTime(args.dt);
+
+    if (totaltime > 0 && endtime > 0) {
+      CUAS_WARN_RANK0("endtime and totaltime are defined, totaltime '{}' is ignored, endtime '{}' is used.",
+                      args.totaltime, args.endtime)
+    }
+    if (totaltime <= 0 && endtime <= 0) {
+      CUAS_WARN_RANK0("neither totaltime nor endtime are defined.")
+    }
+
+    if (endtime <= 0 && totaltime > 0) {
+      endtime = starttime + totaltime;
+    }
+
+    CUAS_INFO_RANK0("generating time step array starttime {}, endtime {}, totaltime {}, dt {}.",
+                    CUAS::parseTime(starttime), CUAS::parseTime(endtime), CUAS::parseTime(totaltime),
+                    CUAS::parseTime(dt))
+    time.timeSteps = CUAS::getTimeStepArray(starttime, endtime, dt);
   }
 
   if (args.verbose) {
@@ -40,42 +72,70 @@ void setupTime(CUAS::Time &time, CUAS::CUASArgs const &args) {
   }
 }
 
-// store at least initial conditions and the final results
-// unless saveEvery is negative --> no output
+/**
+ * setup of the CUAS SolutionHandler
+ *
+ * store at least initial conditions and the final results
+ * unless saveEvery is negative --> no output
+ *
+ * @param args
+ * @param time
+ * @param model
+ */
 std::unique_ptr<CUAS::SolutionHandler> setupSolutionHandler(CUAS::CUASArgs &args, CUAS::Time const &time,
                                                             CUAS::CUASModel const &model) {
-  if (args.saveEvery < 0)
+  if (args.saveEvery < 0 && args.saveInterval.empty()) {
     return nullptr;
-
-  if (args.saveEvery == 0) {
-    CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size())
-    args.saveEvery = time.timeSteps.size();
   }
 
-  return std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
+  // TODO we currently do not differentiate whether we run with dt, timesteparray or coupled
+
+  std::unique_ptr<CUAS::SolutionHandler> solutionHandler;
+
+  if (!args.saveInterval.empty()) {
+    auto saveInterval = CUAS::parseTime(args.saveInterval);
+    if (args.saveEvery > 0) {
+      CUAS_WARN("Both --saveInterval and --saveEvery are used: ignoring --saveEvery.")
+    }
+    solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
+    solutionHandler->setSaveStrategy(CUAS::SaveStrategy::TIMEINTERVAL, saveInterval, -1);
+  } else {
+    auto saveEvery = args.saveEvery;
+    if (saveEvery == 0) {
+      CUAS_WARN("Option --saveEvery is == 0, reset to {}", time.timeSteps.size())
+      saveEvery = static_cast<int>(time.timeSteps.size());
+    }
+    solutionHandler = std::make_unique<CUAS::SolutionHandler>(args.output, model.Ncols, model.Nrows, args.outputSize);
+    solutionHandler->setSaveStrategy(CUAS::SaveStrategy::INDEX, -1, saveEvery);
+  }
+
+  // TODO move to solution handler constructor?
+  if (!time.units.empty()) {
+    solutionHandler->setTimeUnits(time.units);
+  }
+  if (!time.calendar.empty()) {
+    solutionHandler->setCalendar(time.calendar);
+  }
+
+  return solutionHandler;
 }
 
+/**
+ * setup to restart CUAS from an existing solution in NetCDF
+ *
+ * @param solver
+ * @param restartFile
+ * @param restartNoneZeroInitialGuess
+ */
 void restartFromNetCDF(CUAS::CUASSolver &solver, std::string const &restartFile, bool restartNoneZeroInitialGuess) {
   CUAS::ModelReader::restartFromFile(solver, restartFile, restartNoneZeroInitialGuess);
 }
 
-void setupForcing(CUAS::CUASModel &model, CUAS::CUASArgs &args) {
-  if (args.forcingFile.empty()) {
-    CUAS_WARN_RANK0("no forcing file given --> try to use input file as forcing file")
-    args.forcingFile = args.input;
-  }
+}  // namespace CUASSetup
 
-  bool isTimeForcing = CUAS::ModelReader::isTimeDependentField(args.forcingFile, "bmelt");
-  if (isTimeForcing) {
-    CUAS_INFO_RANK0("Using time forcing with file: " + args.forcingFile)
-    model.Q = CUAS::ModelReader::getTimeForcing(args.forcingFile, "bmelt", args.supplyMultiplier / SPY, 0.0,
-                                                args.loopForcing);
-  } else {
-    CUAS_INFO_RANK0("Using constant forcing with file: " + args.forcingFile)
-    model.Q = CUAS::ModelReader::getConstantForcing(args.forcingFile, "bmelt", args.supplyMultiplier / SPY, 0.0);
-  }
-}
-
+/**
+ * CUAS-MPI main function
+ */
 int main(int argc, char *argv[]) {
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   {
@@ -89,24 +149,15 @@ int main(int argc, char *argv[]) {
     setupForcing(*model, args);
 
     CUAS::Time time;
-    setupTime(time, args);
+    CUASSetup::setupTime(time, args);
 
-    std::unique_ptr<CUAS::SolutionHandler> solutionHandler = setupSolutionHandler(args, time, *model);
-
-    if (solutionHandler != nullptr) {
-      if (!time.units.empty()) {
-        solutionHandler->setTimeUnits(time.units);
-      }
-      if (!time.calendar.empty()) {
-        solutionHandler->setCalendar(time.calendar);
-      }
-    }
+    std::unique_ptr<CUAS::SolutionHandler> solutionHandler = CUASSetup::setupSolutionHandler(args, time, *model);
 
     auto solver = std::make_unique<CUAS::CUASSolver>(model.get(), &args, solutionHandler.get());
     solver->setup();
 
     if (!args.restart.empty()) {
-      restartFromNetCDF(*solver, args.restart, args.restartNoneZeroInitialGuess);
+      CUASSetup::restartFromNetCDF(*solver, args.restart, args.restartNoneZeroInitialGuess);
     }
 
     solver->solve(time.timeSteps);

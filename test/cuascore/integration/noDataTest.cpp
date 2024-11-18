@@ -10,9 +10,9 @@
 
 #include "CUASArgs.h"
 #include "CUASSolver.h"
-#include "Forcing/ConstantForcing.h"
+#include "Forcing/SteadyForcing.h"
 
-//#define TESTS_DUMP_NETCDF
+// #define TESTS_DUMP_NETCDF
 #ifdef TESTS_DUMP_NETCDF
 #include "NetCDFFile.h"
 #endif
@@ -95,7 +95,7 @@ TEST(noDataTest, compareModelToPython) {
     file.write("thk", *model.thk, 0);
     file.write("topg", *model.topg, 0);
     file.write("bnd_mask", *model.bndMask, 0);
-    file.write("bmelt", model.Q->getCurrentQ(0), 0);  // m/s
+    file.write("bmelt", model.getCurrentWaterSource(0), 0);  // m/s
   }
 #endif
 
@@ -134,7 +134,7 @@ TEST(noDataTest, compareModelToPython) {
   }
 
   // take zero here for constant forcing
-  auto &Q = model.Q->getCurrentQ(0);
+  auto &Q = model.getCurrentWaterSource(0);
   auto &QGlob = Q.getReadHandle();
   for (int i = 0; i < Q.getLocalNumOfRows(); ++i) {
     for (int j = 0; j < Q.getLocalNumOfCols(); ++j) {

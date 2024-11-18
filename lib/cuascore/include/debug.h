@@ -34,7 +34,7 @@ struct namedGrid {
 inline void dumpGridsToNetCDF(std::string function_name, std::string postfix, std::vector<namedGrid> const &grids) {
   for (auto &g : grids) {
     if (!g.grid->isCompatible(*grids[0].grid)) {
-      CUAS_ERROR("{}:{}:{} was called with incompatible PETScGrids. Exiting.", __FILE__, __LINE__, __func__);
+      CUAS_ERROR("{}:{}:{} was called with incompatible PETScGrids. Exiting.", __FILE__, __LINE__, __func__)
       exit(1);
     }
   }

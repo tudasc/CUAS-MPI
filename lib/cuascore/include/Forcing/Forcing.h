@@ -8,15 +8,30 @@
 #define CUAS_FORCING_H
 
 #include "PETScGrid.h"
+
 #include "timeparse.h"
 
 namespace CUAS {
 
 class Forcing {
  public:
-  virtual PETScGrid const &getCurrentQ(timeSecs currTime = 0) = 0;
+  explicit Forcing() = default;
+  Forcing(const Forcing &) = delete;
+  Forcing &operator=(Forcing const &) = delete;
+  Forcing(const Forcing &&) = delete;
+  Forcing &operator=(Forcing const &&) = delete;
   virtual ~Forcing() = default;
 
+  // member functions
+ public:
+  virtual PETScGrid const &getCurrent(timeSecs currentTime) = 0;
+
+  // member
+ public:
+  // member
+ protected:
+  std::unique_ptr<PETScGrid> current;
+  // member functions
  private:
   virtual void applyMultiplier(PetscScalar multiplier) = 0;
   virtual void applyOffset(PetscScalar offset) = 0;

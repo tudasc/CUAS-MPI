@@ -17,7 +17,7 @@ TEST(CUASArgs, allOpts) {
   char arg0[] = "test";
   char arg1[] = "--Tmax=7";
   char arg2[] = "--Tmin=3";
-  char arg3[] = "--totaltime='4 Weeks'";
+  char arg3[] = "--totaltime='4 weeks'";
   char arg4[] = "--dt='1 day'";
   char arg5[] = "--saveEvery=12";
   char arg6[] = "--conductivity=13.37";
@@ -29,20 +29,27 @@ TEST(CUASArgs, allOpts) {
   char arg11[] = "--layerThickness=1.334";
   char arg12[] = "--unconfSmooth=4.3";
   char arg13[] = "--restart='restartFile.nc'";
-  char arg14[] = "--noSmoothMelt";
-  char arg15[] = "--seaLevelForcing='seaForcingFile.nc'";
-  char arg16[] = "--output='output.nc'";
-  char arg17[] = "--input='input.nc'";
-  char arg18[] = "--selectedChannels=creep";
-  char arg19[] = "--verbose";
-  char arg20[] = "--timeStepFile='timesteps.nc'";
-  char arg21[] = "--verboseSolver";
-  char arg22[] = "--directSolver";
-  char arg23[] = "--forcingFile='timeforcing.nc'";
-  // char arg24[] = "--restartNoneZeroInitialGuess=false";
+  char arg14[] = "--seaLevelForcing='seaForcingFile.nc'";
+  char arg15[] = "--output='output.nc'";
+  char arg16[] = "--input='input.nc'";
+  char arg17[] = "--selectedChannels=creep";
+  char arg18[] = "--verbose";
+  char arg19[] = "--timeStepFile='timesteps.nc'";
+  char arg20[] = "--verboseSolver";
+  char arg21[] = "--directSolver";
+  char arg22[] = "--forcingFile='timeforcing.nc'";
+  char arg23[] = "--timeSteppingTheta=0.5";
+  char arg24[] = "--sizeOfForcingBuffer=5";
+  char arg25[] = "--starttime='1 year'";
+  char arg26[] = "--endtime='1 year 4 weeks'";
+  char arg27[] = "--enableUDS";
+  char arg28[] = "--thresholdThicknessUDS=0.1";
 
-  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,  arg10, arg11,
-                  arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20, arg21, arg22, arg23};
+  // char arg25[] = "--restartNoneZeroInitialGuess=false";
+
+  char *argv[] = {arg0,  arg1,  arg2,  arg3,  arg4,  arg5,  arg6,  arg7,  arg8,  arg9,
+                  arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19,
+                  arg20, arg21, arg22, arg23, arg24, arg25, arg26, arg27, arg28};
   int argc = sizeof(argv) / sizeof(argv[0]);
 
   CUAS::CUASArgs args;
@@ -53,7 +60,7 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.directSolver, true);
   ASSERT_EQ(args.Tmax, 7);
   ASSERT_EQ(args.Tmin, 3);
-  ASSERT_EQ(args.totaltime, "'4 Weeks'");
+  ASSERT_EQ(args.totaltime, "'4 weeks'");
   ASSERT_EQ(args.dt, "'1 day'");
   ASSERT_EQ(args.saveEvery, 12);
   ASSERT_EQ(args.conductivity, 13.37);
@@ -70,12 +77,17 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.unconfSmooth, 4.3);
   ASSERT_EQ(args.restart, "'restartFile.nc'");
   ASSERT_EQ(args.restartNoneZeroInitialGuess, true);
-  ASSERT_EQ(args.noSmoothMelt, true);
   ASSERT_EQ(args.seaLevelForcing, "'seaForcingFile.nc'");
   ASSERT_EQ(args.output, "'output.nc'");
   ASSERT_EQ(args.input, "'input.nc'");
   ASSERT_EQ(args.timeStepFile, "'timesteps.nc'");
   ASSERT_EQ(args.forcingFile, "'timeforcing.nc'");
+  ASSERT_EQ(args.timeSteppingTheta, 0.5);
+  ASSERT_EQ(args.sizeOfForcingBuffer, 5);
+  ASSERT_EQ(args.starttime, "'1 year'");
+  ASSERT_EQ(args.endtime, "'1 year 4 weeks'");
+  ASSERT_EQ(args.enableUDS, true);
+  ASSERT_EQ(args.thresholdThicknessUDS, 0.1);
 }
 
 TEST(CUASArgs, selectiveChannels) {

@@ -7,13 +7,19 @@
 #include "SolutionHandler.h"
 
 #include "CUASConstants.h"
-#include "utilities.h"  // for CUAS::version
+#include "CUASKernels.h"
+#include "CUASModel.h"
+#include "CUASSolver.h"
+#include "CUASTimeIntegrator.h"
+#include "utilities.h"  // for version
 
-#include "petscutil.h"
+#include "petscoptionswrapper.h"
 
 namespace CUAS {
 
-SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize) {
+SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize,
+                                 bool storeMutable)
+    : storeMutable(storeMutable) {
   file = std::make_unique<NetCDFFile>(fileName, dimX, dimY);
 
   if (outputSize == "small") {
@@ -25,7 +31,7 @@ SolutionHandler::SolutionHandler(std::string const &fileName, int dimX, int dimY
   } else if (outputSize == "xlarge" || outputSize == "x-large") {
     osize = OutputSize::XLARGE;
   } else {
-    CUAS_ERROR("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize + "Exiting.");
+    CUAS_ERROR("SolutionHandler.cpp: SolutionHandler(...): unknown output size keyword : " + outputSize + "Exiting.")
     exit(1);
   }
 
@@ -36,8 +42,7 @@ void SolutionHandler::defineSolution() {
   /*
    * grid description
    */
-
-  file->defineScalar("time", true);
+  file->defineScalar("time", UNLIMITED);
   file->addAttributeToVariable("time", "units", "seconds since 01-01-01 00:00:00");
   file->addAttributeToVariable("time", "standard_name", "time");
   file->addAttributeToVariable("time", "calendar", "365_day");
@@ -55,7 +60,8 @@ void SolutionHandler::defineSolution() {
   file->addAttributeToVariable("y", "long_name", "Y-coordinate in Cartesian system");
   file->addAttributeToVariable("y", "axis", "Y");
 
-  file->defineGrid("bnd_mask");  // in the python version the noflow_mask was stored, here we store the bnd_mask
+  // in the python version the noflow_mask was stored, here we store the bnd_mask
+  file->defineGrid("bnd_mask", storeMutable);
   file->addAttributeToVariable("bnd_mask", "units", "1");
   file->addAttributeToVariable("bnd_mask", "flag_meanings",
                                "COMPUTE_FLAG DIRICHLET_FLAG NOFLOW_FLAG DIRICHLET_OCEAN_FLAG DIRICHLET_LAKE_FLAG");
@@ -100,7 +106,7 @@ void SolutionHandler::defineSolution() {
                                "rate of change in transmissivity inf-norm: eps_inf = max(|T^n-T^(n-1)|)/dt");
 
   if (osize >= OutputSize::NORMAL) {
-    file->defineGrid("topg", LIMITED);  // sometimes called bedrock
+    file->defineGrid("topg", storeMutable);  // sometimes called bedrock
     file->addAttributeToVariable("topg", "units", "m");
     file->addAttributeToVariable("topg", "standard_name", "land_ice_bed_elevation");
     file->addAttributeToVariable("topg", "long_name", "land_ice_bed_elevation");
@@ -148,7 +154,7 @@ void SolutionHandler::defineSolution() {
   }
 
   if (osize >= OutputSize::LARGE) {
-    file->defineGrid("thk");
+    file->defineGrid("thk", storeMutable);
     file->addAttributeToVariable("thk", "units", "m");
     file->addAttributeToVariable("thk", "standard_name", "land_ice_thickness");
     file->addAttributeToVariable("thk", "long_name", "land ice thickness");
@@ -162,47 +168,69 @@ void SolutionHandler::defineSolution() {
     file->addAttributeToVariable("effective_storativity", "units", "1");
     file->addAttributeToVariable("effective_storativity", "standard_name", "effective_storativity");
     file->addAttributeToVariable("effective_storativity", "long_name", "Effective layer storativity");
+
+    file->defineGrid("fluxXDir", UNLIMITED);  // could be derived from head and geometry in post-processing
+    file->addAttributeToVariable("fluxXDir", "units", "m2 s-1");
+    file->addAttributeToVariable("fluxXDir", "standard_name", "flux_x_dir");
+    file->addAttributeToVariable("fluxXDir", "long_name", "x-component of the flux");
+
+    file->defineGrid("fluxYDir", UNLIMITED);  // could be derived from head and geometry in post-processing
+    file->addAttributeToVariable("fluxYDir", "units", "m2 s-1");
+    file->addAttributeToVariable("fluxYDir", "standard_name", "flux_y_dir");
+    file->addAttributeToVariable("fluxYDir", "long_name", "y-component of the flux");
   }
 
   if (osize >= OutputSize::XLARGE) {
-    file->defineGrid("pice");  // direct input from ice sheet model or computed from geometry
+    file->defineGrid("pice", storeMutable);  // direct input from ice sheet model or computed from geometry
     file->addAttributeToVariable("pice", "units", "Pa");
     file->addAttributeToVariable("pice", "standard_name", "land_ice_pressure");
     file->addAttributeToVariable("pice", "long_name", "land ice pressure");
   }
 }
 
-void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGrid const &hydraulicTransmissivity,
-                                        CUASModel const &model, PETScGrid const &fluxMagnitude, PETScGrid const &melt,
-                                        PETScGrid const &creep, PETScGrid const &cavity,
-                                        PETScGrid const &effectivePressure, PETScGrid const &effectiveStorativity,
-                                        PETScGrid const &effectiveTransmissivity, PETScGrid const &waterSource,
-                                        CUASArgs const &args) {
-  file->write("x", model.xAxis);
-  file->write("y", model.yAxis);
-
+void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model, CUASArgs const &args,
+                                PETScGrid const &waterSource, CUASTimeIntegrator const &timeIntegrator) {
   //
-  file->write("bnd_mask", *model.bndMask, nextSolution);
+  // STORE DATA, IF NEEDED
+  //
+  OutputReason reason = getOutputReason(timeIntegrator);
 
-  if (osize >= OutputSize::NORMAL) {
-    file->write("topg", *model.topg, nextSolution);
+  if (reason != OutputReason::NONE) {
+    if (!args.verboseSolver && args.verbose) {
+      // show only if verboseSolver is off
+      CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeIntegrator.getTimestepIndex(),
+                      timeIntegrator.getTimesteps().size() - 1, timeIntegrator.getCurrentTime(),
+                      timeIntegrator.getCurrentDt())
+    }
+
+    // enhancement: Process diagnostic variables that are for output only here
+    // instead of in CUASSolver. We don't need them for every time step
+
+    if (reason == OutputReason::INITIAL) {
+      // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
+      storeInitialSetup(solver, model, waterSource, args, timeIntegrator);
+    } else {
+      if (storeMutable) {
+        storeMutableModelInformation(model);
+      }
+      storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource, solver.eps, solver.Teps);
+    }
+
+    finalizeSolution();
   }
+}
 
-  if (osize >= OutputSize::LARGE) {
-    file->write("thk", *model.thk, nextSolution);
-  }
-
-  if (osize >= OutputSize::XLARGE) {
-    file->write("pice", *model.pIce, nextSolution);
-  }
-
+void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   // TODO: The code below will break soon or later if somebody changes CUASArgs
   //       This should be done in an automated way, e.g. by using 'reflection'.
   file->addGlobalAttribute("Tmax", args.Tmax);
   file->addGlobalAttribute("Tmin", args.Tmin);
   file->addGlobalAttribute("Tinit", args.Tinit);
   file->addGlobalAttribute("totaltime", args.totaltime);
+  file->addGlobalAttribute("starttime", args.starttime);
+  file->addGlobalAttribute("endtime", args.endtime);
   file->addGlobalAttribute("dt", args.dt);
+  file->addGlobalAttribute("timeSteppingTheta", args.timeSteppingTheta);
   file->addGlobalAttribute("timeStepFile", args.timeStepFile);
   file->addGlobalAttribute("saveEvery", args.saveEvery);
   file->addGlobalAttribute("conductivity", args.conductivity);
@@ -221,8 +249,8 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("restartNoneZeroInitialGuess", args.restartNoneZeroInitialGuess);
   file->addGlobalAttribute("specificStorage", args.specificStorage);
   file->addGlobalAttribute("specificYield", args.specificYield);
-  file->addGlobalAttribute("noSmoothMelt", args.noSmoothMelt);
   file->addGlobalAttribute("loopForcing", args.loopForcing);
+  file->addGlobalAttribute("coordinatesFile", args.coordinatesFile);
   file->addGlobalAttribute("forcingFile", args.forcingFile);
   file->addGlobalAttribute("basalVelocityIce", args.basalVelocityIce);
   file->addGlobalAttribute("cavityBeta", args.cavityBeta);
@@ -236,24 +264,59 @@ void SolutionHandler::storeInitialSetup(PETScGrid const &hydraulicHead, PETScGri
   file->addGlobalAttribute("output", args.output);
   file->addGlobalAttribute("outputSize", args.outputSize);
 
+  file->addGlobalAttribute("enableUDS", args.enableUDS);
+  file->addGlobalAttribute("thresholdThicknessUDS", args.thresholdThicknessUDS);
+
   // compile time CUASConstants
-  file->addGlobalAttribute("version", CUAS::version());
+  file->addGlobalAttribute("version", version());
   file->addGlobalAttribute("TINY", TINY);
   file->addGlobalAttribute("NOFLOW_VALUE", NOFLOW_VALUE);
   file->addGlobalAttribute("RHO_ICE", RHO_ICE);
   file->addGlobalAttribute("SPY", SPY);
 
-  // store initial conditions if needed
-  storeSolution(0, hydraulicHead, hydraulicTransmissivity, model, fluxMagnitude, melt, creep, cavity, effectivePressure,
-                effectiveStorativity, effectiveTransmissivity, waterSource);
+  // copy lat/lon lat_bnds/lon_bnds from input file if needed
+  if (!args.coordinatesFile.empty()) {
+    CUAS_INFO_RANK0("Copy coordinates from {}", args.coordinatesFile)
+    file->copyCoordinatesFrom(args.coordinatesFile);
+    file->setCoordinatesAttribute();
+  }
 }
 
-void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hydraulicHead,
-                                    PETScGrid const &hydraulicTransmissivity, CUASModel const &model,
-                                    PETScGrid const &fluxMagnitude, PETScGrid const &melt, PETScGrid const &creep,
-                                    PETScGrid const &cavity, PETScGrid const &effectivePressure,
-                                    PETScGrid const &effectiveStorativity, PETScGrid const &effectiveTransmissivity,
-                                    PETScGrid const &waterSource, PetscScalar eps_inf, PetscScalar Teps_inf) {
+void SolutionHandler::storeConstantModelInformation(const CUASModel &model) {
+  file->write("x", model.xAxis);
+  file->write("y", model.yAxis);
+}
+
+void SolutionHandler::storeMutableModelInformation(const CUASModel &model) {
+  file->write("bnd_mask", *model.bndMask, nextSolution);
+
+  if (osize >= OutputSize::NORMAL) {
+    file->write("topg", *model.topg, nextSolution);
+  }
+
+  if (osize >= OutputSize::LARGE) {
+    file->write("thk", *model.thk, nextSolution);
+  }
+
+  if (osize >= OutputSize::XLARGE) {
+    file->write("pice", *model.pIce, nextSolution);
+  }
+}
+
+void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
+                                        CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator) {
+  storeConstantModelInformation(model);
+
+  storeMutableModelInformation(model);
+
+  storeCUASArgs(args);
+
+  // store initial conditions if needed
+  storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource);
+}
+
+void SolutionHandler::storeSolution(timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
+                                    PetscScalar eps_inf, PetscScalar Teps_inf) {
   // write scalars
   file->write("time", currTime, nextSolution);
 
@@ -262,21 +325,23 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hy
   file->write("Teps_inf", Teps_inf, nextSolution);
 
   // write grids
-  file->write("head", hydraulicHead, nextSolution);
-  file->write("transmissivity", hydraulicTransmissivity, nextSolution);
+  file->write("head", *solver.currHead, nextSolution);
+  file->write("transmissivity", *solver.currTransmissivity, nextSolution);
 
   if (osize >= OutputSize::NORMAL) {
-    file->write("a_melt", melt, nextSolution);
-    file->write("a_creep", creep, nextSolution);
-    file->write("a_cavity", cavity, nextSolution);
-    file->write("peffective", effectivePressure, nextSolution);
+    file->write("a_melt", *solver.melt, nextSolution);
+    file->write("a_creep", *solver.creep, nextSolution);
+    file->write("a_cavity", *solver.cavity, nextSolution);
+    file->write("peffective", *solver.pEffective, nextSolution);
     file->write("watersource", waterSource, nextSolution);
-    file->write("flux", fluxMagnitude, nextSolution);
+    file->write("flux", *solver.fluxMagnitude, nextSolution);
   }
 
   if (osize >= OutputSize::LARGE) {
-    file->write("effective_transmissivity", effectiveTransmissivity, nextSolution);
-    file->write("effective_storativity", effectiveStorativity, nextSolution);
+    file->write("effective_transmissivity", *solver.Teff, nextSolution);
+    file->write("effective_storativity", *solver.Seff, nextSolution);
+    file->write("fluxXDir", *solver.fluxXDir, nextSolution);
+    file->write("fluxYDir", *solver.fluxYDir, nextSolution);
   }
 
   if (osize >= OutputSize::XLARGE) {
@@ -284,7 +349,9 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hy
     // output
     // todo: add other fields
   }
+}
 
+void SolutionHandler::finalizeSolution() {
   // Write everything to the file
   file->sync();
 
@@ -293,13 +360,21 @@ void SolutionHandler::storeSolution(CUAS::timeSecs currTime, PETScGrid const &hy
 }
 
 void SolutionHandler::setTimeUnits(std::string const &s) {
-  // Todo: do some checks
+  // TODO: do some checks
   file->addAttributeToVariable("time", "units", s);
 }
 
 void SolutionHandler::setCalendar(std::string const &s) {
-  // Todo: do some checks
+  // TODO: do some checks
   file->addAttributeToVariable("time", "calendar", s);
+}
+
+void SolutionHandler::setSaveStrategy(SaveStrategy strategy, long saveInterval, int saveEvery) {
+  // TODO add sanity checks for input
+
+  this->strategy = strategy;
+  this->saveInterval = saveInterval;
+  this->saveEvery = saveEvery;
 }
 
 void SolutionHandler::storePETScOptions() {
@@ -308,21 +383,41 @@ void SolutionHandler::storePETScOptions() {
   file->addGlobalAttribute("PETSC_OPTIONS_USED", getPETScOptionsUsed());
 }
 
-OutputReason SolutionHandler::getOutputReason(int timeStepIndex, int numberOfTimeSteps, int saveEvery) const {
+OutputReason SolutionHandler::getOutputReason(CUASTimeIntegrator const &timeIntegrator) const {
+  // TODO clean up get output reason
+
+  auto timeStepIndex = timeIntegrator.getTimestepIndex();
+
   if (timeStepIndex == 0) {
     return OutputReason::INITIAL;
   }
-  if (saveEvery > 0) {  // avoid division by zero in modulo operation
-    if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == numberOfTimeSteps - 1)) {
-      return OutputReason::NORMAL;
+
+  if (strategy == SaveStrategy::INDEX) {
+    if (saveEvery > 0) {  // avoid division by zero in modulo operation
+      if ((timeStepIndex % saveEvery == 0) || (timeStepIndex == timeIntegrator.getTimesteps().size() - 1)) {
+        return OutputReason::NORMAL;
+      } else {
+        return OutputReason::NONE;
+      }
     } else {
       return OutputReason::NONE;
     }
-  } else {
-    return OutputReason::NONE;
+  } else if (strategy == SaveStrategy::TIMEINTERVAL) {
+    if (saveInterval > 0) {
+      if ((timeIntegrator.getCurrentTime() % saveInterval == 0) ||
+          (timeIntegrator.getCurrentTime() == timeIntegrator.getTimesteps().back())) {
+        return OutputReason::NORMAL;
+      } else {
+        return OutputReason::NONE;
+      }
+    } else {
+      return OutputReason::NONE;
+    }
+  } else if (strategy == SaveStrategy::DEFAULT) {
+    return OutputReason::NORMAL;
   }
+
+  return OutputReason::NONE;
 }
 
-SolutionHandler::~SolutionHandler() {}
-
-};  // namespace CUAS
+}  // namespace CUAS

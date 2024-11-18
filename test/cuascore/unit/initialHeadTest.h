@@ -18,8 +18,8 @@
 #define GRID_SIZE_Y 5
 #endif
 
-#ifndef THK
-#define THK 1000.0
+#ifndef THK0
+#define THK0 1000.0
 #endif
 
 #ifndef TOPG
@@ -29,18 +29,19 @@
 std::unique_ptr<CUAS::CUASModel> fillData() {
   auto pmodel = std::make_unique<CUAS::CUASModel>(GRID_SIZE_X, GRID_SIZE_Y);
   auto &model = *pmodel;
+  auto constexpr resolution = 1000.0;
 
   // initialize x and y like in python: x = np.arange(20) * 1000.0
   for (int i = 0; i < model.xAxis.size(); ++i) {
-    model.xAxis[i] = i * 1000;
+    model.xAxis[i] = i * resolution;
   }
   for (int i = 0; i < model.yAxis.size(); ++i) {
-    model.yAxis[i] = i * 1000;
+    model.yAxis[i] = i * resolution;
   }
 
   model.topg->setConst(TOPG);
-  model.thk->setConst(THK);
-  model.bndMask->setConst(DIRICHLET_FLAG);  // all dirichlet --> nothing to solve for
+  model.thk->setConst(THK0 * RHO_WATER / RHO_ICE);  // normalized ice thickness for pIce
+  model.bndMask->setConst(DIRICHLET_FLAG);          // all dirichlet --> nothing to solve for
 
   return pmodel;
 }

@@ -32,6 +32,9 @@
 #ifndef PSI_BELOW_ZERO_REPLACE_VALUE
 #define PSI_BELOW_ZERO_REPLACE_VALUE 0.01
 #endif
+#ifndef RELATIVE_GRID_SPACING_ERROR
+#define RELATIVE_GRID_SPACING_ERROR 1.0e-3
+#endif
 
 #define COMPUTE_FLAG 0          // active cuas grid point
 #define DIRICHLET_FLAG 1        // lateral boundary

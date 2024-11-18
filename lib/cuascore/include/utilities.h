@@ -7,6 +7,7 @@
 #ifndef CUAS_UTILITIES_H
 #define CUAS_UTILITIES_H
 
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,24 @@ bool isIncreasing(const std::vector<T> v) {
     }
   }
   return true;
+}
+
+/**
+ * string split
+ * @param s input string to split
+ * @param delim delimiter
+ * @return a vector which contains the individual strings
+ */
+inline std::vector<std::string> split(std::string const &s, char delim) {
+  std::vector<std::string> result;
+  std::stringstream ss(s);
+  std::string item;
+
+  while (getline(ss, item, delim)) {
+    result.push_back(item);
+  }
+
+  return result;
 }
 
 }  // namespace CUAS

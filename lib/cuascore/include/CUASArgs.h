@@ -17,10 +17,14 @@ struct CUASArgs {
   PetscScalar Tmax;
   PetscScalar Tmin;
   PetscScalar Tinit;
+  std::string starttime;
+  std::string endtime;
   std::string totaltime;
   std::string dt;
+  PetscScalar timeSteppingTheta;
   std::string timeStepFile;
   int saveEvery;
+  std::string saveInterval;
   PetscScalar conductivity;
   bool doAllChannels;
   bool doAnyChannel;
@@ -37,8 +41,9 @@ struct CUASArgs {
   bool restartNoneZeroInitialGuess;
   PetscScalar specificStorage;  // Ss
   PetscScalar specificYield;    // Sy
-  bool noSmoothMelt;
+  std::string coordinatesFile;
   std::string forcingFile;
+  int sizeOfForcingBuffer;
   bool loopForcing;
   PetscScalar basalVelocityIce;
   PetscScalar cavityBeta;
@@ -50,6 +55,8 @@ struct CUASArgs {
   std::string input;
   std::string output;
   std::string outputSize;
+  bool enableUDS;  // upwind scheme
+  PetscScalar thresholdThicknessUDS;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);

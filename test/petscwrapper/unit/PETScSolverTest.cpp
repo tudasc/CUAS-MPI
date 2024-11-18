@@ -56,13 +56,13 @@ TEST(PetscSolverTest, solveMUMPS) {
   b->setValue(mpiRank, mpiRank);
   b->assemble();
 
-  PetscOptionsSetValue(PETSC_NULL, "-ksp_type", "preonly");
-  PetscOptionsSetValue(PETSC_NULL, "-pc_type", "lu");
-  PetscOptionsSetValue(PETSC_NULL, "-pc_factor_mat_solver_type", "mumps");
-  PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_14", "120");
-  PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_28", "2");
-  PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_29", "2");
-  PetscOptionsSetValue(PETSC_NULL, "-ksp_error_if_not_converged", nullptr);
+  PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_type", "preonly");
+  PetscOptionsSetValue(PETSC_NULLPTR, "-pc_type", "lu");
+  PetscOptionsSetValue(PETSC_NULLPTR, "-pc_factor_mat_solver_type", "mumps");
+  PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_14", "120");
+  PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_28", "2");
+  PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_29", "2");
+  PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_error_if_not_converged", nullptr);
   PETScSolver::solve(*A, *b, *s, VERBOSE);
 
   PetscScalar v;

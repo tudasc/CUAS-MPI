@@ -45,14 +45,14 @@ TEST(exactTransientSolutionTest, transientForcingTest) {
   time.timeSteps = CUAS::getTimeStepArray(0, endTime, dt);
 
   // setup forcing
-  auto forcing = std::make_unique<TransientForcing>(nx, ny, res);
+  auto forcing = std::make_unique<TransientTestForcing>(nx, ny, res);
 
   // sanity test the forcing: max(Q(x,y,t)) == Q_max(t), convert m/s to m/a
   const PetscScalar Lx = (nx - 1) * res;
   const PetscScalar Ly = (ny - 1) * res;
   for (auto &t_secs : time.timeSteps) {
     auto Q_max = max_Q_exact((PetscScalar)t_secs, Lx, Ly);
-    auto maxQ = forcing->getCurrentQ(t_secs).getMax();
+    auto maxQ = forcing->getCurrent(t_secs).getMax();
     ASSERT_DOUBLE_EQ(Q_max * SPY, maxQ * SPY) << "at t = " << t_secs << " seconds";
   }
 }

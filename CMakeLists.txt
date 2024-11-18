@@ -1,6 +1,9 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.16)
 
-project(CUAS-MPI)
+project(
+  CUAS-MPI
+  VERSION 0.2.0
+  LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -17,8 +20,16 @@ include(ToolchainOptions)
 add_subdirectory(lib)
 add_subdirectory(tools)
 
-option(BUILD_TESTS "enables building tests" OFF)
+# The default options cache
+option(CUAS_ENABLE_TESTS "Enables targets building tests." OFF)
+option(CUAS_ENABLE_DOCS "Enables targets building documentation." OFF)
 
-if(BUILD_TESTS)
+if(CUAS_ENABLE_TESTS)
+  message(STATUS "creating targets to build tests is enabled")
   add_subdirectory(test)
+endif()
+
+if(CUAS_ENABLE_DOCS)
+  message(STATUS "creating targets to build documentation is enabled")
+  add_subdirectory(docs)
 endif()

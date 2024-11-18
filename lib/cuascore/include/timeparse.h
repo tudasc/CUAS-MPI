@@ -10,6 +10,7 @@
 #include "Logger.h"
 
 #include <array>
+#include <cassert>
 #include <iostream>
 #include <map>
 #include <regex>
@@ -29,9 +30,12 @@ struct Time {
 
 // this function parses the input string timeString and returns how many seconds are in the specified time-window
 inline timeSecs parseTime(std::string const &timeString) {
+  if (timeString.empty()) {
+    return 0;
+  }
+
   // map of time-units and the amount of seconds for a single time-unit
   std::map<std::string, timeSecs> timeUnits = {{"year", 60 * 60 * 24 * 365},
-                                               {"month", 60 * 60 * 24 * 30},
                                                {"week", 60 * 60 * 24 * 7},
                                                {"day", 60 * 60 * 24},
                                                {"hour", 60 * 60},
@@ -39,7 +43,7 @@ inline timeSecs parseTime(std::string const &timeString) {
                                                {"second", 1}};
   // map for input times
   std::map<std::string, timeSecs> givenTimes;
-  // vector for splitted input timeString
+  // vector for splitting the input timeString
   std::vector<std::string> splitString;
 
   // split the timeString by ' '
@@ -57,7 +61,7 @@ inline timeSecs parseTime(std::string const &timeString) {
   // check if the size is a multiple of 2. This has to be the case as there is always a quantifyer (integer) with the
   // time unit
   if (splitString.size() % 2 != 0) {
-    CUAS_ERROR("timeparse.h: Wrong format of input string. Needs to be multiple of 2. Exiting.");
+    CUAS_ERROR("timeparse.h: Wrong format of input string. Needs to be multiple of 2. Exiting.")
     exit(1);
   }
 
@@ -79,53 +83,55 @@ inline timeSecs parseTime(std::string const &timeString) {
         // remove the used time-unit so that constructs like 2 years 1 year are impossible in the input string
         timeUnits.erase(currentTimeUnit);
       } else {
-        CUAS_ERROR("timeparse.h: Wrong format for timeValue: '" + timeValue + "'! Exiting.");
+        CUAS_ERROR("timeparse.h: Wrong format for timeValue: '" + timeValue + "'! Exiting.")
         exit(1);
       }
     } else {
       CUAS_ERROR(
           "timeparse.h: Wrong format! You either used a non-existing time-unit or used a time-unit multiple times in "
-          "the input string! Exiting.");
+          "the input string! Exiting.")
       exit(1);
     }
   }
 
   return secs;
-};
+}
 
 inline std::string parseTime(timeSecs const secs) {
   // secs < 0 is invalid input
   if (secs < 0) {
-    CUAS_ERROR("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.");
+    CUAS_ERROR("timeparse.h: Invalid input. secs cannot be less than 0. Exiting.")
     exit(1);
   }
   // second is the smallest timeUnit
-  if (secs < 1) {
+  if (secs == 0) {
     return "0 second";  // set to zero instead of 1 to allow for runs with no time steps (input to output runs)
   }
+
   std::map<std::string, timeSecs> timeUnits = {{"year", 60 * 60 * 24 * 365},
-                                               {"month", 60 * 60 * 24 * 30},
                                                {"week", 60 * 60 * 24 * 7},
                                                {"day", 60 * 60 * 24},
                                                {"hour", 60 * 60},
                                                {"minute", 60},
                                                {"second", 1}};
-
   // this array is used to impose an order on the map.
-  std::array<std::string, 7> timeUnitStrings = {"year", "month", "week", "day", "hour", "minute", "second"};
-  std::string timeString = "";
+  std::array<std::string, 6> timeUnitStrings = {"year", "week", "day", "hour", "minute", "second"};
+  assert(timeUnits.size() == timeUnitStrings.size());
+
+  std::string timeString;
   timeSecs secsToBeDistributed = secs;
-  std::string currentTimeUnit;
-  for (std::string const &i : timeUnitStrings) {
-    timeSecs timeValue = (timeSecs)(secsToBeDistributed / timeUnits[i]);
+  for (std::string const &timeUnit : timeUnitStrings) {
+    auto timeValue = secsToBeDistributed / timeUnits[timeUnit];
     if (timeValue == 0) {
       continue;
-    } else {
-      // append timeValue to timeString
-      timeString += std::to_string(timeValue) + " " + i + (timeValue > 1 ? "s" : "") + " ";
     }
+
+    // append timeValue to timeString
+    // append " ", the last " " is removed at the end of the function
+    timeString += std::to_string(timeValue) + " " + timeUnit + (timeValue > 1 ? "s" : "") + " ";
     // subtract the secs used for the current timeUnit from the seconds which are still left
-    secsToBeDistributed -= (timeValue * timeUnits[i]);
+    secsToBeDistributed -= (timeValue * timeUnits[timeUnit]);
+
     if (secsToBeDistributed <= 0) {
       break;
     }
@@ -139,30 +145,29 @@ inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTi
   // negative time is considered to be fatal
   if (startTime < 0) {
     CUAS_ERROR("{} called with invalid startTime = {} < 0. Exiting.",  //
-               __PRETTY_FUNCTION__, startTime);
+               __PRETTY_FUNCTION__, startTime)
     exit(1);
   }
   if (endTime < 0) {
     CUAS_ERROR("{} called with invalid endTime = {} < 0. Exiting.",  //
-               __PRETTY_FUNCTION__, endTime);
+               __PRETTY_FUNCTION__, endTime)
     exit(1);
   }
   if (dt < 0) {
     CUAS_ERROR("{} called with invalid dt = {} < 0. Exiting.",  //
-               __PRETTY_FUNCTION__, dt);
+               __PRETTY_FUNCTION__, dt)
     exit(1);
   }
 
-  // relationship between beginning and end
   // end has to be larger than start
   if (startTime > endTime) {
     CUAS_ERROR("{} called with invalid startTime = {} > endTime = {}. Exiting.",  //
-               __PRETTY_FUNCTION__, startTime, endTime);
+               __PRETTY_FUNCTION__, startTime, endTime)
     exit(1);
   }
 
   // create vector and insert default value startTime
-  std::vector<CUAS::timeSecs> timeSteps;
+  std::vector<timeSecs> timeSteps;
   auto currTime = startTime;
   timeSteps.push_back(currTime);
 
@@ -173,20 +178,22 @@ inline std::vector<timeSecs> getTimeStepArray(timeSecs startTime, timeSecs endTi
   }
   // nothing to do, but this could be intentional
   if (dt == 0) {
-    CUAS_WARN("{} called with dt == 0. Ignoring startTime and endTime.", __PRETTY_FUNCTION__);
+    CUAS_WARN_RANK0("{} called with dt == 0. Ignoring startTime and endTime.", __PRETTY_FUNCTION__)
     return timeSteps;
   }
   // nothing to do, but this could be intentional
   if (startTime == endTime) {
-    CUAS_WARN("{} called with startTime equal to endTime. Ignoring time step length dt.", __PRETTY_FUNCTION__);
+    CUAS_WARN_RANK0("{} called with startTime equal to endTime. Ignoring time step length dt.", __PRETTY_FUNCTION__)
     return timeSteps;
   }
 
-  // this is the normal case
-  // timeSteps.back() might be larger than endTime, if endTime % dt != 0.
-  // This ensures that endTime is included in the computation.
+  // Ensures that endTime is included, even if endTime is not an integer multiple of dt ()
+  if (endTime % dt != 0) {  // note: % 0 aka modulo(0) is invalid and thus dt == 0 is invalid here
+    CUAS_WARN_RANK0("{} endTime is not an integer multiple of dt. Reducing the last time step to match timeEnd.",
+                    __PRETTY_FUNCTION__)
+  }
   while (currTime < endTime) {
-    currTime += dt;
+    currTime = std::min(currTime + dt, endTime);  // don't overshoot the endTime
     timeSteps.push_back(currTime);
   }
   return timeSteps;

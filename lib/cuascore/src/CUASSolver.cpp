@@ -8,8 +8,9 @@
 
 #include "CUASConstants.h"
 #include "CUASKernels.h"
-#include "specialgradient.h"
+#include "CUASTimeIntegrator.h"
 #include "systemmatrix.h"
+#include "timing.h"
 
 #include "Logger.h"
 #include "PETScSolver.h"
@@ -21,13 +22,67 @@
 
 namespace CUAS {
 
+#define CUAS_MAX_TIMESTEP std::numeric_limits<typeof(timeSecs)>::max()
+
+CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *solutionHandler)
+    : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
+  /***** setup grids to work with *****/
+  nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  // rate factor from flow law (ice rheology)
+  rateFactorIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  // basal velocity of ice
+  basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  melt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  tmpMelt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  creep = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  cavity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
+  fluxXDir = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fluxYDir = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  workSpace = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
+  Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
+
+  effTransEast = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  effTransWest = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  effTransNorth = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  effTransSouth = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  /***** setup water source *****/
+  waterSource = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  addWaterSource(dynamic_cast<WaterSource *>(model));
+
+  /***** setup equation system *****/
+  DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
+               PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
+  DMSetFromOptions(dm);
+  DMSetUp(dm);
+  Mat petMat;
+  DMCreateMatrix(dm, &petMat);
+  matA = std::make_unique<PETScMatrix>(petMat);
+  bGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  solGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+
+  /***** setup helper global indices *****/
+  globalIndicesBlocked = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  fillGlobalIndicesBlocked(*globalIndicesBlocked);
+}
+
 void CUASSolver::setup() {
   melt->setZero();
   creep->setZero();
   cavity->setZero();
   pEffective->setZero();
-  gradHeadSquared->setZero();
   fluxMagnitude->setZero();
+  waterSource->setZero();
+  workSpace->setZero();
 
   rateFactorIce->setConst(args->flowConstant);         // todo: read 2d field from file (optional)
   basalVelocityIce->setConst(args->basalVelocityIce);  // todo: read 2d field from file (optional)
@@ -53,57 +108,7 @@ void CUASSolver::setup() {
 
   //
   // initialize the head
-  //
-  if (args->initialHead == "zero") {
-    currHead->setZero();
-  } else if (args->initialHead == "Nzero") {
-    // np.maximum(np.maximum(helpers.pressure_to_head(pwater=pice, topg=topg), topg), 0.0)
-    pressureToHead(*currHead, *model->pIce, *model->topg);
-    {
-      auto head = currHead->getWriteHandle();
-      auto &topg = model->topg->getReadHandle();
-      for (int j = 0; j < currHead->getLocalNumOfRows(); ++j) {
-        for (int i = 0; i < currHead->getLocalNumOfCols(); ++i) {
-          head(j, i) = std::max({head(j, i), topg(j, i), 0.0});
-        }
-      }
-    }
-  } else if (args->initialHead == "topg") {
-    currHead->copy(*model->topg);
-  } else {
-    try {
-      auto initialHeadValue = (PetscScalar)std::stod(args->initialHead);
-      currHead->setConst(initialHeadValue);
-    } catch (std::invalid_argument const &ex) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead invalid_argument: '" + args->initialHead + "'. Exiting.");
-      exit(1);
-    } catch (std::out_of_range const &ex) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead out_of_range: '" + args->initialHead + "'. Exiting.");
-      exit(1);
-    } catch (...) {
-      CUAS_ERROR("CUASSolver.cpp: solve(): args->initialHead needs to be zero, Nzero, topg or valid number. Exiting.");
-      exit(1);
-    }
-  }
-
-  // local noFlowMask
-  {
-    auto cols = model->bndMask->getTotalNumOfCols();
-    auto rows = model->bndMask->getTotalNumOfRows();
-    auto grid = std::make_unique<PETScGrid>(cols, rows);
-    auto glob = grid->getWriteHandle();
-    auto &mask = model->bndMask->getReadHandle();
-
-    for (int i = 0; i < grid->getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < grid->getLocalNumOfCols(); ++j) {
-        // should we use true = 1.0 and false = 0.0 to match type of PetscScalar?
-        glob(i, j) = (mask(i, j) == (PetscScalar)NOFLOW_FLAG) ? true : false;
-      }
-    }
-    glob.setValues();
-    binaryDilation(*gradMask, *grid);  // fixme: check gradMask for all Dirichlet BCs in Poisson Test
-    gradMask->setRealBoundary(1.0);    // do not allow the gradient at the outermost grid points
-  }
+  setInitialHeadFromArgs(*currHead, *model->bndMask, *model->topg, *model->pIce, *args, *workSpace);
 
   // TODO: Time dependent forcing (Interpolierung)
   //
@@ -112,16 +117,16 @@ void CUASSolver::setup() {
   // SET PETSc Options for direct solver MUMPS+PARDISO
   if (args->directSolver) {
 #if (PETSC_HAVE_MUMPS == 1) && (PETSC_HAVE_PARMETIS == 1)
-    CUAS_INFO("CUASSolver::setup(): Setup MUMPS+PARMETIS");
+    CUAS_INFO("CUASSolver::setup(): Setup MUMPS+PARMETIS")
     // See: https://petsc.org/release/docs/manualpages/Mat/MATSOLVERMUMPS.html
-    PetscOptionsSetValue(PETSC_NULL, "-ksp_type", "preonly");
-    PetscOptionsSetValue(PETSC_NULL, "-pc_type", "lu");
-    PetscOptionsSetValue(PETSC_NULL, "-pc_factor_mat_solver_type", "mumps");
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_14", "120");  // needed?
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_28", "2");    // parallel analysis
-    PetscOptionsSetValue(PETSC_NULL, "-mat_mumps_icntl_29", "2");    // parallel ordering: 2 = parmetis
+    PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_type", "preonly");
+    PetscOptionsSetValue(PETSC_NULLPTR, "-pc_type", "lu");
+    PetscOptionsSetValue(PETSC_NULLPTR, "-pc_factor_mat_solver_type", "mumps");
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_14", "120");  // needed?
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_28", "2");    // parallel analysis
+    PetscOptionsSetValue(PETSC_NULLPTR, "-mat_mumps_icntl_29", "2");    // parallel ordering: 2 = parmetis
     // if MUMPS factorization fails inside a KSP solve, give information about the failure
-    PetscOptionsSetValue(PETSC_NULL, "-ksp_error_if_not_converged", nullptr);
+    PetscOptionsSetValue(PETSC_NULLPTR, "-ksp_error_if_not_converged", nullptr);
 #else
     CUAS_ERROR("CUASSolver.cpp: setup(): args->directSolver requires PETSc compiled with MUMPS and PARMETIS. Exiting.");
     exit(1);
@@ -129,13 +134,43 @@ void CUASSolver::setup() {
   }
 }
 
-void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+void CUASSolver::solve(std::vector<timeSecs> &timeSteps) {
+  prepare();
 
+  CUASTimeIntegrator timeIntegrator(timeSteps);
+
+  beginSolverTiming();
+
+  bool continueSolverLoop = true;
+
+  while (continueSolverLoop) {
+    auto [currTime, dt] = timeIntegrator.getTimestepInformation(CUAS_MAX_TIMESTEP);
+
+    updateWaterSource(currTime);
+
+    preComputation();
+
+    storeData(timeIntegrator);
+
+    continueSolverLoop = updateHeadAndTransmissivity(timeIntegrator);
+
+    timeIntegrator.finalizeTimestep(dt);
+  }
+
+  endSolverTiming();
+}
+
+void CUASSolver::prepare() {
   //
   // SOLVER PREPARATION
   //
+
+  // only if we really want to solve something, the choice of theta is relevant
+  if (args->timeSteppingTheta < 0.0 || args->timeSteppingTheta > 1.0) {
+    CUAS_ERROR("CUASSolver::prepare(): timeSteppingTheta = {} is invalid for calling systemmatrix() . Exiting.",
+               args->timeSteppingTheta)
+    exit(1);
+  }
 
   // after restart apply checks and set values consistent to cuas mask
   {
@@ -159,163 +194,187 @@ void CUASSolver::solve(std::vector<CUAS::timeSecs> &timeSteps) {
       }
     }
   }
-  dirichletValues->copy(*currHead);  // store initial values as dirichlet values for this run
+  dirichletValues->copy(*currHead);               // store initial values as dirichlet values for this run
+  nextTransmissivity->copy(*currTransmissivity);  // otherwise invalid for bnd:mask == DIRICHLET_FLAG
 
   // initialized as confined only and thus Seff = S = Ss * b, and Teff = T
   Seff->setConst(args->layerThickness * args->specificStorage);
   Teff->copy(*currTransmissivity);
 
-  // start
-  clock_t t;
-  if (rank == 0) {
-    t = clock();
-  }
-
-  // Why is this not an arg?
-  // tkleiner: Because other values are not working! This indicates that the choice of initial
-  // conditions is not appropriate.
-  const PetscScalar theta = 1.0;  // 1 means fully implicit, 0 means fully explicit, 0.5 is Crank-Nicholson
-
   if (args->verbose) {
-    CUAS_INFO_RANK0("  S = Ss * b = {}", args->specificStorage * args->layerThickness);
-    CUAS_INFO_RANK0("          Sy = {}", args->specificYield);
-    CUAS_INFO_RANK0("        TINY = {}", TINY);
-    CUAS_INFO_RANK0("NOFLOW_VALUE = {}", NOFLOW_VALUE);
-    CUAS_INFO_RANK0("     RHO_ICE = {}", RHO_ICE);
-    CUAS_INFO_RANK0("         SPY = {}", SPY);
-    CUAS_INFO_RANK0("       input = {}", args->input);
-    CUAS_INFO_RANK0("      output = {}", args->output);
-    CUAS_INFO_RANK0("Starting CUASSolver");
+    CUAS_INFO_RANK0("  S = Ss * b = {}", args->specificStorage * args->layerThickness)
+    CUAS_INFO_RANK0("          Sy = {}", args->specificYield)
+    CUAS_INFO_RANK0("        TINY = {}", TINY)
+    CUAS_INFO_RANK0("NOFLOW_VALUE = {}", NOFLOW_VALUE)
+    CUAS_INFO_RANK0("     RHO_ICE = {}", RHO_ICE)
+    CUAS_INFO_RANK0("         SPY = {}", SPY)
+    CUAS_INFO_RANK0("       input = {}", args->input)
+    CUAS_INFO_RANK0("      output = {}", args->output)
+    CUAS_INFO_RANK0("Starting CUASSolver")
   }
+}
 
-  timeSecs dt = 0;
-  for (int timeStepIndex = 0; timeStepIndex < timeSteps.size(); ++timeStepIndex) {
-    auto currTime = timeSteps[timeStepIndex];
-    if (timeSteps.size() > 1) {
-      if (timeStepIndex < timeSteps.size() - 1) {
-        auto nextTime = timeSteps[timeStepIndex + 1];
-        dt = nextTime - currTime;
-      } else {
-        // This is the last iteration only used to recompute the diagnostic fields for saving
-        dt = -9999;  // Something stupid to let the solver crash if used
-      }
-    }
-
-    // time dependent forcing
-    auto &currentQ = model->Q->getCurrentQ(currTime);
-
-    // TODO: basal velocity and rate factor fields are probably also time dependent
-    // auto &currentRateFactor = XXX->getCurrent(currTime);
-    // auto &currentBasalVelocity = XXX->getCurrent(currTime);
-
-    // if (args->seaLevelForcing) {
-    // TODO
-    //}
-
-    // Update Seff, Teff or both if needed.
-    updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
-                                     args->layerThickness, args->specificStorage, args->specificYield,
-                                     args->unconfSmooth, args->disableUnconfined, args->doAnyChannel);
-
-    // calculate effective pressure for diagnostic output and probably for creep opening/closure
-    headToEffectivePressure(*pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
-
-    // we need gradient of head for the flux and probably for melt opening
-    getGradHeadSQR(*gradHeadSquared, *currHead, model->dx, *gradMask);
-
-    // TODO extract?
-    // compute channel opening terms to be ready for netcdf output
-    if (args->doAnyChannel) {
-      // creep
-      if (args->doCreep) {
-        computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity);
-      }
-      // melt
-      if (args->doMelt) {
-        computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, *currTransmissivity, *gradHeadSquared);
-        if (!args->noSmoothMelt) {
-          convolveStar11411(*melt, *tmpMelt);
-          melt->copy(*tmpMelt);
-        }
-      }
-      // cavity
-      if (args->doCavity) {
-        computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce);
-      }
-    }
-
-    // TODO extract?
-    //
-    // STORE DATA, IF NEEDED
-    //
-    if (solutionHandler != nullptr) {
-      OutputReason reason = solutionHandler->getOutputReason(timeStepIndex, (int)timeSteps.size(), args->saveEvery);
-      if (reason != OutputReason::NONE) {
-        if (args->verbose) {
-          CUAS_INFO_RANK0("time({}/{}) = {} s, dt = {} s", timeStepIndex, timeSteps.size() - 1, currTime, dt);
-        }
-        // Process diagnostic variables for output only. We don't need them in every time step
-        getFluxMagnitude(*fluxMagnitude, *gradHeadSquared, *Teff);  // was currTransmissivity for a very long time
-        // ... more
-
-        if (reason == OutputReason::INITIAL) {
-          // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
-          solutionHandler->storeInitialSetup(*currHead, *currTransmissivity, *model, *fluxMagnitude, *melt, *creep,
-                                             *cavity, *pEffective, *Seff, *Teff, currentQ, *args);
-        } else {
-          solutionHandler->storeSolution(currTime, *currHead, *currTransmissivity, *model, *fluxMagnitude, *melt,
-                                         *creep, *cavity, *pEffective, *Seff, *Teff, currentQ, eps, Teps);
-        }
-      }
-    }  // solutionHandler
-
-    //
-    // WE NEED TO SOLVE AGAIN
-    //
-    if (timeStepIndex < timeSteps.size() - 1) {
-      // Sanity check
-      if (dt <= 0) {
-        CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt);
-        exit(1);
-      }
-
-      //
-      // UPDATE HEAD
-      //
-      systemmatrix(*matA, *bGrid, *Seff, *Teff, model->dx, dt, theta, *currHead, currentQ, *dirichletValues,
-                   *model->bndMask, *globalIndicesBlocked);
-
-      // solve the equation A*sol = b,
-      // todo: - return number of iterations and rnorm for logging
-      PETScSolver::solve(*matA, *bGrid, *solGrid, args->verboseSolver && !args->directSolver);
-      nextHead->copyGlobal(*solGrid);
-      // todo: eps_head = np.max(np.abs(nextHead - currHead))
-      eps = nextHead->getMaxAbsDiff(*currHead) / dt;
-      // switch pointers
-      currHead.swap(nextHead);
-
-      //
-      // UPDATE TRANSMISSIVITY, IF NEEDED
-      //
-      if (args->doAnyChannel) {
-        doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
-                   args->Tmax, dt);
-        // todo: eps_T = np.max(np.abs(T - currTransmissivity))
-        Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / dt;
-        // switch pointers
-        currTransmissivity.swap(nextTransmissivity);
-      }
-
+void CUASSolver::updateWaterSource(timeSecs currTime) {
+  if (waterSources.empty()) {
+    // if we do not have a water source in water sources, water source is set to 0
+    waterSource->setZero();
+  } else if (waterSources.size() == 1) {
+    // if we have one water source, we only check this water source
+    // if it provides a water source, we copy the current field in water source
+    // if it does not provide a water source, we set wat source to 0
+    if (waterSources[0]->providesWaterSource()) {
+      waterSource->copy(waterSources[0]->getCurrentWaterSource(currTime));
     } else {
-      // NO NEED TO UPDATE nextHead or T again
+      waterSource->setZero();
+    }
+  } else {
+    // if multiple water sources are provided we iterate all of them
+    // all water sources are checked if they provide a water source
+    // if they do not provide a water source they are skipped
+    waterSource->setZero();
+    auto writeHandle = waterSource->getWriteHandle();
+    for (auto w : waterSources) {
+      if (!w->providesWaterSource()) {
+        continue;
+      }
+      auto &curr = w->getCurrentWaterSource(currTime);
+      auto &readHandle = curr.getReadHandle();
+      for (int i = 0; i < waterSource->getLocalNumOfRows(); ++i) {
+        for (int j = 0; j < waterSource->getLocalNumOfCols(); ++j) {
+          writeHandle(i, j) = writeHandle(i, j) + readHandle(i, j);
+        }
+      }
     }
   }
+}
 
-  // end
-  if (rank == 0) {
-    t = clock() - t;
-    CUAS_INFO_RANK0("CUASSolver.cpp: solve(): computation took: {} seconds.", ((float)t) / CLOCKS_PER_SEC);
+void CUASSolver::preComputation() {
+  // TODO: basal velocity and rate factor fields are probably also time dependent
+  // auto &currentRateFactor = XXX->getCurrent(currTime);
+  // auto &currentBasalVelocity = XXX->getCurrent(currTime);
+
+  // if (args->seaLevelForcing) {
+  // TODO
+  //}
+
+  // Update Seff, Teff or both if needed.
+  updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
+                                   args->layerThickness, args->specificStorage, args->specificYield, args->unconfSmooth,
+                                   args->disableUnconfined, args->doAnyChannel);
+  if (args->enableUDS) {
+    // experimental for unconfined flow mainly
+    updateInterfaceTransmissivityUDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
+                                     *model->topg, *currHead, *Teff, args->thresholdThicknessUDS);
+  } else {
+    // this is the unmodified old scheme
+    updateInterfaceTransmissivityCDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
+                                     *model->topg, *currHead, *Teff);
   }
+
+  // Use unified version for the flux (CDS and UDS). So far only needed for output.
+  getFlux(*fluxMagnitude, *fluxXDir, *fluxYDir, *model->bndMask, *currHead, *effTransEast, *effTransWest,
+          *effTransNorth, *effTransSouth, model->dx);
+  // ... more diagnostic variables ?
+
+  // calculate effective pressure for diagnostic output and probably for creep opening/closure
+  headToEffectivePressure(*pEffective, *currHead, *model->topg, *model->pIce, args->layerThickness);
+
+  // compute channel opening terms to be ready for netcdf output
+  if (args->doAnyChannel) {
+    // creep
+    if (args->doCreep) {
+      computeCreepOpening(*creep, *rateFactorIce, *pEffective, *currTransmissivity, *model->bndMask);
+    }
+    // melt
+    if (args->doMelt) {
+      // use unified version of computeMeltOpening
+      computeMeltOpening(*melt, args->roughnessFactor, args->conductivity, model->dx, *effTransEast, *effTransWest,
+                         *effTransNorth, *effTransSouth, *currHead, *model->topg, *model->bndMask);
+    }
+    // cavity
+    if (args->doCavity) {
+      computeCavityOpening(*cavity, args->cavityBeta, args->conductivity, *basalVelocityIce, *model->bndMask);
+    }
+  }
+}
+
+void CUASSolver::storeData(CUASTimeIntegrator const &timeIntegrator) {
+  //
+  // STORE DATA, IF NEEDED
+  //
+  if (solutionHandler) {
+    solutionHandler->storeData(*this, *model, *args, *waterSource, timeIntegrator);
+  }
+}
+
+bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeIntegrator) {
+  auto dt = timeIntegrator.getCurrentDt();
+  auto currTime = timeIntegrator.getCurrentTime();
+  auto timeSteps = timeIntegrator.getTimesteps();
+  auto timeStepIndex = timeIntegrator.getTimestepIndex();
+
+  // Sanity check
+  if (dt < 0) {
+    CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
+    exit(1);
+  }
+
+  // do we need to solve again?
+  bool solve = dt != 0;
+
+  if (solve) {
+    //
+    // UPDATE HEAD
+    //
+    //    systemmatrixDeprecated(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt),
+    //    args->timeSteppingTheta,
+    //                           *currHead, *waterSource, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
+    systemmatrix(*matA, *bGrid, *Seff, *effTransEast, *effTransWest, *effTransNorth, *effTransSouth, model->dx,
+                 static_cast<double>(dt), args->timeSteppingTheta, *currHead, *waterSource, *dirichletValues,
+                 *model->bndMask, *globalIndicesBlocked);
+
+    // solve the equation A*sol = b,
+    auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
+    nextHead->copyGlobal(*solGrid);
+    // eps_head = np.max(np.abs(nextHead - currHead))
+    eps = nextHead->getMaxAbsDiff(*currHead) / static_cast<double>(dt);
+    // switch pointers
+    currHead.swap(nextHead);
+
+    //
+    // UPDATE TRANSMISSIVITY, IF NEEDED
+    //
+    if (args->doAnyChannel) {
+      doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
+                 args->Tmax, static_cast<double>(dt));
+      // eps_T = np.max(np.abs(T - currTransmissivity))
+      Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / static_cast<double>(dt);
+      // switch pointers
+      currTransmissivity.swap(nextTransmissivity);
+    }
+
+    if (args->verboseSolver) {
+      // compute max digits needed for verboseSolver output format
+      auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
+      auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
+
+      // no fmt given for res.numberOfIterations, because this is only available from PETSc
+      CUAS_INFO_RANK0("SOLVER: {:{}d} {:{}d} {:.5e} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
+                      maxDigitsTime, eps, Teps, res.residualNorm, res.numberOfIterations, res.reason)
+    }
+  } else {
+    // NO NEED TO UPDATE nextHead or T again
+  }
+
+  return solve;
+}
+
+void CUASSolver::addWaterSource(WaterSource *newWaterSource) {
+  if (std::find(waterSources.begin(), waterSources.end(), newWaterSource) != waterSources.end()) {
+    CUAS_WARN("New water source was already added to the CUAS Solver before and is refused to be added again.")
+    return;
+  }
+  waterSources.emplace_back(newWaterSource);
 }
 
 }  // namespace CUAS

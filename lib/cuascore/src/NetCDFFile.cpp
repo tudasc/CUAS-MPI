@@ -73,6 +73,12 @@ int NetCDFFile::getDimLength(int dimId) const {
   return lengthOfDim;
 }
 
+std::string NetCDFFile::getDimName(int dimId) const {
+  char name[NC_MAX_NAME + 1];
+  SECURED_NETCDF_EXECUTION(nc_inq_dimname(fileId, dimId, &name[0]));
+  return std::string(name);
+}
+
 bool NetCDFFile::checkDimensions(std::string const &varName, PETScGrid const &input) const {
   int varId = getVarId(varName);
   size_t numOfCols;
@@ -222,6 +228,9 @@ NetCDFFile::NetCDFFile(std::string const &fileName, char mode) : fileName(fileNa
     CUAS_ERROR("NetCDFFile.cpp: NetCDFFile() in create-mode: A netcdf error occurred: " + netcdfError + "Exiting.")
     exit(1);
   }
+
+  // fixme: Here is the problem: all files are expected to have "x" and "y"! This is not the case
+  //        for, e.g. a file that just contains time steps.
   dimX = getDimLength("x");
   dimY = getDimLength("y");
 }
@@ -302,6 +311,18 @@ void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string 
   auto varId = getVarId(varName);
   SECURED_NETCDF_EXECUTION(
       nc_put_att_text(fileId, varId, attributeName.c_str(), strlen(attributeText.c_str()), attributeText.c_str()));
+}
+
+void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string const &attributeName,
+                                        PetscScalar attribute) {
+  auto varId = getVarId(varName);
+  double petscToDouble(attribute);  // PetscScalar is double, but this could change
+  SECURED_NETCDF_EXECUTION(nc_put_att_double(fileId, varId, attributeName.c_str(), NC_DOUBLE, 1, &petscToDouble));
+}
+
+void NetCDFFile::addAttributeToVariable(std::string const &varName, std::string const &attributeName, int attribute) {
+  auto varId = getVarId(varName);
+  SECURED_NETCDF_EXECUTION(nc_put_att_int(fileId, varId, attributeName.c_str(), NC_INT, 1, &attribute));
 }
 
 void NetCDFFile::addGlobalAttribute(std::string const &attributeName, std::string const &attributeText) {
@@ -480,11 +501,11 @@ void NetCDFFile::read(std::string const &varName, std::vector<PetscScalar> &dest
   int varId = getVarId(varName);
 
   if (!checkDimensions(varName, dest)) {
-    CUAS_ERROR("NetCDFFile.cpp: read('{}') with std::vector: size does not fit! Exiting.", varName)
+    CUAS_ERROR("NetCDFFile.cpp: read('{}') with std::vector<PetscScalar>: size does not fit! Exiting.", varName)
     exit(1);
   }
 
-  // the std::vector is not distributed. Therefore the sequential get method from netcdf is called
+  // the std::vector is not distributed. Therefore, the sequential get method from netcdf is called
   SECURED_NETCDF_EXECUTION(nc_get_var_double(fileId, varId, dest.data()));
 }
 
@@ -608,6 +629,65 @@ void NetCDFFile::read(std::string const &forcingName, std::vector<std::unique_pt
     count[2] = currentGrid.getLocalNumOfCols();
 
     SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), count.data(), &gridFromNetcdf[0][0]));
+  }
+}
+
+void NetCDFFile::read(std::string const &forcingName, std::vector<std::unique_ptr<PETScGrid>> &forcing,
+                      int firstElement, int numberOfElementsToLoad) {
+  // firstElement + numberOfElementsToLoad > numberOfElements --> NetCDF Error
+
+  // firstElement < 0 --> NetCDF Error
+  if (firstElement < 0) {
+    CUAS_ERROR("{}::{} {} Index of first element to load is smaller than 0! Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
+  }
+  if (forcing.size() < numberOfElementsToLoad) {
+    CUAS_ERROR("{}::{} {} Number of slices to load is larger than buffer size! Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
+  }
+  if (forcing.size() != numberOfElementsToLoad) {
+    CUAS_WARN("{}::{} {} The size of the buffer is not fully utilised!.", __FILE__, __LINE__, __PRETTY_FUNCTION__)
+  }
+  if (numberOfElementsToLoad == 1) {
+    CUAS_WARN("{}::{} {} The size of the buffer is equal 1. This is an atypical use.", __FILE__, __LINE__,
+              __PRETTY_FUNCTION__)
+  }
+  if (numberOfElementsToLoad <= 0) {
+    CUAS_WARN("{}::{} {} The size of the buffer is less equal 0. Read buffered does nothing.", __FILE__, __LINE__,
+              __PRETTY_FUNCTION__)
+  }
+
+  auto varId = getVarId(forcingName);
+  int numOfDims;
+  nc_inq_varndims(fileId, varId, &numOfDims);
+  if (numOfDims != 3) {
+    CUAS_ERROR("{}::{} {} NetCDFFile.cpp: read() The forcing is not 3 dimensional! Exiting.", __FILE__, __LINE__,
+               __PRETTY_FUNCTION__)
+    exit(1);
+  }
+
+  // FIXME is this check useful
+  // // determine start and count of values
+  // if (!checkDimensionsTimeForcing(forcingName, forcing)) {
+  //   CUAS_ERROR("NetCDFFile.cpp: read() with std::vector of PETScGrid: sizes do not fit! Exiting.")
+  //   exit(1);
+  // }
+
+  for (int i = 0; i < numberOfElementsToLoad; ++i) {
+    PETScGrid &currentGrid = *forcing[i];
+    auto grid = currentGrid.getWriteHandle();
+    auto gridRaw = grid.getRaw();
+
+    auto nStart = static_cast<size_t>(firstElement + i);
+    auto yStart = static_cast<size_t>(currentGrid.getCornerY());
+    auto xStart = static_cast<size_t>(currentGrid.getCornerX());
+    std::array<size_t, 3> start = {nStart, yStart, xStart};
+    auto nSize = static_cast<size_t>(1);
+    auto ySize = static_cast<size_t>(currentGrid.getLocalNumOfRows());
+    auto xSize = static_cast<size_t>(currentGrid.getLocalNumOfCols());
+    std::array<size_t, 3> size = {nSize, ySize, xSize};
+
+    SECURED_NETCDF_EXECUTION(nc_get_vara_double(fileId, varId, start.data(), size.data(), &gridRaw[0][0]));
   }
 }
 
@@ -904,6 +984,74 @@ std::string NetCDFFile::getTypeName(nc_type varType) {
 bool NetCDFFile::isNetCDFFloatingPoint(nc_type varType) { return varType == NC_FLOAT || varType == NC_DOUBLE; }
 bool NetCDFFile::isNetCDFIntegral(nc_type varType) {
   return (varType == NC_LONG) || (varType == NC_INT) || (varType == NC_SHORT);
+}
+
+// Use nc_copy_var (int ncid_in, int varid_in, int ncid_out)
+// This will copy a variable that is an array of primitive type and its
+// attributes from one file to another, assuming dimensions in the output
+// file are already defined and have same dimension IDs and length.
+void NetCDFFile::copyCoordinatesFrom(const std::string &srcFileName) {
+  constexpr static std::string_view prefix{"NetCDFFile::copyCoordinatesFrom()"};
+
+  if (srcFileName.empty()) {
+    CUAS_ERROR_RANK0("{}: called with empty fileName. Exiting.", prefix)
+    exit(1);
+  }
+
+  auto ncin = std::make_unique<NetCDFFile>(srcFileName, 'r');
+
+  // copy lat(y,x), lon(y,x), lat_bnds(y, x, nv4), lon_bnds(y, x, nv4),  ;
+  // The name of the third dimension name 'nv4' may vary.
+  const std::array<std::string, 4> varNames{"lat", "lon", "lat_bnds", "lon_bnds"};
+  for (auto &varName : varNames) {
+    if (!ncin->hasVariable(varName)) {
+      if (varName == "lat" || varName == "lon") {
+        CUAS_ERROR_RANK0("{}: Variabe '{}' not found in file '{}'. Exiting.", prefix, varName, srcFileName)
+        exit(1);
+      } else {
+        // lat_bnds and lon_bnds are only needed for later remapping using CDO
+        CUAS_WARN_RANK0("{}: Variabe '{}' not found in file '{}'. Continue.", prefix, varName, srcFileName)
+        continue;  // terminate current iteration for varName
+      }
+    }
+    // check the dimensions and create new dimensions if missing
+    auto srcDimIds = ncin->getDimIdsForVariable(varName);
+    for (auto dimId : srcDimIds) {
+      auto dimName = ncin->getDimName(dimId);
+      if (!hasDimension(dimName)) {
+        if (dimName == "x" || dimName == "y") {
+          CUAS_ERROR_RANK0("{}: Dimension '{}' should already exist in output file. Exiting.", prefix, dimName)
+          exit(1);
+        }
+        auto dimLen = ncin->getDimLength(dimName);
+        int newDimId;
+        SECURED_NETCDF_EXECUTION(nc_redef(fileId));
+        SECURED_NETCDF_EXECUTION(nc_def_dim(fileId, dimName.c_str(), dimLen, &newDimId));
+        SECURED_NETCDF_EXECUTION(nc_enddef(fileId));
+      }
+    }
+    // now all dimensions exist and we can start copy all over
+    auto srcVarId = ncin->getVarId(varName);
+    auto srcFileId = ncin->getFileId();
+    int retval;
+    if ((retval = nc_copy_var(srcFileId, srcVarId, fileId)) != NC_NOERR) {
+      std::string netcdfError = nc_strerror(retval);
+      CUAS_ERROR("{}: nc_copy_var() failed for '{}' with error {}. Exiting.", prefix, varName, netcdfError)
+      exit(1);
+    }
+  }
+}
+
+void NetCDFFile::setCoordinatesAttribute() {
+  const char attText[] = "lat lon";
+  for (auto &ncVar : netcdfVars) {
+    auto varName = ncVar.first;
+    auto varId = ncVar.second.varId;
+    // only variable in the map plane are qualified
+    if (variableHasDimensionByName(varName, "x") && variableHasDimensionByName(varName, "y")) {
+      SECURED_NETCDF_EXECUTION(nc_put_att_text(fileId, varId, "coordinates", strlen(attText), attText));
+    }
+  }
 }
 
 }  // namespace CUAS

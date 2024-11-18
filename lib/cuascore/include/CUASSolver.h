@@ -20,93 +20,78 @@ namespace CUAS {
 
 class CUASSolver {
  public:
-  explicit CUASSolver(CUASModel *model, CUASArgs const *const args, CUAS::SolutionHandler *solutionHandler = nullptr)
-      : model(model), args(args), solutionHandler(solutionHandler), numOfCols(model->Ncols), numOfRows(model->Nrows) {
-    nextHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    currHead = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    nextTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    currTransmissivity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
-    gradMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    dirichletValues = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
-    // rate factor from flow law (ice rheology)
-    rateFactorIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    // basal velocity of ice
-    basalVelocityIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
-    melt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    tmpMelt = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    creep = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    cavity = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    pEffective = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // same as model->pIce
-    gradHeadSquared = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
-    Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
-    Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effectife Transmissivity
-
-    DMDACreate2d(PETSC_COMM_WORLD, DM_BOUNDARY_GHOSTED, DM_BOUNDARY_GHOSTED, DMDA_STENCIL_BOX, numOfCols, numOfRows,
-                 PETSC_DECIDE, PETSC_DECIDE, 1, 1, nullptr, nullptr, &dm);
-    DMSetFromOptions(dm);
-    DMSetUp(dm);
-    Mat petMat;
-    DMCreateMatrix(dm, &petMat);
-    matA = std::make_unique<PETScMatrix>(petMat);
-    bGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    solGrid = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
-    globalIndicesBlocked = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-    fillGlobalIndicesBlocked(*globalIndicesBlocked);
-  }
+  explicit CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *solutionHandler = nullptr);
   CUASSolver(CUASSolver &) = delete;
   CUASSolver(CUASSolver &&) = delete;
+  CUASSolver &operator=(CUASSolver const &) = delete;
+  CUASSolver &operator=(CUASSolver const &&) = delete;
   ~CUASSolver() { DMDestroy(&dm); }
 
-  void solve(std::vector<CUAS::timeSecs> &timeSteps);
-
+  // member functions
+ public:
+  void solve(std::vector<timeSecs> &timeSteps);
   void setup();
 
+  // member
  public:
   std::unique_ptr<PETScGrid> nextHead;  // unknown head at new time level
   std::unique_ptr<PETScGrid> currHead;  // head at the current time level
   std::unique_ptr<PETScGrid> nextTransmissivity;
   std::unique_ptr<PETScGrid> currTransmissivity;
 
- private:
-  int const numOfCols;
-  int const numOfRows;
-
-  std::unique_ptr<PETScGrid> gradMask;
-  std::unique_ptr<PETScGrid> dirichletValues;
-
-  std::unique_ptr<PETScGrid> rateFactorIce;
-  std::unique_ptr<PETScGrid> basalVelocityIce;
-
   std::unique_ptr<PETScGrid> melt;
   std::unique_ptr<PETScGrid> tmpMelt;
   std::unique_ptr<PETScGrid> creep;
   std::unique_ptr<PETScGrid> cavity;
-  std::unique_ptr<PETScGrid> pEffective;  // same as model->pIce
-  std::unique_ptr<PETScGrid> gradHeadSquared;
-  std::unique_ptr<PETScGrid> fluxMagnitude;
+  std::unique_ptr<PETScGrid> pEffective;
+  std::unique_ptr<PETScGrid> fluxXDir;       //!< water flux in x-direction
+  std::unique_ptr<PETScGrid> fluxYDir;       //!< water flux in y-direction
+  std::unique_ptr<PETScGrid> fluxMagnitude;  //!< water flux magnitude
 
-  std::unique_ptr<PETScGrid> Seff;  // effective Storativity
-  std::unique_ptr<PETScGrid> Teff;  // effectife Transmissivity
+  std::unique_ptr<PETScGrid> rateFactorIce;
+  std::unique_ptr<PETScGrid> basalVelocityIce;
 
+  std::unique_ptr<PETScGrid> Seff;       //!< effective Storativity
+  std::unique_ptr<PETScGrid> Teff;       //!< effective Transmissivity
+  std::unique_ptr<PETScGrid> workSpace;  //!< a temporary grid to store e.g. waterPressure
+
+  std::unique_ptr<PETScGrid> effTransEast;   //!< effective transmissivity at the eastern (i + 1/2) boundary
+  std::unique_ptr<PETScGrid> effTransWest;   //!< effective transmissivity at the western (i - 1/2) boundary
+  std::unique_ptr<PETScGrid> effTransNorth;  //!< effective transmissivity at the norther (j + 1/2) boundary
+  std::unique_ptr<PETScGrid> effTransSouth;  //!< effective transmissivity at the southern (j - 1/2) boundary
+
+  std::unique_ptr<PETScGrid> dirichletValues;  // public to be used in the coupler
+
+  PetscScalar eps = 0.0;   //!<  \f$ max(|h^n - h^{n-1}|)/dt \f$
+  PetscScalar Teps = 0.0;  //!<  \f$ max(|T^n - T^{n-1}|)/dt \f$
+
+  // member
+ private:
   CUASModel *const model;
   CUASArgs const *const args;
-  CUAS::SolutionHandler *const solutionHandler;
-
-  std::unique_ptr<PETScGrid> globalIndicesBlocked;
+  SolutionHandler *const solutionHandler;
 
   DM dm;
   std::unique_ptr<PETScMatrix> matA;
   std::unique_ptr<PETScGrid> bGrid;
   std::unique_ptr<PETScGrid> solGrid;
 
-  PetscScalar eps = 0.0;
-  PetscScalar Teps = 0.0;
+  int const numOfCols;
+  int const numOfRows;
+
+  std::unique_ptr<PETScGrid> globalIndicesBlocked;
+
+  std::unique_ptr<PETScGrid> waterSource;
+  std::vector<WaterSource *> waterSources;
+
+  // member functions
+ private:
+  void prepare();
+  void updateWaterSource(timeSecs currTime);
+  void preComputation();
+  void storeData(CUASTimeIntegrator const &timeIntegrator);
+  [[nodiscard]] bool updateHeadAndTransmissivity(CUASTimeIntegrator const &timeIntegrator);
+  void addWaterSource(WaterSource *newWaterSource);
 };
 
 }  // namespace CUAS

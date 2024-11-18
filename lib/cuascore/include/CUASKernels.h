@@ -7,15 +7,22 @@
 #ifndef CUAS_KERNELS_H
 #define CUAS_KERNELS_H
 
+#include "CUASArgs.h"
 #include "CUASConstants.h"
-#include "specialgradient.h"
-
 #include "Logger.h"
 #include "PETScGrid.h"
 
 #include <algorithm>
 
 namespace CUAS {
+
+namespace  // unnamed namespace
+{
+// fixme: code duplication from  lib/cuascore/src/systemmatrix.cpp
+inline PetscScalar harmonicmean(PetscScalar x1, PetscScalar x2) {  // can only be accessed in this file
+  return 2.0 * x1 * x2 / (x1 + x2 + TINY);
+}
+}  // namespace
 
 /** Converts hydraulic head to water pressure
  *
@@ -30,7 +37,7 @@ namespace CUAS {
 inline void headToPressure(PETScGrid &result, PETScGrid const &hydraulicHead, PETScGrid const &bedElevation,
                            PetscScalar const zw = 0.0) {
   if (!result.isCompatible(hydraulicHead) || !result.isCompatible(bedElevation)) {
-    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -47,20 +54,20 @@ inline void headToPressure(PETScGrid &result, PETScGrid const &hydraulicHead, PE
 
 /** Converts hydraulic head to effective pressure
  *
- * This uses water pressure at the aquifer ice interface and ice pressure.
+ * This uses water pressure at the ice interface (top of aquifer) and ice pressure.
  *
- * \f$ N = p_i - p_w\f$
+ * \f$ N = p_i - p_w(z_w = layerThickness) \f$
  *
  * @param result effective pressure (Pa)
  * @param hydraulicHead  (m)
  * @param bedElevation   (m)
- * @param icePressure    (m)
+ * @param icePressure    (Pa)
  * @param layerThickness (m)
  */
 inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydraulicHead, PETScGrid const &bedElevation,
                                     PETScGrid const &icePressure, PetscScalar const layerThickness = 0.0) {
   if (!result.isCompatible(hydraulicHead) || !result.isCompatible(bedElevation)) {
-    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: headToPressure was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -72,7 +79,7 @@ inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydrauli
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
       // see headToPressure()
-      double pw = (head(j, i) - topg(j, i) - layerThickness) * RHO_WATER * GRAVITY;
+      auto pw = (head(j, i) - topg(j, i) - layerThickness) * RHO_WATER * GRAVITY;
       res(j, i) = pi(j, i) - pw;
     }
   }
@@ -80,13 +87,19 @@ inline void headToEffectivePressure(PETScGrid &result, PETScGrid const &hydrauli
 
 /** Convert water pressure to hydraulic head
  *
+ *    zw = 0.0 -> water pressure at the base of the aquifer
+ *    zw = layer thickness -> ... at top of aquifer
+ *
  * @param result
  * @param waterPressure (Pa)
  * @param bedElevation (m)
+ * @param zw \f$0 \le z_w \le layerThickness\f$
+ *
  */
-inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PETScGrid const &bedElevation) {
+inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PETScGrid const &bedElevation,
+                           PetscScalar const zw = 0.0) {
   if (!result.isCompatible(waterPressure) || !result.isCompatible(bedElevation)) {
-    CUAS_ERROR("CUASKernels.h: pressureToHead was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: pressureToHead was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -98,7 +111,7 @@ inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PE
 
   for (int j = 0; j < result.getLocalGhostNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalGhostNumOfCols(); ++i) {
-      res(j, i) = pw(j, i, GHOSTED) * rgMultiplicator + topg(j, i, GHOSTED);
+      res(j, i) = pw(j, i, GHOSTED) * rgMultiplicator + topg(j, i, GHOSTED) + zw;
     }
   }
 }
@@ -110,7 +123,7 @@ inline void pressureToHead(PETScGrid &result, PETScGrid const &waterPressure, PE
  */
 inline void overburdenPressure(PETScGrid &result, PETScGrid const &iceThickness) {
   if (!result.isCompatible(iceThickness)) {
-    CUAS_ERROR("CUASKernels.h: overburdenPressure was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: overburdenPressure was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -134,17 +147,24 @@ inline void overburdenPressure(PETScGrid &result, PETScGrid const &iceThickness)
  * @param basalVelocity (m/s)
  */
 inline void computeCavityOpening(PETScGrid &result, PetscScalar const beta, PetscScalar const hydraulicConductivity,
-                                 PETScGrid const &basalVelocity) {
-  if (!result.isCompatible(basalVelocity)) {
+                                 PETScGrid const &basalVelocity, PETScGrid const &bndMask) {
+  if (!result.isCompatible(basalVelocity) || !result.isCompatible(bndMask)) {
     CUAS_ERROR("CUASKernels.h: computeCavityOpening was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
   auto res = result.getWriteHandle();
   auto &vb = basalVelocity.getReadHandle();
-  PetscScalar betaK = beta * hydraulicConductivity;
+  auto &mask = bndMask.getReadHandle();
+
+  const auto betaK = beta * hydraulicConductivity;
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      res(j, i) = betaK * vb(j, i);
+      // only on active points, todo: Do we need the trivial else case ?
+      if (mask(j, i) == COMPUTE_FLAG) {
+        res(j, i) = betaK * vb(j, i);
+      } else {
+        res(j, i) = 0.0;
+      }
     }
   }
 }
@@ -160,9 +180,9 @@ inline void computeCavityOpening(PETScGrid &result, PetscScalar const beta, Pets
  * @param hydraulicTransmissivity (m^2/s)
  */
 inline void computeCreepOpening(PETScGrid &result, PETScGrid const &rateFactor, PETScGrid const &effectivePressure,
-                                PETScGrid const &hydraulicTransmissivity) {
+                                PETScGrid const &hydraulicTransmissivity, PETScGrid const &bndMask) {
   if (!result.isCompatible(rateFactor) || !result.isCompatible(effectivePressure) ||
-      !result.isCompatible(hydraulicTransmissivity)) {
+      !result.isCompatible(hydraulicTransmissivity) || !result.isCompatible(bndMask)) {
     CUAS_ERROR("CUASKernels.h: computeCreepOpening was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
@@ -171,38 +191,16 @@ inline void computeCreepOpening(PETScGrid &result, PETScGrid const &rateFactor, 
   auto &A = rateFactor.getReadHandle();
   auto &N = effectivePressure.getReadHandle();
   auto &T = hydraulicTransmissivity.getReadHandle();
+  auto &mask = bndMask.getReadHandle();
 
   for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      res(j, i) = -2.0 * A(j, i) * pow(N(j, i) / 3.0, 3) * T(j, i);
-    }
-  }
-}
-
-/** Implements dT/dt_melt as in Beyer et al., 2018 Eq 5.
- *
- * @param result
- * @param roughnessFactor
- * @param hydraulicConductivity
- * @param hydraulicTransmissivity
- * @param gradientHeadSquared
- */
-inline void computeMeltOpening(PETScGrid &result, PetscScalar const roughnessFactor,
-                               PetscScalar const hydraulicConductivity, PETScGrid const &hydraulicTransmissivity,
-                               PETScGrid const &gradientHeadSquared) {
-  if (!result.isCompatible(hydraulicTransmissivity) || !result.isCompatible(gradientHeadSquared)) {
-    CUAS_ERROR("CUASKernels.h: computeMeltOpening was called with incompatible PETScGrids. Exiting.");
-    exit(1);
-  }
-
-  auto res = result.getWriteHandle();
-  auto &T = hydraulicTransmissivity.getReadHandle();
-  auto &gradh2 = gradientHeadSquared.getReadHandle();
-  const PetscScalar r_g_rhow_K = roughnessFactor * GRAVITY * RHO_WATER * hydraulicConductivity;
-  const PetscScalar rhoi_L_inv = 1.0 / (RHO_ICE * LATENT_HEAT);
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      res(j, i) = r_g_rhow_K * T(j, i) * gradh2(j, i) * rhoi_L_inv;
+      // only on active points, todo: Do we need the trivial else case ?
+      if (mask(j, i) == COMPUTE_FLAG) {
+        res(j, i) = -2.0 * A(j, i) * pow(N(j, i) / 3.0, 3) * T(j, i);
+      } else {
+        res(j, i) = 0.0;
+      }
     }
   }
 }
@@ -214,9 +212,13 @@ inline void computeMeltOpening(PETScGrid &result, PetscScalar const roughnessFac
  */
 inline void binaryDilation(PETScGrid &output, PETScGrid const &input) {
   if (!output.isCompatible(input)) {
-    CUAS_ERROR("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: binaryDilation was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
+
+  // otherwise the output is not correctly updated,
+  // when called a second time with smaller masked area
+  output.setZero();
 
   auto &in = input.getReadHandle();
   auto out = output.getWriteHandle();
@@ -229,16 +231,22 @@ inline void binaryDilation(PETScGrid &output, PETScGrid const &input) {
 
   for (int i = 0; i < iter_rows; ++i) {
     for (int j = 0; j < iter_cols; ++j) {
-      if (in(index_rows, index_cols, GHOSTED))
+      // TODO we only have to evaluate this until we found one true
+      if (0.0 != in(index_rows, index_cols, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows + 1, index_cols, GHOSTED))
+      }
+      if (0.0 != in(index_rows + 1, index_cols, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows - 1, index_cols, GHOSTED))
+      }
+      if (0.0 != in(index_rows - 1, index_cols, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows, index_cols + 1, GHOSTED))
+      }
+      if (0.0 != in(index_rows, index_cols + 1, GHOSTED)) {
         out(i, j) = true;
-      if (in(index_rows, index_cols - 1, GHOSTED))
+      }
+      if (0.0 != in(index_rows, index_cols - 1, GHOSTED)) {
         out(i, j) = true;
+      }
       ++index_cols;
     }
     index_cols = 1;
@@ -267,7 +275,7 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
   if (!effectiveStorativity.isCompatible(bndMask) || !effectiveTransmissivity.isCompatible(bndMask) ||
       !hydraulicTransmissivity.isCompatible(bndMask) || !hydraulicHead.isCompatible(bndMask) ||
       !bedElevation.isCompatible(bndMask)) {
-    CUAS_ERROR("CUASKernels.h: getEffectiveAquiferProperties was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: getEffectiveAquiferProperties was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -275,7 +283,7 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
     CUAS_ERROR(
         "CUASKernels.h: getEffectiveAquiferProperties was called with incompatible parameter unconfinedSmooth={}. "
         "Exiting.",
-        unconfinedSmooth);
+        unconfinedSmooth)
     exit(1);
   }
 
@@ -358,7 +366,7 @@ inline void updateEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PE
  */
 inline void convolveStar11411(PETScGrid const &input, PETScGrid &result) {
   if (!input.isCompatible(result)) {
-    CUAS_ERROR("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: convolveStar11411 was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -423,7 +431,7 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
   if (!aMelt.isCompatible(hydraulicTransmissivity) || !aCreep.isCompatible(hydraulicTransmissivity) ||
       !aCavity.isCompatible(hydraulicTransmissivity) ||
       !newHydraulicTransmissivity.isCompatible(hydraulicTransmissivity)) {
-    CUAS_ERROR("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.");
+    CUAS_ERROR("CUASKernels.h: doChannels was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
@@ -447,8 +455,9 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
           T(j, i) = Tmax;  // todo: better use Tocean here
         } else if (mask(j, i) == (PetscScalar)DIRICHLET_FLAG) {
           // Do nothing. If the head is as Dirichlet BC assume the transmissivity is also given.
+          // T(j, i) = T_n(j, i); // fixme: here or in CUASSolver.cpp ? actual done in CUASSolver
         } else {
-          CUAS_ERROR("CUASKernels.h: doChannels was called with unknown bndMask value {}. Exiting.", mask(j, i));
+          CUAS_ERROR("CUASKernels.h: doChannels was called with unknown bndMask value {}. Exiting.", mask(j, i))
           exit(1);
         }
       }
@@ -456,54 +465,455 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
   }
 }
 
-/** Compute the hydraulic flux.
- *
- * It is assumed that the gradient mask has already be applied to the gradient!
- *
- * @param result (m^2/s)
- * @param gradientHeadSquared (1)
- * @param hydraulicTransmissivity (m^2/s)
- */
-inline void getFluxMagnitude(PETScGrid &result, PETScGrid const &gradientHeadSquared,
-                             PETScGrid const &hydraulicTransmissivity) {
-  if (!result.isCompatible(gradientHeadSquared) || !result.isCompatible(hydraulicTransmissivity)) {
-    CUAS_ERROR("CUASKernels.h: getFluxMagnitude() was called with incompatible PETScGrids. Exiting.");
+// args.initialHead == 'Nopc':
+//  See issm v4.23: trunk/src/c/classes/Loads/Friction.cpp:
+//                      p_water = max(0.,rho_water*gravity*(sealevel-base));
+//                      Neff = p_ice - p_water;
+//
+//  Note, ISSM uses the base = iceSurface - iceThickness and base = bed only for grounded ice
+//
+inline void setInitialHeadFromArgs(PETScGrid &result, PETScGrid const &bndMask, PETScGrid const &bedElevation,
+                                   PETScGrid const &icePressure, CUASArgs const &args, PETScGrid &workSpace) {
+  if (!result.isCompatible(bedElevation) || !result.isCompatible(bndMask) || !result.isCompatible(icePressure) ||
+      !result.isCompatible(workSpace)) {
+    CUAS_ERROR("{}:was called with incompatible PETScGrids. Exiting.", __PRETTY_FUNCTION__)
     exit(1);
   }
 
-  auto res = result.getWriteHandle();
-  auto &T = hydraulicTransmissivity.getReadHandle();
-  auto &gradh2 = gradientHeadSquared.getReadHandle();
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      res(j, i) = T(j, i) * PetscSqrtScalar(gradh2(j, i));
+  // Use this to keep the implementation consistent with all the post-EGU runs for Greenland
+  // This might be changed in the future
+  bool positivePreserving = false;
+  constexpr PetscScalar seaLevel = 0.0;  // sea level with respect to datum. This may change in future applications.
+
+  //
+  // fixme: I would like to write pressureToHead(result, 0.1 * icePressure, ...)
+  //
+  if (args.initialHead == "topg") {
+    result.copy(bedElevation);
+    // positivePreserving = true;  // if true -> this would be the same as Nopc
+  } else if (args.initialHead == "low") {
+    workSpace.copy(icePressure);  // store waterPressure = icePressure in workSpace
+    workSpace.applyMultiplier(0.1);
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // 10% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "mid") {
+    workSpace.copy(icePressure);
+    workSpace.applyMultiplier(0.5);
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // 50% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "high") {
+    workSpace.copy(icePressure);
+    workSpace.applyMultiplier(0.9);
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // 90% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "Nzero") {
+    pressureToHead(result, icePressure, bedElevation, args.layerThickness);  // 100% of ice overburden pressure
+    positivePreserving = true;
+  } else if (args.initialHead == "Nopc") {
+    // implements Wolovick et al., 2023, eq.6 (doi: 10.5194/tc-17-5027-2023)
+    {
+      auto waterPressure = workSpace.getWriteHandle();
+      auto &topg = bedElevation.getReadHandle();
+      for (int row = 0; row < workSpace.getLocalNumOfRows(); ++row) {
+        for (int col = 0; col < workSpace.getLocalNumOfCols(); ++col) {
+          waterPressure(row, col) = std::max(0.0, RHO_WATER * GRAVITY * (seaLevel - topg(row, col)));
+        }
+      }
+    }
+    pressureToHead(result, workSpace, bedElevation, args.layerThickness);  // Nopc
+    positivePreserving = true;
+  } else {
+    // set from numeric value
+    try {
+      auto initialHeadValue = (PetscScalar)std::stod(args.initialHead);
+      result.setConst(initialHeadValue);
+    } catch (std::invalid_argument const &ex) {
+      CUAS_ERROR("{}: args->initialHead invalid_argument: {}. Exiting.", __PRETTY_FUNCTION__, args.initialHead)
+      exit(1);
+    } catch (std::out_of_range const &ex) {
+      CUAS_ERROR("{}: args->initialHead out_of_range: {}. Exiting.", __PRETTY_FUNCTION__, args.initialHead)
+      exit(1);
+    } catch (...) {
+      CUAS_ERROR(
+          "{}: args->initialHead needs to be 'Nzero', 'Nopc', 'low', 'mid', 'high', 'topg' or valid number. Exiting.",
+          __PRETTY_FUNCTION__)
+      exit(1);
+    }
+  }
+
+  // positive preserving (head => 0, psi => 0)
+  if (positivePreserving) {
+    auto head = result.getWriteHandle();
+    auto &topg = bedElevation.getReadHandle();
+    for (int row = 0; row < result.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result.getLocalNumOfCols(); ++col) {
+        head(row, col) = std::max({head(row, col), topg(row, col), 0.0});  // positive preserving head
+      }
+    }
+  } else {
+    CUAS_WARN_RANK0("{}: positivePreserving is false (off)", __PRETTY_FUNCTION__)
+  }
+
+  // duplicate some code from prepare() to make sure the ocean head is at sea level
+  {
+    auto head = result.getWriteHandle();
+    auto &mask = bndMask.getReadHandle();
+    for (int row = 0; row < result.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result.getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
+          // ensure proper ocean bc's after restart
+          head(row, col) = seaLevel;
+        }
+      }
     }
   }
 }
 
-/**
- * Simple driver for gradient2(...) that also aplies the gradient mask
- * @param result (1)
- * @param hydraulicHead (m)
- * @param dx (m)
- * @param gradMask (1)
+/** Compute the hydraulic flux using upwind difference scheme (UDS)
+ *
+ * We use compass notation to simplify indexing, thus "E" means to the East i+1 while "e" means
+ * at the eastern interface at i+1/2 and in a similar fashion for N:North, S:South, W:West.
+ * East = col + 1, West = col - 1
+ * North = row + 1, South = row - 1
+ *
+ *
+ * @param fluxMagnitude (m^2/s)
+ * @param fluxXDir
+ * @param fluxYDir
+ * @param bndMask
+ * @param hydraulicHead (1)
+ * @param effTransEast
+ * @param effTransWest
+ * @param effTransNorth
+ * @param effTransSouth
+ * @param dx
  */
-inline void getGradHeadSQR(PETScGrid &result, PETScGrid const &hydraulicHead, PetscScalar const dx,
-                           PETScGrid const &gradMask) {
-  if (!result.isCompatible(hydraulicHead) || !result.isCompatible(gradMask)) {
-    CUAS_ERROR("CUASKernels.h: getGradHeadSQR was called with incompatible PETScGrids. Exiting.");
+inline void getFlux(PETScGrid &fluxMagnitude, PETScGrid &fluxXDir, PETScGrid &fluxYDir, PETScGrid const &bndMask,
+                    PETScGrid const &hydraulicHead, PETScGrid const &effTransEast, PETScGrid const &effTransWest,
+                    PETScGrid const &effTransNorth, PETScGrid const &effTransSouth, PetscScalar dx) {
+  if (!fluxMagnitude.isCompatible(hydraulicHead) || !fluxMagnitude.isCompatible(fluxXDir) ||
+      !fluxMagnitude.isCompatible(fluxYDir) || !fluxMagnitude.isCompatible(bndMask) ||
+      !fluxMagnitude.isCompatible(effTransEast) || !fluxMagnitude.isCompatible(effTransWest) ||
+      !fluxMagnitude.isCompatible(effTransNorth) || !fluxMagnitude.isCompatible(effTransSouth)) {
+    CUAS_ERROR("CUASKernels.h: getFlux() was called with incompatible PETScGrids. Exiting.");
     exit(1);
   }
 
-  gradient2(result, hydraulicHead, dx);
+  auto fl = fluxMagnitude.getWriteHandle();
+  auto flx = fluxXDir.getWriteHandle();
+  auto fly = fluxYDir.getWriteHandle();
 
-  // apply mask
+  auto &T_up_x = effTransEast.getReadHandle();   // interface (eff.) transmissivity in x-dir
+  auto &T_dn_x = effTransWest.getReadHandle();   // interface (eff.) transmissivity in x-dir
+  auto &T_up_y = effTransNorth.getReadHandle();  // interface (eff.) transmissivity in y-dir
+  auto &T_dn_y = effTransSouth.getReadHandle();  // interface (eff.) transmissivity in y-dir
+
+  auto &head = hydraulicHead.getReadHandle();
+  auto &mask = bndMask.getReadHandle();
+
+  auto const cornerX = hydraulicHead.getCornerX();
+  auto const cornerY = hydraulicHead.getCornerY();
+  auto cornerXGhost = hydraulicHead.getCornerXGhost();
+  auto cornerYGhost = hydraulicHead.getCornerYGhost();
+
+  const auto dx_inv = 1.0 / dx;
+
+  for (int row = 0; row < hydraulicHead.getLocalNumOfRows(); ++row) {
+    for (int col = 0; col < hydraulicHead.getLocalNumOfCols(); ++col) {
+      // as in lib/cuascore/src/systemmatrix.cpp
+      auto j = row + (cornerY - cornerYGhost);
+      auto i = col + (cornerX - cornerXGhost);
+
+      if (mask(row, col) == (PetscScalar)COMPUTE_FLAG) {
+        // some abbreviations
+        auto head_E = head(j, i + 1, GHOSTED);
+        auto head_W = head(j, i - 1, GHOSTED);
+        auto head_N = head(j + 1, i, GHOSTED);
+        auto head_S = head(j - 1, i, GHOSTED);
+        auto head_P = head(j, i, GHOSTED);
+
+        auto flux_e = -T_up_x(row, col) * (head_E - head_P) * dx_inv;
+        auto flux_w = -T_dn_x(row, col) * (head_P - head_W) * dx_inv;
+        auto flux_n = -T_up_y(row, col) * (head_N - head_P) * dx_inv;
+        auto flux_s = -T_dn_y(row, col) * (head_P - head_S) * dx_inv;
+
+        // Results:
+        flx(row, col) = 0.5 * (flux_e + flux_w);
+        fly(row, col) = 0.5 * (flux_n + flux_s);
+        fl(row, col) = PetscSqrtScalar((flx(row, col) * flx(row, col)) + (fly(row, col) * fly(row, col)));
+      }
+    }
+  }
+}
+
+/** Implements dT/dt_melt
+ *
+ */
+inline void computeMeltOpening(PETScGrid &result, PetscScalar const roughnessFactor,
+                               PetscScalar const hydraulicConductivity, PetscScalar const dx,
+                               PETScGrid const &effTransEast, PETScGrid const &effTransWest,
+                               PETScGrid const &effTransNorth, PETScGrid const &effTransSouth,
+                               PETScGrid const &hydraulicHead, PETScGrid const &bedElevation, PETScGrid const &bndMask,
+                               const PetscScalar alpha = 1.0, const PetscScalar beta = 2.0) {
+  if (!result.isCompatible(effTransEast) || !result.isCompatible(hydraulicHead) || !result.isCompatible(bedElevation)) {
+    CUAS_ERROR("CUASKernels.h: computeMeltOpening() was called with incompatible PETScGrids. Exiting.")
+    exit(1);
+  }
+  if (dx <= 0.0) {
+    CUAS_ERROR("CUASKernels.h: computeMeltOpening() was called with invalid grid spacing dx = {}. Exiting.", dx)
+    exit(1);
+  }
+  if (alpha < 1.0) {
+    CUAS_ERROR("CUASKernels.h: computeMeltOpening() was called with invalid alpha = {} < 1. Exiting.", alpha)
+    exit(1);
+  }
+
+  // todo: We need a proof that this implementation is actually correct or find a reference
+  if (beta != 2.0) {
+    CUAS_WARN_RANK0("CUASKernels.h: computeMeltOpening() was called with beta = {} != 2.", beta)
+  }
+
+  const PetscScalar r_g_rhow_K = roughnessFactor * GRAVITY * RHO_WATER * hydraulicConductivity;
+  const PetscScalar rhoi_L_inv = 1.0 / (RHO_ICE * LATENT_HEAT);
+
   auto res = result.getWriteHandle();
-  auto &gmask = gradMask.getReadHandle();
-  for (int j = 0; j < result.getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < result.getLocalNumOfCols(); ++i) {
-      if (gmask(j, i) == 1.0) {  // gradMask has inverted meaning
-        res(j, i) = 0.0;
+  auto const cornerX = result.getCornerX();
+  auto const cornerY = result.getCornerY();
+  auto cornerXGhost = result.getCornerXGhost();
+  auto cornerYGhost = result.getCornerYGhost();
+
+  auto &T_up_x = effTransEast.getReadHandle();   // interface (eff.) transmissivity in x-dir
+  auto &T_dn_x = effTransWest.getReadHandle();   // interface (eff.) transmissivity in x-dir
+  auto &T_up_y = effTransNorth.getReadHandle();  // interface (eff.) transmissivity in y-dir
+  auto &T_dn_y = effTransSouth.getReadHandle();  // interface (eff.) transmissivity in y-dir
+
+  auto &head = hydraulicHead.getReadHandle();
+  auto &topg = bedElevation.getReadHandle();
+  auto &mask = bndMask.getReadHandle();
+
+  for (int row = 0; row < result.getLocalNumOfRows(); ++row) {
+    for (int col = 0; col < result.getLocalNumOfCols(); ++col) {
+      // We only want opening at active cuas locations.
+      // We don't need to check if result.isOnRealBoundary(row, col), because we don't
+      // have active points on the real boundary
+      if (mask(row, col) != (PetscScalar)COMPUTE_FLAG || head(row, col) - topg(row, col) <= 0.0) {
+        res(row, col) = 0.0;
+      } else {
+        // as in lib/cuascore/src/systemmatrix.cpp
+        auto j = row + (cornerY - cornerYGhost);
+        auto i = col + (cornerX - cornerXGhost);
+
+        // some abbreviations
+        auto head_E = head(j, i + 1, GHOSTED);
+        auto head_W = head(j, i - 1, GHOSTED);
+        auto head_N = head(j + 1, i, GHOSTED);
+        auto head_S = head(j - 1, i, GHOSTED);
+        auto head_P = head(j, i, GHOSTED);
+
+        auto dhdx_up_x = (head_E - head_P) / dx;
+        auto dhdx_dn_x = (head_P - head_W) / dx;
+        auto dhdy_up_y = (head_N - head_P) / dx;
+        auto dhdy_dn_y = (head_P - head_S) / dx;
+
+        // extended version of gradient2() from specialgradient.cpp. See Beyer et al., 2018 Eq. B9
+        // if beta is 2 we get (dhdx*dhdx)^(beta/2) = (dhdx^2)^(2/2) = dhdx^2 as expected
+        res(row, col) = r_g_rhow_K * rhoi_L_inv * 0.5 *
+                        (pow(T_up_x(row, col), alpha) * pow(dhdx_up_x * dhdx_up_x, beta / 2.0) +
+                         pow(T_dn_x(row, col), alpha) * pow(dhdx_dn_x * dhdx_dn_x, beta / 2.0) +
+                         pow(T_up_y(row, col), alpha) * pow(dhdy_up_y * dhdy_up_y, beta / 2.0) +
+                         pow(T_dn_y(row, col), alpha) * pow(dhdy_dn_y * dhdy_dn_y, beta / 2.0));
+      }  // end mask
+    }
+  }
+}
+
+inline void updateInterfaceTransmissivityCDS(PETScGrid &effTransEast, PETScGrid &effTransWest, PETScGrid &effTransNorth,
+                                             PETScGrid &effTransSouth, const PETScGrid &bndMask,
+                                             const PETScGrid &bedElevation, const PETScGrid &hydraulicHead,
+                                             PETScGrid const &effectiveTransmissivity) {
+  if (!bndMask.isCompatible(hydraulicHead) || !bndMask.isCompatible(bedElevation) ||
+      !bndMask.isCompatible(effectiveTransmissivity) || !bndMask.isCompatible(effTransEast) ||
+      !bndMask.isCompatible(effTransWest) || !bndMask.isCompatible(effTransNorth) ||
+      !bndMask.isCompatible(effTransSouth)) {
+    CUAS_ERROR("CUASKernels.h: updateInterfaceTransmissivityCDS was called with incompatible PETScGrids. Exiting.")
+    exit(1);
+  }
+
+  // read from
+  auto &mask = bndMask.getReadHandle();
+  auto &transmissivity = effectiveTransmissivity.getReadHandle();
+  // auto &head = hydraulicHead.getReadHandle();
+  // auto &topg = bedElevation.getReadHandle();
+
+  // write to
+  auto T_e = effTransEast.getWriteHandle();   // interface (eff.) transmissivity in pos. x-dir
+  auto T_w = effTransWest.getWriteHandle();   // interface (eff.) transmissivity in neg. x-dir
+  auto T_n = effTransNorth.getWriteHandle();  // interface (eff.) transmissivity in pos. y-dir
+  auto T_s = effTransSouth.getWriteHandle();  // interface (eff.) transmissivity in neg. y-dir
+
+  auto cornerX = bndMask.getCornerX();
+  auto cornerY = bndMask.getCornerY();
+  auto cornerXGhost = bndMask.getCornerXGhost();
+  auto cornerYGhost = bndMask.getCornerYGhost();
+
+  // we take localnumOfCols, so that we can iterate over the normal boundaries
+  for (int row = 0; row < bndMask.getLocalNumOfRows(); ++row) {
+    for (int col = 0; col < bndMask.getLocalNumOfCols(); ++col) {
+      if (mask(row, col) == (PetscScalar)COMPUTE_FLAG) {
+        // needed for transmissivity and head in order to use LocalArray rather than GlobalArray
+        auto j = row + (cornerY - cornerYGhost);
+        auto i = col + (cornerX - cornerXGhost);
+
+        // same for transmissivity aka effective transmissivity
+        auto T_E = transmissivity(j, i + 1, GHOSTED);
+        auto T_W = transmissivity(j, i - 1, GHOSTED);
+        auto T_N = transmissivity(j + 1, i, GHOSTED);
+        auto T_S = transmissivity(j - 1, i, GHOSTED);
+        auto T_P = transmissivity(j, i, GHOSTED);
+
+        T_e(row, col) = harmonicmean(T_P, T_E);
+        T_w(row, col) = harmonicmean(T_P, T_W);
+        T_s(row, col) = harmonicmean(T_P, T_S);
+        T_n(row, col) = harmonicmean(T_P, T_N);
+      }
+    }
+  }
+}
+
+inline void updateInterfaceTransmissivityUDS(PETScGrid &effTransEast, PETScGrid &effTransWest, PETScGrid &effTransNorth,
+                                             PETScGrid &effTransSouth, const PETScGrid &bndMask,
+                                             const PETScGrid &bedElevation, const PETScGrid &hydraulicHead,
+                                             PETScGrid const &effectiveTransmissivity, PetscScalar threshold) {
+  if (!bndMask.isCompatible(hydraulicHead) || !bndMask.isCompatible(bedElevation) ||
+      !bndMask.isCompatible(effectiveTransmissivity) || !bndMask.isCompatible(effTransEast) ||
+      !bndMask.isCompatible(effTransWest) || !bndMask.isCompatible(effTransNorth) ||
+      !bndMask.isCompatible(effTransSouth)) {
+    CUAS_ERROR("CUASKernels.h: updateInterfaceTransmissivityUDS was called with incompatible PETScGrids. Exiting.")
+    exit(1);
+  }
+
+  if (threshold < 0.0) {
+    CUAS_ERROR("CUASSolver::updateInterfaceTransmissivityUDS() called with threshold = {} < 0. Exiting.", threshold);
+    exit(1);
+  }
+
+  // read from
+  auto &mask = bndMask.getReadHandle();
+  auto &transmissivity = effectiveTransmissivity.getReadHandle();
+  auto &head = hydraulicHead.getReadHandle();
+  auto &topg = bedElevation.getReadHandle();
+
+  // write to
+  auto T_up_x = effTransEast.getWriteHandle();   // interface (eff.) transmissivity in pos. x-dir
+  auto T_dn_x = effTransWest.getWriteHandle();   // interface (eff.) transmissivity in neg. x-dir
+  auto T_up_y = effTransNorth.getWriteHandle();  // interface (eff.) transmissivity in pos. y-dir
+  auto T_dn_y = effTransSouth.getWriteHandle();  // interface (eff.) transmissivity in neg. y-dir
+
+  auto cornerX = bndMask.getCornerX();
+  auto cornerY = bndMask.getCornerY();
+  auto cornerXGhost = bndMask.getCornerXGhost();
+  auto cornerYGhost = bndMask.getCornerYGhost();
+
+  // PetscScalar T_up_x, T_dn_x;  // interface (eff.) transmissivity in x-dir
+  // PetscScalar T_up_y, T_dn_y;  // interface (eff.) transmissivity in y-dir
+
+  PetscScalar T_e, T_w, T_s, T_n;
+
+  // we take localnumOfCols, so that we can iterate over the normal boundaries
+  for (int row = 0; row < bndMask.getLocalNumOfRows(); ++row) {
+    for (int col = 0; col < bndMask.getLocalNumOfCols(); ++col) {
+      if (mask(row, col) == (PetscScalar)COMPUTE_FLAG) {
+        // needed for transmissivity and head in order to use LocalArray rather than GlobalArray
+        auto j = row + (cornerY - cornerYGhost);
+        auto i = col + (cornerX - cornerXGhost);
+
+        // some abbreviations
+        auto head_E = head(j, i + 1, GHOSTED);
+        auto head_W = head(j, i - 1, GHOSTED);
+        auto head_N = head(j + 1, i, GHOSTED);
+        auto head_S = head(j - 1, i, GHOSTED);
+        auto head_P = head(j, i, GHOSTED);
+
+        // we also need psi = head - topg for all
+        auto psi_E = head_E - topg(j, i + 1, GHOSTED);
+        auto psi_W = head_W - topg(j, i - 1, GHOSTED);
+        auto psi_N = head_N - topg(j + 1, i, GHOSTED);
+        auto psi_S = head_S - topg(j - 1, i, GHOSTED);
+        auto psi_P = head_P - topg(j, i, GHOSTED);
+
+        // same for transmissivity aka effective transmissivity
+        auto T_E = transmissivity(j, i + 1, GHOSTED);
+        auto T_W = transmissivity(j, i - 1, GHOSTED);
+        auto T_N = transmissivity(j + 1, i, GHOSTED);
+        auto T_S = transmissivity(j - 1, i, GHOSTED);
+        auto T_P = transmissivity(j, i, GHOSTED);
+
+        //
+        // eastern eff. boundary transmissivity
+        //
+        if (mask(j, i + 1, GHOSTED) == NOFLOW_FLAG) {
+          // This was also harmonic mean in the CDS scheme
+          T_e = NOFLOW_VALUE;  // fixme: should we use zero instead?
+        } else {
+          if (psi_E > threshold && psi_P > threshold) {
+            T_e = harmonicmean(T_P, T_E);
+          } else {
+            // arithmetic mean or better harmonic mean?
+            T_e = 0.5 * (T_P + T_E);  // Teff(psi_e) at (i+1/2, j)
+            T_e = 1e-1 * T_P;         // 1% of the center
+          }
+        }
+        //
+        // western eff. boundary transmissivity
+        //
+        if (mask(j, i - 1, GHOSTED) == NOFLOW_FLAG) {
+          // This was also harmonic mean in the CDS scheme
+          T_w = NOFLOW_VALUE;  // fixme: should we use zero instead?
+        } else {
+          if (psi_W > threshold && psi_P > threshold) {
+            T_w = harmonicmean(T_P, T_W);
+          } else {
+            // arithmetic mean or better harmonic mean
+            T_w = 0.5 * (T_P + T_W);  // Teff(psi_w) at (i-1/2, j)
+            T_w = 1e-1 * T_P;
+          }
+        }
+        //
+        // northern eff. boundary transmissivity
+        //
+        if (mask(j + 1, i, GHOSTED) == NOFLOW_FLAG) {
+          // This was also harmonic mean in the CDS scheme
+          T_n = NOFLOW_VALUE;  // fixme: should we use zero instead?
+        } else {
+          if (psi_N > threshold && psi_P > threshold) {
+            T_n = harmonicmean(T_P, T_N);
+          } else {
+            // arithmetic mean or better harmonic mean?
+            T_n = 0.5 * (T_P + T_N);  // Teff(psi_w) at (i, j+1/2)
+            T_n = 1e-1 * T_P;
+          }
+        }
+        //
+        // southern eff. boundary transmissivity
+        //
+        if (mask(j - 1, i, GHOSTED) == NOFLOW_FLAG) {
+          // This was also harmonic mean in the CDS scheme
+          T_s = NOFLOW_VALUE;  // fixme: should we use zero instead?
+        } else {
+          if (psi_S > threshold && psi_P > threshold) {
+            T_s = harmonicmean(T_P, T_S);
+          } else {
+            // arithmetic mean or better harmonic mean
+            T_s = 0.5 * (T_P + T_S);  // Teff(psi_s) at (i, j-1/2)
+            T_s = 1e-1 * T_P;
+          }
+        }
+
+        // no flux out of dry cells
+        T_up_x(row, col) = (psi_P <= 0.0 && head_P > head_E && psi_P <= psi_E) ? NOFLOW_VALUE : T_e;
+        T_dn_x(row, col) = (psi_P <= 0.0 && head_P > head_W && psi_P <= psi_W) ? NOFLOW_VALUE : T_w;
+        T_up_y(row, col) = (psi_P <= 0.0 && head_P > head_N && psi_P <= psi_N) ? NOFLOW_VALUE : T_n;
+        T_dn_y(row, col) = (psi_P <= 0.0 && head_P > head_S && psi_P <= psi_S) ? NOFLOW_VALUE : T_s;
       }
     }
   }

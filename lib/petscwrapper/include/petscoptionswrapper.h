@@ -1,18 +1,22 @@
 /**
- * File: petscutil.h
+ * File: petscoptions.h
  * License: Part of the CUAS-MPI project. Licensed under BSD 3 clause license. See LICENSE.txt file at
  * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
  */
 
+#ifndef CUAS_PETSCOPTIONSWRAPPER_H
+#define CUAS_PETSCOPTIONSWRAPPER_H
+
 #include "Logger.h"
 
 #include "petsc.h"
+#include "petscwrapperutils.h"
 
 #include <string>
 
 std::string getPETScOptionsAll() {
   char *copts;
-  PetscOptionsGetAll(PETSC_NULL, &copts);
+  PetscOptionsGetAll(PETSC_NULLPTR, &copts);
   auto result = std::string(copts);
   PetscFree(copts);
   return result;
@@ -21,15 +25,15 @@ std::string getPETScOptionsAll() {
 void getPETScOptionsAll(std::vector<std::string> &names, std::vector<std::string> &values) {
   // TODO getPETScOptionsAll --> split string
   CUAS_WARN("{} not implemented yet", __PRETTY_FUNCTION__)
-  names.push_back(__PRETTY_FUNCTION__);
-  values.push_back("not implemented yet");
+  names.emplace_back(__PRETTY_FUNCTION__);
+  values.emplace_back("not implemented yet");
 }
 
 void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::string> &values) {
   PetscInt N;
   char **tnames;
   char **tvalues;
-  PetscOptionsLeftGet(PETSC_NULL, &N, &tnames, &tvalues);
+  PetscOptionsLeftGet(PETSC_NULLPTR, &N, &tnames, &tvalues);
 
   names.resize(N);
   values.resize(N);
@@ -47,7 +51,7 @@ void getPETScOptionsUnused(std::vector<std::string> &names, std::vector<std::str
     }
   }
 
-  PetscOptionsLeftRestore(PETSC_NULL, &N, &tnames, &tvalues);
+  PetscOptionsLeftRestore(PETSC_NULLPTR, &N, &tnames, &tvalues);
 }
 
 std::string getPETScOptionsUnused() {
@@ -80,8 +84,8 @@ std::string getPETScOptionsUnused() {
 void getPETScOptionsUsed(std::vector<std::string> &names, std::vector<std::string> &values) {
   // TODO getPETScOptionsAll and getPETScOptionsUnused --> used = all not in unused
   CUAS_WARN("{} not implemented yet", __PRETTY_FUNCTION__)
-  names.push_back(__PRETTY_FUNCTION__);
-  values.push_back("not implemented yet");
+  names.emplace_back(__PRETTY_FUNCTION__);
+  values.emplace_back("not implemented yet");
 }
 
 std::string getPETScOptionsUsed() {
@@ -93,3 +97,5 @@ std::string getPETScOptionsUsed() {
 
   return result;
 }
+
+#endif  // CUAS_PETSCOPTIONSWRAPPER_H

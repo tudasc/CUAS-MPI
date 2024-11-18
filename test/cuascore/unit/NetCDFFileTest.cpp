@@ -33,21 +33,33 @@ TEST(NetCDFFileTest, addAttributes) {
   file.defineScalar("limitedScalar", LIMITED);
   file.addAttributeToVariable("limitedScalar", "testAttribute1", "testvalue1");
   file.addAttributeToVariable("limitedScalar", "testAttribute2", "testvalue2");
+  file.addAttributeToVariable("limitedScalar", "testAttribute3", 1.23456);
+  file.addAttributeToVariable("limitedScalar", "testAttribute4", 42);
   file.defineScalar("unlimitedScalar", UNLIMITED);
   file.addAttributeToVariable("unlimitedScalar", "testAttribute1", "testvalue1");
   file.addAttributeToVariable("unlimitedScalar", "testAttribute2", "testvalue2");
+  file.addAttributeToVariable("unlimitedScalar", "testAttribute3", 1.23456);
+  file.addAttributeToVariable("unlimitedScalar", "testAttribute4", 42);
   file.defineVectorX("vectorX");
   file.addAttributeToVariable("vectorX", "testAttribute1", "testvalue1");
   file.addAttributeToVariable("vectorX", "testAttribute2", "testvalue2");
+  file.addAttributeToVariable("vectorX", "testAttribute3", 1.23456);
+  file.addAttributeToVariable("vectorX", "testAttribute4", 42);
   file.defineVectorY("vectorY");
   file.addAttributeToVariable("vectorY", "testAttribute1", "testvalue1");
   file.addAttributeToVariable("vectorY", "testAttribute2", "testvalue2");
+  file.addAttributeToVariable("vectorY", "testAttribute3", 1.23456);
+  file.addAttributeToVariable("vectorY", "testAttribute4", 42);
   file.defineGrid("limitedGrid", LIMITED);
   file.addAttributeToVariable("limitedGrid", "testAttribute1", "testvalue1");
   file.addAttributeToVariable("limitedGrid", "testAttribute2", "testvalue2");
+  file.addAttributeToVariable("limitedGrid", "testAttribute3", 1.23456);
+  file.addAttributeToVariable("limitedGrid", "testAttribute4", 42);
   file.defineGrid("unlimitedGrid", UNLIMITED);
   file.addAttributeToVariable("unlimitedGrid", "testAttribute1", "testvalue1");
   file.addAttributeToVariable("unlimitedGrid", "testAttribute2", "testvalue2");
+  file.addAttributeToVariable("unlimitedGrid", "testAttribute3", 1.23456);
+  file.addAttributeToVariable("unlimitedGrid", "testAttribute4", 42);
 }
 
 TEST(NetCDFFileTest, addGlobalAttributes) {

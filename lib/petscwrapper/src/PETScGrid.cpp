@@ -44,36 +44,19 @@ PetscScalar PETScGrid::getMaxAbsDiff(PETScGrid const &sub) const {
     CUAS_ERROR("PETScGrid.cpp: copy: input is not compatible. Exiting.")
     exit(1);
   }
-
   PetscScalar result = 0.0;
-
-  // TODO this implementation uses PETSc functions and is easy to understand,
-  //  but it is probably slower than the manual implmentation below
   Vec diff;
-  DMCreateGlobalVector(dm, &diff);
+  DMGetGlobalVector(dm, &diff);
   VecCopy(global, diff);
   VecAXPY(diff, -1, sub.global);
-  VecAbs(diff);
-  VecMax(diff, PETSC_NULL, &result);
-  VecDestroy(&diff);
-
-  /*auto &minuend = getReadHandle();
-  auto &subtrahend = sub.getReadHandle();
-  for (int j = 0; j < getLocalNumOfRows(); ++j) {
-    for (int i = 0; i < getLocalNumOfCols(); ++i) {
-      auto absDiff = std::abs(minuend(j, i) - subtrahend(j, i));
-      result = std::max(absDiff, result);
-    }
-  }
-
-  MPI_Allreduce(&result, &result, 1, MPI_DOUBLE, MPI_MAX, PETSC_COMM_WORLD);*/
-
+  VecNorm(diff, NORM_INFINITY, &result);
+  DMRestoreGlobalVector(dm, &diff);
   return result;
 }
 
 std::array<PetscScalar, 3> PETScGrid::getErrorNorms(PETScGrid const &sub) const {
   if (!isCompatible(sub)) {
-    CUAS_ERROR("{}: input is not compatible. Exiting.", __PRETTY_FUNCTION__);
+    CUAS_ERROR("{}: input is not compatible. Exiting.", __PRETTY_FUNCTION__)
     exit(1);
   }
   PetscScalar L1, L2, Linf;
@@ -89,7 +72,7 @@ std::array<PetscScalar, 3> PETScGrid::getErrorNorms(PETScGrid const &sub) const 
 
 PetscScalar PETScGrid::getMax() const {
   PetscScalar result;
-  VecMax(global, PETSC_NULL, &result);
+  VecMax(global, PETSC_NULLPTR, &result);
   return result;
 }
 
@@ -118,27 +101,72 @@ void PETScGrid::copyGlobal(PETScGrid const &input) {
   DMGlobalToLocal(dm, global, INSERT_VALUES, local);
 }
 
+bool PETScGrid::isOnGhostBoundary(int row, int col) const {
+  return cornerYGhost == -1 && row == 0 || cornerXGhost == -1 && col == 0 ||
+         cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localGhostNumOfRows - 1 ||
+         cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localGhostNumOfCols - 1;
+}
+
+bool PETScGrid::isOnRealBoundary(int row, int col) const {
+  //  return cornerYGhost == -1 && row == 0 || cornerXGhost == -1 && col == 0 ||
+  //         cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localNumOfRows - 1 ||
+  //         cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localNumOfCols - 1;
+  return isOnRealBoundaryEast(row, col) || isOnRealBoundaryWest(row, col) || isOnRealBoundaryNorth(row, col) ||
+         isOnRealBoundarySouth(row, col);
+}
+
+bool PETScGrid::isOnRealBoundaryEast(int row, int col) const {
+  return cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && col == localNumOfCols - 1;
+}
+
+bool PETScGrid::isOnRealBoundaryWest(int row, int col) const { return cornerXGhost == -1 && col == 0; }
+
+bool PETScGrid::isOnRealBoundaryNorth(int row, int col) const {
+  return cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && row == localNumOfRows - 1;
+}
+
+bool PETScGrid::isOnRealBoundarySouth(int row, int col) const { return cornerYGhost == -1 && row == 0; }
+
 void PETScGrid::setGhostBoundary(PetscScalar value) {
   auto handle = getWriteHandleGhost();
-  for (int i = 0; i < localGhostNumOfRows; ++i) {
-    for (int j = 0; j < localGhostNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
-        handle(i, j) = value;
+  for (int row = 0; row < localGhostNumOfRows; ++row) {
+    for (int col = 0; col < localGhostNumOfCols; ++col) {
+      if (isOnGhostBoundary(row, col)) {
+        handle(row, col) = value;
       }
     }
   }
 }
 
-void PETScGrid::setRealBoundary(PetscScalar value) {
+// See https://isocpp.org/wiki/faq/pointers-to-members
+void PETScGrid::setRealBoundary(PetscScalar value, Direction direction) {
+  PETScGridMemFn isOnBoundaryFunc;
+  switch (direction) {
+    case Direction::All:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundary;
+      break;
+    case Direction::North:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundaryNorth;
+      break;
+    case Direction::East:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundaryEast;
+      break;
+    case Direction::South:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundarySouth;
+      break;
+    case Direction::West:
+      isOnBoundaryFunc = &PETScGrid::isOnRealBoundaryWest;
+      break;
+    default:
+      CUAS_ERROR("Error: PETScGrid::setRealBoundary() with unknown direction. Exiting.")
+      exit(1);
+  }
+
   auto handle = getWriteHandle();
-  for (int i = 0; i < localNumOfRows; ++i) {
-    for (int j = 0; j < localNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
-        handle(i, j) = value;
+  for (int row = 0; row < localNumOfRows; ++row) {
+    for (int col = 0; col < localNumOfCols; ++col) {
+      if ((this->*isOnBoundaryFunc)(row, col)) {
+        handle(row, col) = value;
       }
     }
   }
@@ -146,13 +174,11 @@ void PETScGrid::setRealBoundary(PetscScalar value) {
 
 void PETScGrid::findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar newValue) {
   auto handle = getWriteHandleGhost();
-  for (int i = 0; i < localGhostNumOfRows; ++i) {
-    for (int j = 0; j < localGhostNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localGhostNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localGhostNumOfCols - 1) {
-        if (handle(i, j) == oldValue) {
-          handle(i, j) = newValue;
+  for (int row = 0; row < localGhostNumOfRows; ++row) {
+    for (int col = 0; col < localGhostNumOfCols; ++col) {
+      if (isOnGhostBoundary(row, col)) {
+        if (handle(row, col) == oldValue) {
+          handle(row, col) = newValue;
         }
       }
     }
@@ -161,13 +187,11 @@ void PETScGrid::findAndReplaceGhostBoundary(PetscScalar oldValue, PetscScalar ne
 
 void PETScGrid::findAndReplaceRealBoundary(PetscScalar oldValue, PetscScalar newValue) {
   auto handle = getWriteHandle();
-  for (int i = 0; i < localNumOfRows; ++i) {
-    for (int j = 0; j < localNumOfCols; ++j) {
-      if (cornerYGhost == -1 && i == 0 || cornerXGhost == -1 && j == 0 ||
-          cornerYGhost + localGhostNumOfRows == totalGhostNumOfRows - 1 && i == localNumOfRows - 1 ||
-          cornerXGhost + localGhostNumOfCols == totalGhostNumOfCols - 1 && j == localNumOfCols - 1) {
-        if (handle(i, j) == oldValue) {
-          handle(i, j) = newValue;
+  for (int row = 0; row < localNumOfRows; ++row) {
+    for (int col = 0; col < localNumOfCols; ++col) {
+      if (isOnRealBoundary(row, col)) {
+        if (handle(row, col) == oldValue) {
+          handle(row, col) = newValue;
         }
       }
     }

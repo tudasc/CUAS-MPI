@@ -1,7 +1,44 @@
 # File: .gitlab-ci.yml
 # Description: File to configure our Gitlab CI
 
-# Stages
+
+.lb-setup: &lb-setup
+  - module purge
+  - module load cmake
+  - module load gcc/$GCC_VERSION openmpi/$OPENMPI_VERSION
+  - module load petsc/$PETSC_VERSION
+  - module load libnetcdf/$LIBNETCDF_VERSION
+
+
+.output-directories: &output-directories
+  - printf "CI_PROJECT_DIR  $CI_PROJECT_DIR\n"
+  - printf "CI_BUILDS_DIR   $CI_BUILDS_DIR\n"
+  - printf "CUAS_WORK_PATH  $CUAS_WORK_PATH\n"
+
+
+default:
+  before_script:
+    - *output-directories
+    - *lb-setup
+  tags:
+    - general
+
+
+variables:
+  GIT_STRATEGY: none
+  CUAS_WORK_PATH: $CI_BUILDS_DIR/$CI_PROJECT_ID/$CI_PIPELINE_ID/$CI_COMMIT_SHORT_SHA/cuas-mpi
+  CUAS_BUILD_DIR: build
+  CUAS_INSTALL_DIR: install
+  CUAS_DOCS_DIR: build-docs
+
+  GCC_VERSION: 10.2
+  OPENMPI_VERSION: 4.0
+  PETSC_VERSION: 3.14
+  LIBNETCDF_VERSION: 4.7
+  LLVM_VERSION: 12.0.1
+  PYTHON_VERSION: 3.9.5
+
+
 stages:
   - download
   - build
@@ -9,72 +46,61 @@ stages:
   - unit-test
   - integration-test
   - linting
+  - docs
 
-.lb-setup: &lb-setup
-  - module load cmake
-  - module load gcc/10.2 openmpi/4.0
-  - module load petsc/3.14
-  - module load libnetcdf/4.7
 
-cuas-dowload:
+download-cuas:
   stage: download
-  tags:
-    - general
-  before_script: *lb-setup
   variables:
     GIT_STRATEGY: clone
+    GIT_DEPTH: 5
   script:
-    echo "repository cloned"
+    - if [ -d $CUAS_WORK_PATH ]; then printf "Directory exists.\n  EXIT!\n"; exit 1; fi
+    - mkdir -p $CUAS_WORK_PATH
+    - cp -rT $CI_PROJECT_DIR $CUAS_WORK_PATH
+    - printf "repository cloned into  $CI_PROJECT_DIR\n  and copied into       $CUAS_WORK_PATH\n"
+
 
 build-cuas:
   stage: build
-  tags:
-    - general
-  before_script: *lb-setup
-  variables:
-    GIT_STRATEGY: none
+  needs: ["download-cuas"]
   script:
-    - cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
-    - cmake --build build --verbose --parallel $(cat /proc/cpuinfo | grep processor | wc -l)
+    - cd $CUAS_WORK_PATH
+    - cmake -B $CUAS_BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
+    - cmake --build $CUAS_BUILD_DIR --verbose --parallel $(cat /proc/cpuinfo | grep processor | wc -l)
+
 
 install-cuas:
   stage: install
-  tags:
-    - general
-  before_script: *lb-setup
-  variables:
-    GIT_STRATEGY: none
+  needs: ["build-cuas"]
   script:
-    cmake --install build --prefix install
+    - cd $CUAS_WORK_PATH
+    - cmake --install $CUAS_BUILD_DIR --prefix $CUAS_INSTALL_DIR
+
 
 test-petscwrapper:
   stage: unit-test
-  tags:
-    - general
-  before_script: *lb-setup
-  variables:
-    GIT_STRATEGY: none
+  needs: ["install-cuas"]
   script:
-    - cd install/test/petscwrapper/unit
+    - cd $CUAS_WORK_PATH
+    - cd $CUAS_INSTALL_DIR/test/petscwrapper/unit
     - mpirun -n 5 --timeout 60 ./test-PETScVector
     - mpirun -n 5 --timeout 60 ./test-PETScMatrix
     - mpirun -n 4 --timeout 60 ./test-PETScSolver
     - mpirun -n 4 --timeout 60 ./test-PETScGrid
     - mpirun -n 4 --timeout 60 ./test-fillgrid
 
+
 test-cuascore:
   stage: unit-test
-  tags:
-    - general
-  before_script: *lb-setup
-  variables:
-    GIT_STRATEGY: none
+  needs: ["install-cuas"]
   script:
-    - cd install/test/cuascore/unit
+    - cd $CUAS_WORK_PATH
+    - cd $CUAS_INSTALL_DIR/test/cuascore/unit
     - mpirun -n 1 --timeout 60 ./test-CUASArgs
     - mpirun -n 1 --timeout 60 ./test-timeparse
+    - mpirun -n 1 --timeout 60 ./test-utilities
     - mpirun -n 9 --timeout 60 ./test-CUASKernels
-    - mpirun -n 6 --timeout 60 ./test-specialgradient
     - mpirun -n 6 --timeout 60 ./test-forcing
     - mpirun -n 1 --timeout 60 ./test-systemmatrix
     - mpirun -n 4 --timeout 60 ./test-systemmatrix
@@ -87,17 +113,17 @@ test-cuascore:
     - mpirun -n 4 --timeout 60 ./test-initialHead
     #- mpirun -n 1 --timeout 60 ./test-ModelReader
     #- mpirun -n 1 --timeout 60 ./test-timeForcingNetcdf
+    - mpirun -n 4 --timeout 60 ./test-TimeIntegrator
+
 
 test-cuas:
   stage: integration-test
-  tags:
-    - general
-  before_script: *lb-setup
-  variables:
-    GIT_STRATEGY: none
+  needs: ["install-cuas"]
   script:
-    - cd install/test/cuascore/integration
+    - cd $CUAS_WORK_PATH
+    - cd $CUAS_INSTALL_DIR/test/cuascore/integration
     - mpirun -n 9 --timeout 60 ./test-noData
+    - mpirun -n 2 ./test-exactCircularSteadySolution 81 31 86400 # no output
     # argc,argv test
     - mpirun -n 2 --timeout 60 ./test-exactTransientSolution
     - mpirun -n 2 --timeout 60 ./test-exactTransientSolution 1000.0
@@ -115,39 +141,68 @@ test-cuas:
     - mpirun -n 4 --timeout 60 ./test-exactSteadySolution 2000.0  51  51 31 86400
     - mpirun -n 4 --timeout 60 ./test-exactSteadySolution 1000.0 101 101 31 86400
     - mpirun -n 4 --timeout 60 ./test-exactSteadySolution  500.0 201 201 31 86400
+    # exact solution with varying transmissivity
+    - mpirun -n 1 -timeout 60 ./test-exactPiecewiseConstantSteadySolution 101 11 86400
+
 
 run-clang-format:
   stage: linting
-  tags:
-    - general
+  needs: ["install-cuas"]
   before_script:
-    - *lb-setup
-    - module load gcc llvm/12.0.1
-  variables:
-    GIT_STRATEGY: none
+    - *output-directories
+    - module load gcc/$GCC_VERSION
+    - module load llvm/$LLVM_VERSION
   script:
+    - cd $CUAS_WORK_PATH
     - ./utils/checkClangFormat.sh
+
 
 run-clang-tidy:
   stage: linting
-  tags:
-    - general
+  needs: ["install-cuas"]
   before_script:
+    - *output-directories
     - *lb-setup
-    - module load gcc llvm/12.0.1
-  variables:
-    GIT_STRATEGY: none
+    - module load llvm/$LLVM_VERSION
   script:
+    - cd $CUAS_WORK_PATH
     - ./utils/checkClangTidy.sh
+
 
 run-cmake-format:
   stage: linting
-  tags:
-    - general
+  needs: ["install-cuas"]
   before_script:
-    - *lb-setup
-    - module load python/3.9.5
-  variables:
-    GIT_STRATEGY: none
+    - *output-directories
+    - module load gcc/$GCC_VERSION
+    - module load python/$PYTHON_VERSION
   script:
+    - cd $CUAS_WORK_PATH
     - ./utils/checkCmakeFormat.sh
+
+
+build-cuas-docs-doxygen:
+  stage: docs
+  needs: ["install-cuas"]
+  before_script:
+    - *output-directories
+    - *lb-setup
+    - module load doxygen
+  script:
+    - cd $CUAS_WORK_PATH
+    - cmake -B $CUAS_DOCS_DIR/doxygen -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCUAS_ENABLE_DOCS=Doxygen
+    - cmake --build $CUAS_DOCS_DIR/doxygen --target docs
+
+
+build-cuas-docs-doxygensphinxbreathe:
+  stage: docs
+  needs: ["install-cuas"]
+  before_script:
+    - *output-directories
+    - *lb-setup
+    - module load doxygen
+    - module load python/$PYTHON_VERSION
+  script:
+    - cd $CUAS_WORK_PATH
+    - cmake -B $CUAS_DOCS_DIR/doxygensphinxbreathe -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT -DCUAS_ENABLE_DOCS=DoxygenSphinxBreathe
+    - cmake --build $CUAS_DOCS_DIR/doxygensphinxbreathe --target docs

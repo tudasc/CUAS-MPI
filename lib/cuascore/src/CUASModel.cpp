@@ -7,49 +7,32 @@
 #include "CUASModel.h"
 
 #include "CUASConstants.h"
+#include "Forcing/SteadyForcing.h"
 
 #include "Logger.h"
 
 namespace CUAS {
 
-CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(numOfRows) {
+CUASModel::CUASModel(int numOfCols, int numOfRows) : Ncols(numOfCols), Nrows(numOfRows), waterSource(nullptr) {
   xAxis.resize(Ncols);
   yAxis.resize(Nrows);
+  dx = 0.0;
+  dy = 0.0;
 
   topg = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   thk = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   bndMask = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-  Q = nullptr;
   pIce = std::make_unique<PETScGrid>(numOfCols, numOfRows);
 }
 
 // call init before using Model but after thk has been set
 void CUASModel::init() {
-  dx = xAxis[1] - xAxis[0];
-  dy = yAxis[1] - yAxis[0];
-  if (dx != dy) {
-    CUAS_ERROR("CUASModel.cpp: init(): dx and dy are not equal. Exiting.");
+  dx = getAxisSpacing(xAxis, "xAxis");
+  dy = getAxisSpacing(yAxis, "yAxis");
+  auto err = fabs(dx - dy);
+  if (err > dx * RELATIVE_GRID_SPACING_ERROR || err > dy * RELATIVE_GRID_SPACING_ERROR) {
+    CUAS_ERROR("CUASModel.cpp: init(): dx = {} and dy = {} are not equal. Exiting.", dx, dy)
     exit(1);
-  }
-
-  // the check if dy == 0 is just for readability. The previous implies that if dx == 0 -> dy == 0
-  if (dx == 0 || dy == 0) {
-    CUAS_ERROR("CUASModel.cpp: init(): dx and dy are zero. Exiting.");
-    exit(1);
-  }
-
-  for (int i = 0; i < xAxis.size() - 1; ++i) {
-    if (std::fabs(xAxis[i + 1] - xAxis[i] - dx) > std::numeric_limits<double>::epsilon()) {
-      CUAS_ERROR("CUASModel.cpp: init(): The values of xAxis are not evenly spaced across all time steps. Exiting.");
-      exit(1);
-    }
-  }
-
-  for (int i = 0; i < yAxis.size() - 1; ++i) {
-    if (std::fabs(yAxis[i + 1] - yAxis[i] - dy) > std::numeric_limits<double>::epsilon()) {
-      CUAS_ERROR("CUASModel.cpp: init(): The values of yAxis are not evenly spaced across all time steps. Exiting.");
-      exit(1);
-    }
   }
 
   // pIce = thk * RHO_ICE * GRAVITY (python)
@@ -69,6 +52,47 @@ void CUASModel::init() {
   // This could be removed later, if cuas-python is obsolete, or we only
   // require that the outer (ghost) nodes are no-flow in cuas-mpi.
   bndMask->findAndReplaceRealBoundary((PetscScalar)COMPUTE_FLAG, (PetscScalar)NOFLOW_FLAG);
+}
+
+bool CUASModel::providesWaterSource() const { return waterSource != nullptr; }
+
+PETScGrid const &CUASModel::getCurrentWaterSource(timeSecs currTime) {
+  if (!providesWaterSource()) {
+    CUAS_WARN(
+        "Called CUASModel::getCurrentWaterSource, but no WaterSource initialized, we create a default 0 WaterSource. "
+        "This causes overhead, please check providesWaterSource, before calling getCurrentWaterSource.")
+    PETScGrid zeroGrid(Ncols, Nrows);
+    zeroGrid.setZero();
+    waterSource = std::make_unique<SteadyForcing>(zeroGrid);
+  }
+
+  return waterSource->getCurrent(currTime);
+}
+
+void CUASModel::setWaterSource(std::unique_ptr<Forcing> waterSource) { this->waterSource = std::move(waterSource); }
+
+PetscScalar CUASModel::getAxisSpacing(std::vector<PetscScalar> const &axis, const std::string &axisName) {
+  auto n = axis.size();
+  if (n < 3) {
+    CUAS_ERROR("CUASModel.cpp: getAxisSpacing(): The size n = {} of {} is invalid. Exiting.", n, axisName)
+  }
+
+  auto spacing = (axis.back() - axis.front()) / (PetscScalar)(n - 1);
+  if (spacing <= 0.0) {
+    CUAS_ERROR("CUASModel.cpp: getAxisSpacing(): Invalid spacing {} for {}. Exiting.", spacing, axisName)
+  }
+
+  for (int i = 0; i < n - 1; ++i) {
+    auto err = fabs(axis[i + 1] - axis[i] - spacing);
+    if (err > spacing * RELATIVE_GRID_SPACING_ERROR) {
+      CUAS_ERROR(
+          "CUASModel.cpp: getAxisSpacing(): The values of {} are not evenly spaced (err={}, index={i}). Exiting.",
+          axisName, err, i)
+      exit(1);
+    }
+  }
+
+  return spacing;
 }
 
 }  // namespace CUAS

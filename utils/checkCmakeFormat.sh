@@ -2,7 +2,7 @@
 
 notFormated=0
 
-folder="lib tools test"
+folder="lib tools test docs"
 
 cmake-format --check CMakeLists.txt
 if [ $? -ne 0 ]; then

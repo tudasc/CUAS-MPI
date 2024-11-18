@@ -15,8 +15,8 @@ int mpiSize;
 
 #define MPI_SIZE 6
 
-//#define NODATA_COLS 20
-//#define NODATA_ROWS 10
+// #define NODATA_COLS 20
+// #define NODATA_ROWS 10
 
 TEST(fillNoDataTest, fillNoData) {
   ASSERT_EQ(mpiSize, MPI_SIZE);
@@ -40,7 +40,7 @@ TEST(fillNoDataTest, fillNoData) {
 
   ASSERT_TRUE(model->thk->isCompatible(*model->topg));
   ASSERT_TRUE(model->thk->isCompatible(*model->bndMask));
-  ASSERT_TRUE(model->thk->isCompatible(model->Q->getCurrentQ()));
+  ASSERT_TRUE(model->thk->isCompatible(model->getCurrentWaterSource(0)));
   ASSERT_TRUE(model->thk->isCompatible(*model->pIce));
 
   ASSERT_EQ(model->thk->getTotalNumOfRows(), 10);
@@ -157,7 +157,7 @@ TEST(fillNoDataTest, fillNoData) {
   }
 
   {
-    auto &Q = model->Q->getCurrentQ();
+    auto &Q = model->getCurrentWaterSource(0);
     auto &QHandle = Q.getReadHandle();
     if (mpiRank == 0) {
       ASSERT_EQ(QHandle(0, 0), 1.0 / SPY);
