@@ -12,6 +12,8 @@
 
 #include "cxxopts.hpp"
 
+#include <iostream>
+
 namespace CUAS {
 
 inline void defineArgs(cxxopts::Options &options);
