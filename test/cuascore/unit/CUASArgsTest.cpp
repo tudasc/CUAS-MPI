@@ -13,6 +13,50 @@
 int mpiRank;
 int mpiSize;
 
+TEST(CUASArgs, defaults) {
+  char arg0[] = "test";
+  char *argv[] = {arg0};
+  int argc = sizeof(argv) / sizeof(argv[0]);
+
+  CUAS::CUASArgs args;
+  CUAS::parseArgs(argc, argv, args);
+
+  ASSERT_EQ(args.verbose, false);
+  ASSERT_EQ(args.verboseSolver, false);
+  ASSERT_EQ(args.directSolver, false);
+  ASSERT_EQ(args.Tmax, 20.0);
+  ASSERT_EQ(args.Tmin, 0.0000001);
+  ASSERT_EQ(args.totaltime, "");
+  ASSERT_EQ(args.dt, "");
+  ASSERT_EQ(args.saveEvery, 0);
+  ASSERT_EQ(args.conductivity, 10.0);
+  ASSERT_EQ(args.doAllChannels, false);
+  ASSERT_EQ(args.doAnyChannel, false);
+  ASSERT_EQ(args.doCreep, false);
+  ASSERT_EQ(args.doMelt, false);
+  ASSERT_EQ(args.doCavity, false);
+  ASSERT_EQ(args.disableUnconfined, false);
+  ASSERT_EQ(args.flowConstant, 5e-25);
+  ASSERT_EQ(args.roughnessFactor, 1.0);
+  ASSERT_EQ(args.supplyMultiplier, 1.0);
+  ASSERT_EQ(args.layerThickness, 0.1);
+  ASSERT_EQ(args.unconfSmooth, 0.0);
+  ASSERT_EQ(args.restart, "");
+  ASSERT_EQ(args.restartNoneZeroInitialGuess, true);
+  ASSERT_EQ(args.seaLevelForcing, "");
+  ASSERT_EQ(args.output, "out.nc");
+  ASSERT_EQ(args.input, "");
+  ASSERT_EQ(args.timeStepFile, "");
+  ASSERT_EQ(args.forcingFile, "");
+  ASSERT_EQ(args.timeSteppingTheta, 1.0);
+  ASSERT_EQ(args.sizeOfForcingBuffer, -1);
+  ASSERT_EQ(args.starttime, "");
+  ASSERT_EQ(args.endtime, "");
+  ASSERT_EQ(args.enableUDS, false);
+  ASSERT_EQ(args.thresholdThicknessUDS, 0.0);
+  ASSERT_EQ(args.disableNonNegative, false);
+}
+
 TEST(CUASArgs, allOpts) {
   char arg0[] = "test";
   char arg1[] = "--Tmax=7";
