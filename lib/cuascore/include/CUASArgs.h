@@ -57,6 +57,7 @@ struct CUASArgs {
   std::string outputSize;
   bool enableUDS;  // upwind scheme
   PetscScalar thresholdThicknessUDS;
+  bool disableNonNegative;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);

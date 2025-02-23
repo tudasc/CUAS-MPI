@@ -139,6 +139,8 @@ inline void defineArgs(cxxopts::Options &options) {
       ("specificYield",
        "Specific yield, Sy (unit: 1)",
        cxxopts::value<PetscScalar>()->default_value("0.4"))
+      ("disableNonNegative",
+       "disable maintain non-negativity (psi >= 0)")
       ("enableUDS",
        "Enable upwind difference scheme (UDS). The default is the central difference scheme (CDS).")
       ("thresholdThicknessUDS",
@@ -245,6 +247,7 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.timeSteppingTheta = result["timeSteppingTheta"].as<PetscScalar>();
   args.enableUDS = result["enableUDS"].as<bool>();
   args.thresholdThicknessUDS = result["thresholdThicknessUDS"].as<PetscScalar>();
+  args.disableNonNegative = result["disableNonNegative"].as<bool>();
 }
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result) {

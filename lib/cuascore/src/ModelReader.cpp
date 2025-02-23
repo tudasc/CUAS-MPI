@@ -34,6 +34,12 @@ void ModelReader::restartFromFile(CUASSolver &solver, std::string const &restart
   restartNetcdfFile->read("head", *solver.currHead);
   restartNetcdfFile->read("transmissivity", *solver.currTransmissivity);
 
+  // read in cumulative variables from previous runs if available
+  if (restartNetcdfFile->hasVariable("conservation_error") && solver.cumulativeConservationError) {
+    CUAS_INFO_RANK0("ModelReader::restartFromFile(): Read 'conservation_error' from <{restartFile}>")
+    restartNetcdfFile->read("conservation_error", *solver.cumulativeConservationError);
+  }
+
   if (restartNoneZeroInitialGuess) {
     CUAS_WARN("restartNoneZeroInitialGuess not implemented yet")
   }

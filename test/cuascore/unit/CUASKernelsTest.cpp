@@ -779,7 +779,7 @@ TEST(CUASKernelsTest, getEffectiveAquiferProperties) {
 
     constexpr PetscScalar Seff_test =
         specificStorage * layerThickness + specificYield;  // max value that can be reached
-    constexpr PetscScalar Teff_test = Tinit / layerThickness * PSI_BELOW_ZERO_REPLACE_VALUE;  // slightly above zero
+    constexpr PetscScalar Teff_test = NOFLOW_VALUE;
 
     // fixme:
     CUAS::getEffectiveAquiferProperties(Seff, Teff, transmissivity, head, topg, bndMask, layerThickness,

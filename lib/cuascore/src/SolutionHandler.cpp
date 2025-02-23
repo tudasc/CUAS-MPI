@@ -90,6 +90,14 @@ void SolutionHandler::defineSolution() {
   file->addAttributeToVariable("transmissivity", "standard_name", "hydraulic_transmissivity");
   file->addAttributeToVariable("transmissivity", "long_name", "hydraulic transmissivity");
 
+  // Fixme: no way to check if this field exists or if we use option --disableNonNegative
+  file->defineGrid("conservation_error", UNLIMITED);
+  file->addAttributeToVariable("conservation_error", "units", "m");
+  file->addAttributeToVariable("conservation_error", "standard_name", "cumulative_conservation_error");
+  file->addAttributeToVariable("conservation_error", "long_name", "cumulative conservation error");
+  file->addAttributeToVariable("conservation_error", "doc",
+                               "cumulative conservation error due to enforcing head - topg >= 0");
+
   /*
    * solver and convergence
    */
@@ -266,6 +274,7 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
 
   file->addGlobalAttribute("enableUDS", args.enableUDS);
   file->addGlobalAttribute("thresholdThicknessUDS", args.thresholdThicknessUDS);
+  file->addGlobalAttribute("disableNonNegative", args.disableNonNegative);
 
   // compile time CUASConstants
   file->addGlobalAttribute("version", version());
@@ -327,6 +336,11 @@ void SolutionHandler::storeSolution(timeSecs currTime, CUASSolver const &solver,
   // write grids
   file->write("head", *solver.currHead, nextSolution);
   file->write("transmissivity", *solver.currTransmissivity, nextSolution);
+
+  // store optional grids if needed
+  if (solver.cumulativeConservationError) {
+    file->write("conservation_error", *solver.cumulativeConservationError, nextSolution);
+  }
 
   if (osize >= OutputSize::NORMAL) {
     file->write("a_melt", *solver.melt, nextSolution);
