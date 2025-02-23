@@ -44,9 +44,10 @@ class CUASSolver {
   std::unique_ptr<PETScGrid> creep;
   std::unique_ptr<PETScGrid> cavity;
   std::unique_ptr<PETScGrid> pEffective;
-  std::unique_ptr<PETScGrid> fluxXDir;       //!< water flux in x-direction
-  std::unique_ptr<PETScGrid> fluxYDir;       //!< water flux in y-direction
-  std::unique_ptr<PETScGrid> fluxMagnitude;  //!< water flux magnitude
+  std::unique_ptr<PETScGrid> fluxXDir;                     //!< water flux in x-direction
+  std::unique_ptr<PETScGrid> fluxYDir;                     //!< water flux in y-direction
+  std::unique_ptr<PETScGrid> fluxMagnitude;                //!< water flux magnitude
+  std::unique_ptr<PETScGrid> cumulativeConservationError;  // optional field that could be not allocated in constructor
 
   std::unique_ptr<PETScGrid> rateFactorIce;
   std::unique_ptr<PETScGrid> basalVelocityIce;

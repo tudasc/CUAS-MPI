@@ -293,26 +293,49 @@ inline void getEffectiveAquiferProperties(PETScGrid &effectiveStorativity, PETSc
   auto &head = hydraulicHead.getReadHandle();
   auto &topg = bedElevation.getReadHandle();
   auto &mask = bndMask.getReadHandle();
+
   for (int j = 0; j < effectiveStorativity.getLocalNumOfRows(); ++j) {
     for (int i = 0; i < effectiveStorativity.getLocalNumOfCols(); ++i) {
       // Seff = S = Ss * b in the confined case
       Seff(j, i) = specificStorage * layerThickness;
-
       if (mask(j, i) == (PetscScalar)COMPUTE_FLAG) {
-        auto psi_org = head(j, i) - topg(j, i);
-        // fixme: CUAS is using PSI_BELOW_ZERO_REPLACE_VALUE without justification.
-        auto psi = (psi_org < 0.0) ? PSI_BELOW_ZERO_REPLACE_VALUE : psi_org;  // this is needed for Seff, why?
+        auto psi = head(j, i) - topg(j, i);
+
         // implements Ehlig & Halepaska Eq. 5a,b
-        Teff(j, i) = (psi < layerThickness) ? T(j, i) / layerThickness * psi : T(j, i);
+        if (psi < layerThickness) {
+          // here psi could be negative
+          Teff(j, i) = T(j, i) / layerThickness * psi;
+        } else {
+          Teff(j, i) = T(j, i);
+        }
+        // avoid zero or negative effective transmissivity
+        if (Teff(j, i) < NOFLOW_VALUE) {
+          Teff(j, i) = NOFLOW_VALUE;
+        }
+
         // implements Ehlig & Halepaska Eq. 7
         PetscScalar Sprime;
         if (unconfinedSmooth > 0.0) {
-          // psi could be negative and needs to be handled next
-          Sprime = (psi < layerThickness) ? specificYield / unconfinedSmooth * (layerThickness - psi) : 0.0;
-          Sprime = (psi < (layerThickness - unconfinedSmooth)) ? specificYield : Sprime;
+          if (psi < layerThickness) {
+            if (psi < (layerThickness - unconfinedSmooth)) {
+              // small psi including the case psi < 0
+              Sprime = specificYield;
+            } else {
+              // here psi must be already > 0
+              Sprime = specificYield / unconfinedSmooth * (layerThickness - psi);
+            }
+          } else {
+            Sprime = 0.0;
+          }
         } else {
           Sprime = (psi < layerThickness) ? specificYield : 0.0;
         }
+
+        //        // Doherty (2001) scheme for dry cell storativity
+        //        if (psi <= 0.0) {
+        //          Sprime = 0.0;
+        //        }
+
         Seff(j, i) += Sprime;
       } else {
         Teff(j, i) = T(j, i);
@@ -788,12 +811,12 @@ inline void updateInterfaceTransmissivityUDS(PETScGrid &effTransEast, PETScGrid 
       !bndMask.isCompatible(effectiveTransmissivity) || !bndMask.isCompatible(effTransEast) ||
       !bndMask.isCompatible(effTransWest) || !bndMask.isCompatible(effTransNorth) ||
       !bndMask.isCompatible(effTransSouth)) {
-    CUAS_ERROR("CUASKernels.h: updateInterfaceTransmissivityUDS was called with incompatible PETScGrids. Exiting.")
+    CUAS_ERROR("CUASKernels.h: updateInterfaceTransmissivityUDS() was called with incompatible PETScGrids. Exiting.")
     exit(1);
   }
 
   if (threshold < 0.0) {
-    CUAS_ERROR("CUASSolver::updateInterfaceTransmissivityUDS() called with threshold = {} < 0. Exiting.", threshold);
+    CUAS_ERROR("CUASKernels.h: updateInterfaceTransmissivityUDS() called with threshold = {} < 0. Exiting.", threshold);
     exit(1);
   }
 
@@ -914,6 +937,36 @@ inline void updateInterfaceTransmissivityUDS(PETScGrid &effTransEast, PETScGrid 
         T_dn_x(row, col) = (psi_P <= 0.0 && head_P > head_W && psi_P <= psi_W) ? NOFLOW_VALUE : T_w;
         T_up_y(row, col) = (psi_P <= 0.0 && head_P > head_N && psi_P <= psi_N) ? NOFLOW_VALUE : T_n;
         T_dn_y(row, col) = (psi_P <= 0.0 && head_P > head_S && psi_P <= psi_S) ? NOFLOW_VALUE : T_s;
+      }
+    }
+  }
+}
+
+//! preserve psi >= head - topg
+inline void preserveNonNegativePsi(PETScGrid const &bedElevation, PETScGrid const &bndMask, PETScGrid &hydraulicHead,
+                                   PETScGrid &cumulativeConservationError) {
+  // Maintain non-negativity (psi =  head - topg >= 0)
+  // This should not be needed if everything works as expected.
+  // Todo: check flux limiter schemes, e.g. \ref Jarosch_et_al_2013
+
+  if (!bndMask.isCompatible(hydraulicHead) || !bndMask.isCompatible(bedElevation) ||
+      !bndMask.isCompatible(cumulativeConservationError)) {
+    CUAS_ERROR("CUASKernels.h: preserveNonNegativePsi() was called with incompatible PETScGrids. Exiting.")
+    exit(1);
+  }
+
+  auto &topg = bedElevation.getReadHandle();
+  auto &mask = bndMask.getReadHandle();
+  auto conservationError = cumulativeConservationError.getWriteHandle();
+  auto head = hydraulicHead.getWriteHandle();
+  for (int row = 0; row < hydraulicHead.getLocalNumOfRows(); ++row) {
+    for (int col = 0; col < hydraulicHead.getLocalNumOfCols(); ++col) {
+      if (mask(row, col) == COMPUTE_FLAG) {
+        auto psi = head(row, col) - topg(row, col);
+        if (psi < 0.0) {
+          head(row, col) -= psi;
+          conservationError(row, col) -= psi;
+        }
       }
     }
   }

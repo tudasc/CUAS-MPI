@@ -46,7 +46,9 @@ CUASSolver::CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *
   fluxYDir = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   fluxMagnitude = std::make_unique<PETScGrid>(numOfCols, numOfRows);
   workSpace = std::make_unique<PETScGrid>(numOfCols, numOfRows);
-
+  if (!args->disableNonNegative) {
+    cumulativeConservationError = std::make_unique<PETScGrid>(numOfCols, numOfRows);
+  }
   Seff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Storativity
   Teff = std::make_unique<PETScGrid>(numOfCols, numOfRows);  // effective Transmissivity
 
@@ -83,7 +85,9 @@ void CUASSolver::setup() {
   fluxMagnitude->setZero();
   waterSource->setZero();
   workSpace->setZero();
-
+  if (cumulativeConservationError) {
+    cumulativeConservationError->setZero();
+  }
   rateFactorIce->setConst(args->flowConstant);         // todo: read 2d field from file (optional)
   basalVelocityIce->setConst(args->basalVelocityIce);  // todo: read 2d field from file (optional)
 
@@ -338,6 +342,9 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
     nextHead->copyGlobal(*solGrid);
     // eps_head = np.max(np.abs(nextHead - currHead))
     eps = nextHead->getMaxAbsDiff(*currHead) / static_cast<double>(dt);
+    if (cumulativeConservationError) {
+      preserveNonNegativePsi(*model->topg, *model->bndMask, *nextHead, *cumulativeConservationError);
+    }
     // switch pointers
     currHead.swap(nextHead);
 
