@@ -58,6 +58,7 @@ struct CUASArgs {
   bool enableUDS;  // upwind scheme
   PetscScalar thresholdThicknessUDS;
   bool disableNonNegative;
+  int nonLinearIters;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);

@@ -275,6 +275,7 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   file->addGlobalAttribute("enableUDS", args.enableUDS);
   file->addGlobalAttribute("thresholdThicknessUDS", args.thresholdThicknessUDS);
   file->addGlobalAttribute("disableNonNegative", args.disableNonNegative);
+  file->addGlobalAttribute("args.nonLinearIters", args.nonLinearIters);
 
   // compile time CUASConstants
   file->addGlobalAttribute("version", version());

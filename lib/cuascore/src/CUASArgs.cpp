@@ -141,11 +141,14 @@ inline void defineArgs(cxxopts::Options &options) {
        cxxopts::value<PetscScalar>()->default_value("0.4"))
       ("disableNonNegative",
        "disable maintain non-negativity (psi >= 0)")
+      ("nonLinearIters",
+       "Number of non-linear sub-iterations.",
+       cxxopts::value<int>()->default_value("0"))
       ("enableUDS",
        "Enable upwind difference scheme (UDS). The default is the central difference scheme (CDS).")
       ("thresholdThicknessUDS",
        "Threshold for UDS scheme (m). Common choices are zero or layer thickness.",
-        cxxopts::value<PetscScalar>()->default_value("0.0"))
+       cxxopts::value<PetscScalar>()->default_value("0.0"))
       ("basalVelocityIce",
        "Basal velocity of the ice (m/s)",
        cxxopts::value<PetscScalar>()->default_value("1e-6"))
@@ -248,6 +251,11 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.enableUDS = result["enableUDS"].as<bool>();
   args.thresholdThicknessUDS = result["thresholdThicknessUDS"].as<PetscScalar>();
   args.disableNonNegative = result["disableNonNegative"].as<bool>();
+  args.nonLinearIters = result["nonLinearIters"].as<int>();
+  if (args.nonLinearIters < 0) {
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.nonLinearIters = <{}> < 0. Exiting.", args.nonLinearIters);
+    exit(1);
+  }
 }
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result) {
