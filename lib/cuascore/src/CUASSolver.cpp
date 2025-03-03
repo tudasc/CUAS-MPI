@@ -261,19 +261,8 @@ void CUASSolver::preComputation() {
   // TODO
   //}
 
-  // Update Seff, Teff or both if needed.
-  updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
-                                   args->layerThickness, args->specificStorage, args->specificYield, args->unconfSmooth,
-                                   args->disableUnconfined, args->doAnyChannel);
-  if (args->enableUDS) {
-    // experimental for unconfined flow mainly
-    updateInterfaceTransmissivityUDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
-                                     *model->topg, *currHead, *Teff, args->thresholdThicknessUDS);
-  } else {
-    // this is the unmodified old scheme
-    updateInterfaceTransmissivityCDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
-                                     *model->topg, *currHead, *Teff);
-  }
+  // transmissivity and storativity at the center and/or the grid interfaces
+  updateAquiferProperties();
 
   // Use unified version for the flux (CDS and UDS). So far only needed for output.
   getFlux(*fluxMagnitude, *fluxXDir, *fluxYDir, *model->bndMask, *currHead, *effTransEast, *effTransWest,
@@ -302,6 +291,21 @@ void CUASSolver::preComputation() {
   }
 }
 
+void CUASSolver::updateAquiferProperties() {  // Update Seff, Teff or both if needed.
+  updateEffectiveAquiferProperties(*Seff, *Teff, *currTransmissivity, *currHead, *model->topg, *model->bndMask,
+                                   args->layerThickness, args->specificStorage, args->specificYield, args->unconfSmooth,
+                                   args->disableUnconfined, args->doAnyChannel);
+  if (args->enableUDS) {
+    // experimental for unconfined flow mainly
+    updateInterfaceTransmissivityUDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
+                                     *model->topg, *currHead, *Teff, args->thresholdThicknessUDS);
+  } else {
+    // this is the unmodified old scheme
+    updateInterfaceTransmissivityCDS(*effTransEast, *effTransWest, *effTransNorth, *effTransSouth, *model->bndMask,
+                                     *model->topg, *currHead, *Teff);
+  }
+}
+
 void CUASSolver::storeData(CUASTimeIntegrator const &timeIntegrator) {
   //
   // STORE DATA, IF NEEDED
@@ -317,6 +321,10 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
   auto timeSteps = timeIntegrator.getTimesteps();
   auto timeStepIndex = timeIntegrator.getTimestepIndex();
 
+  // compute max digits needed for verboseSolver output format
+  auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
+  auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
+
   // Sanity check
   if (dt < 0) {
     CUAS_ERROR("CUASSolver.cpp: solve(): dt={}s is invalid for calling systemmatrix() . Exiting.", dt)
@@ -330,23 +338,39 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
     //
     // UPDATE HEAD
     //
-    //    systemmatrixDeprecated(*matA, *bGrid, *Seff, *Teff, model->dx, static_cast<double>(dt),
-    //    args->timeSteppingTheta,
-    //                           *currHead, *waterSource, *dirichletValues, *model->bndMask, *globalIndicesBlocked);
-    systemmatrix(*matA, *bGrid, *Seff, *effTransEast, *effTransWest, *effTransNorth, *effTransSouth, model->dx,
-                 static_cast<double>(dt), args->timeSteppingTheta, *currHead, *waterSource, *dirichletValues,
-                 *model->bndMask, *globalIndicesBlocked);
 
-    // solve the equation A*sol = b,
-    auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
-    nextHead->copyGlobal(*solGrid);
-    // eps_head = np.max(np.abs(nextHead - currHead))
-    eps = nextHead->getMaxAbsDiff(*currHead) / static_cast<double>(dt);
-    if (cumulativeConservationError) {
-      preserveNonNegativePsi(*model->topg, *model->bndMask, *nextHead, *cumulativeConservationError);
+    // We need to have at least one solve() per time step. With zero sub-iterations, we have exactly one solve with
+    // the given time step length. With one sub-iteration, we have two solve() with dt/2 each. And so on.
+    auto totalIters = 1 + args->nonLinearIters;
+    auto dtIter = dt / static_cast<double>(totalIters);
+
+    for (auto iter = 0; iter < totalIters; ++iter) {
+      // CUAS_INFO_RANK0("CUASSolver.cpp::solve() sub-iter {}/{}: dt = {}", iter+1, totalIters, dtIter)
+
+      // Teff (at the center and at the interfaces) and Seff
+      updateAquiferProperties();  // fixme: has been called already outside the loop. See preComputation():
+
+      systemmatrix(*matA, *bGrid, *Seff, *effTransEast, *effTransWest, *effTransNorth, *effTransSouth, model->dx,
+                   dtIter, args->timeSteppingTheta, *currHead, *waterSource, *dirichletValues, *model->bndMask,
+                   *globalIndicesBlocked);
+
+      // solve the equation A*sol = b,
+      auto res = PETScSolver::solve(*matA, *bGrid, *solGrid);
+      nextHead->copyGlobal(*solGrid);
+      // eps_head = np.max(np.abs(nextHead - currHead))
+      eps = nextHead->getMaxAbsDiff(*currHead) / dtIter;
+      if (cumulativeConservationError) {
+        preserveNonNegativePsi(*model->topg, *model->bndMask, *nextHead, *cumulativeConservationError);
+      }
+      // switch pointers
+      currHead.swap(nextHead);
+
+      if (args->verboseSolver) {
+        // no fmt given for res.numberOfIterations, because this is only available from PETSc
+        CUAS_INFO_RANK0("SOLVER(h): {:{}d} {:{}d} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
+                        maxDigitsTime, eps, res.residualNorm, res.numberOfIterations, res.reason)
+      }
     }
-    // switch pointers
-    currHead.swap(nextHead);
 
     //
     // UPDATE TRANSMISSIVITY, IF NEEDED
@@ -358,16 +382,11 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
       Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / static_cast<double>(dt);
       // switch pointers
       currTransmissivity.swap(nextTransmissivity);
-    }
 
-    if (args->verboseSolver) {
-      // compute max digits needed for verboseSolver output format
-      auto maxDigitsIndex = static_cast<int>(std::ceil(std::log10(timeSteps.size())));
-      auto maxDigitsTime = static_cast<int>(std::ceil(std::log10(timeSteps.back())));
-
-      // no fmt given for res.numberOfIterations, because this is only available from PETSc
-      CUAS_INFO_RANK0("SOLVER: {:{}d} {:{}d} {:.5e} {:.5e} {:.5e} {} {}", timeStepIndex, maxDigitsIndex, currTime,
-                      maxDigitsTime, eps, Teps, res.residualNorm, res.numberOfIterations, res.reason)
+      if (args->verboseSolver) {
+        // Fixme: This reports only eps and res for the last solve if args->nonLinearIters > 0
+        CUAS_INFO_RANK0("SOLVER(T): {:{}d} {:{}d} {:.5e}", timeStepIndex, maxDigitsIndex, currTime, maxDigitsTime, Teps)
+      }
     }
   } else {
     // NO NEED TO UPDATE nextHead or T again

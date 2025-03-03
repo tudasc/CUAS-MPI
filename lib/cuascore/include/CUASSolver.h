@@ -93,6 +93,7 @@ class CUASSolver {
   void storeData(CUASTimeIntegrator const &timeIntegrator);
   [[nodiscard]] bool updateHeadAndTransmissivity(CUASTimeIntegrator const &timeIntegrator);
   void addWaterSource(WaterSource *newWaterSource);
+  void updateAquiferProperties();
 };
 
 }  // namespace CUAS
