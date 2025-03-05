@@ -114,6 +114,8 @@ void SolutionHandler::defineSolution() {
                                "rate of change in transmissivity inf-norm: eps_inf = max(|T^n-T^(n-1)|)/dt");
 
   if (osize >= OutputSize::NORMAL) {
+    // even in coupled (ISSM) runs topg is not a mutable field, but we store it because otherwise it would be the only
+    // field which is not stored per time step
     file->defineGrid("topg", storeMutable);  // sometimes called bedrock
     file->addAttributeToVariable("topg", "units", "m");
     file->addAttributeToVariable("topg", "standard_name", "land_ice_bed_elevation");
@@ -193,6 +195,17 @@ void SolutionHandler::defineSolution() {
     file->addAttributeToVariable("pice", "units", "Pa");
     file->addAttributeToVariable("pice", "standard_name", "land_ice_pressure");
     file->addAttributeToVariable("pice", "long_name", "land ice pressure");
+
+    // rateFactorIce (unlimited for the purpose of coupling)
+    file->defineGrid("rate_factor_ice", storeMutable);  // from command-line arg or via the couple
+    file->addAttributeToVariable("rate_factor_ice", "units", "Pa^-3 s^-1");
+    file->addAttributeToVariable("rate_factor_ice", "long_name", "ice basal rate factor");
+    file->addAttributeToVariable("rate_factor_ice", "doc", "with n = 3 (Glen's flow law)");
+
+    // basalVelocityIce (unlimited for the purpose of coupling)
+    file->defineGrid("basal_velocity_ice", storeMutable);  // from command-line arg or via the couple
+    file->addAttributeToVariable("basal_velocity_ice", "units", "m s^-1");
+    file->addAttributeToVariable("basal_velocity_ice", "long_name", "ice basal basal velocity");
   }
 }
 
@@ -213,13 +226,15 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
 
     // enhancement: Process diagnostic variables that are for output only here
     // instead of in CUASSolver. We don't need them for every time step
+    // TODO: flux should go here
+    // ... more
 
     if (reason == OutputReason::INITIAL) {
       // storeInitialSetup() calls storeSolution() to store initial values for time dependent fields
       storeInitialSetup(solver, model, waterSource, args, timeIntegrator);
     } else {
       if (storeMutable) {
-        storeMutableModelInformation(model);
+        storeMutableModelInformation(solver, model);
       }
       storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource, solver.eps, solver.Teps);
     }
@@ -297,7 +312,7 @@ void SolutionHandler::storeConstantModelInformation(const CUASModel &model) {
   file->write("y", model.yAxis);
 }
 
-void SolutionHandler::storeMutableModelInformation(const CUASModel &model) {
+void SolutionHandler::storeMutableModelInformation(CUASSolver const &solver, const CUASModel &model) {
   file->write("bnd_mask", *model.bndMask, nextSolution);
 
   if (osize >= OutputSize::NORMAL) {
@@ -310,18 +325,17 @@ void SolutionHandler::storeMutableModelInformation(const CUASModel &model) {
 
   if (osize >= OutputSize::XLARGE) {
     file->write("pice", *model.pIce, nextSolution);
+    file->write("rate_factor_ice", *solver.rateFactorIce, nextSolution);
+    file->write("basal_velocity_ice", *solver.basalVelocityIce, nextSolution);
   }
 }
 
 void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
                                         CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator) {
-  storeConstantModelInformation(model);
-
-  storeMutableModelInformation(model);
-
   storeCUASArgs(args);
 
-  // store initial conditions if needed
+  storeConstantModelInformation(model);
+  storeMutableModelInformation(solver, model);
   storeSolution(timeIntegrator.getCurrentTime(), solver, waterSource);
 }
 
