@@ -25,6 +25,23 @@ enum class OutputSize { SMALL, NORMAL, LARGE, XLARGE };
 enum class OutputReason { NONE, INITIAL, NORMAL };
 enum class SaveStrategy { DEFAULT, TIMEINTERVAL, INDEX };
 
+/*
+ * The SolutionHandler handles all variables and fields of CUAS-MPI, defines and triggers the output operations
+ *
+ * Behavior:
+ * outputSize defined by cmd-parameter
+ * - small:  time, x, y, bnd_mask, head, transmissivity, conservation_error, eps_inf, Teps_inf
+ * - normal: topg, watersource, a_melt, a_creep, a_cavity, peffective, flux
+ * - large:  thk, effective_transmissivity, effective_storativity, fluxXDir, fluxXDir
+ * - xlarge: pice, rate_factor_ice, basal_velocity_ice
+ *
+ * config dependent output
+ * constant: written once, mutable: once or every time step, umlimited: every time step
+ * - constant:  x, y
+ * - mutable:   bnd_mask, topg, thk, pice, rate_factor_ice, basal_velocity_ice
+ * - unlimited: time, head, transmissivity, conservation_error, eps_inf, Teps_inf, watersource, a_melt, a_creep,
+ *              a_cavity, peffective, flux, effective_transmissivity, effective_storativity, fluxXDir, fluxXDir
+ */
 class SolutionHandler {
  public:
   // use this constructor if you want to determine the shape of the solution on your own
@@ -53,7 +70,7 @@ class SolutionHandler {
                          CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator);
   void storeCUASArgs(CUASArgs const &args);
   void storeConstantModelInformation(CUASModel const &model);
-  void storeMutableModelInformation(CUASModel const &model);
+  void storeMutableModelInformation(CUASSolver const &solver, CUASModel const &model);
   // write the values passed as parameters to the NetCDF file
   void storeSolution(timeSecs currTime, CUASSolver const &solver, PETScGrid const &waterSource,
                      PetscScalar eps_inf = NC_FILL_DOUBLE, PetscScalar Teps_inf = NC_FILL_DOUBLE);
