@@ -145,6 +145,8 @@ class NetCDFFile {
   void write(std::string const &varName, PETScVector &input, int currentTimeStep = -1);
   // writes the input PetscScalar to the variable in the netcdf file with the name varName
   void write(std::string const &varName, PetscScalar input, int currentTimeStep = -1);
+  // writes the input PetscScalar to the variable in the netcdf file with the name varName
+  void write(std::string const &varName, long input, int currentTimeStep = -1);
   // writes a vector with all timesteps to the netcdf file
   // TODO deprecated?
   // void writeTimeSteps(std::vector<int>);

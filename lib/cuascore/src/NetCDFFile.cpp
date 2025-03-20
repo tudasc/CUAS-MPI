@@ -892,6 +892,24 @@ void NetCDFFile::write(std::string const &varName, PetscScalar input, const int 
   }
 }
 
+void NetCDFFile::write(std::string const &varName, long input, const int currentTimeStep) {
+  auto currentVar = netcdfVars[varName];
+  auto varId = currentVar.varId;
+  auto isUnlimited = currentVar.isUnlimited;
+  if (isUnlimited) {
+    std::array<size_t, 1> start;
+    std::array<size_t, 1> count;
+
+    start[0] = currentTimeStep;
+    count[0] = 1;
+
+    nc_var_par_access(fileId, varId, NC_COLLECTIVE);
+    SECURED_NETCDF_EXECUTION(nc_put_vara_long(fileId, varId, start.data(), count.data(), &input));
+  } else {
+    SECURED_NETCDF_EXECUTION(nc_put_var_long(fileId, varId, &input));
+  }
+}
+
 void NetCDFFile::sync() const { SECURED_NETCDF_EXECUTION(nc_sync(fileId)); }
 
 NetCDFFile::~NetCDFFile() { SECURED_NETCDF_EXECUTION(nc_close(fileId)); }

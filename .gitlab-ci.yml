@@ -121,6 +121,10 @@ test-cuas:
   needs: ["install-cuas"]
   script:
     - cd $CUAS_WORK_PATH
+    - pushd $CUAS_INSTALL_DIR/bin
+    - mpirun -n 1 ./cuas.exe --version >> version.txt
+    - mpirun -n 1 ./cuas.exe --help >> help.txt
+    - popd
     - cd $CUAS_INSTALL_DIR/test/cuascore/integration
     - mpirun -n 9 --timeout 60 ./test-noData
     - mpirun -n 2 ./test-exactCircularSteadySolution 81 31 86400 # no output

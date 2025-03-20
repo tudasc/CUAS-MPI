@@ -85,12 +85,12 @@ TEST(NetCDFFileTest, write) {
 
   {
     // Test Scalars
-    file.write("limitedScalar", 5);
+    file.write("limitedScalar", 5.0);
     // overwrite value of limitedScalar
-    file.write("limitedScalar", 3);
-    file.write("unlimitedScalar", 5, 0);
-    file.write("unlimitedScalar", 3, 1);
-    file.write("unlimitedScalar", 1, 2);
+    file.write("limitedScalar", 3.0);
+    file.write("unlimitedScalar", 5.0, 0);
+    file.write("unlimitedScalar", 3.0, 1);
+    file.write("unlimitedScalar", 1.0, 2);
   }
 
   {
