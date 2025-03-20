@@ -24,6 +24,8 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result);
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result);
 
+inline void sanityChecks(CUASArgs const &args);
+
 void parseArgs(int argc, char **argv, CUASArgs &args) {
   cxxopts::Options options("CUAS", "MPI parallel version of CUAS");
 
@@ -38,6 +40,8 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   // check if all channels or any channels should be applied
   evaluateDoChannels(args, result);
 
+  sanityChecks(args);
+
   if (args.verbose) {
     CUAS_INFO_RANK0("CUASArgs.cpp: parseArgs:\n\tinput: {}\n\toutput: {}.", result["input"].as<std::string>(),
                     result["output"].as<std::string>())
@@ -45,21 +49,19 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 }
 
 inline void defineArgs(cxxopts::Options &options) {
+  options.positional_help("INPUT [OUTPUT]").show_positional_help();
+
+  options.add_options()("h,help", "Print help")("version", "Show version information");
+
   // clang-format off
   options
-    .positional_help("INPUT [OUTPUT]")
-    .show_positional_help()
     .add_options()
-      ("h,help",
-       "Print help")
       ("v,verbose",
        "Verbose output. Disables Progressbar")
       ("verboseSolver",
        "Verbose Solver output.")
       ("directSolver",
        "Set PETSc options for MUMPS+PARMETIS.")
-      ("version",
-       "Show version information")
       ("input",
        "Netcdf input file.",
        cxxopts::value<std::string>()->default_value(""))
@@ -174,11 +176,12 @@ inline void defineArgs(cxxopts::Options &options) {
        cxxopts::value<std::string>()->default_value(""))
       ("seaLevelForcing",
        "Apply sea level forcing from NetCDF scalar time series file.",
-       cxxopts::value<std::string>()->default_value(""))
-      ("positional",
-       "Positional arguments: these are the arguments that are entered without an option.",
-       cxxopts::value<std::vector<std::string>>());
+       cxxopts::value<std::string>()->default_value(""));
   // clang-format on
+
+  options.add_options()("positional",
+                        "Positional arguments: these are the arguments that are entered without an option.",
+                        cxxopts::value<std::vector<std::string>>());
 
   options.parse_positional({"input", "output", "positional"});
 }
@@ -252,38 +255,38 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
   args.thresholdThicknessUDS = result["thresholdThicknessUDS"].as<PetscScalar>();
   args.disableNonNegative = result["disableNonNegative"].as<bool>();
   args.nonLinearIters = result["nonLinearIters"].as<int>();
-  if (args.nonLinearIters < 0) {
-    CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.nonLinearIters = <{}> < 0. Exiting.", args.nonLinearIters);
-    exit(1);
-  }
+  args.selectedChannels = result["selectedChannels"].as<std::string>();
+  args.doChannels = result["doChannels"].as<bool>();
 }
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result) {
-  auto doChannels = result["doChannels"].as<bool>();
-  auto selectedChannels = result["selectedChannels"].as<std::string>();
-
-  // doChannels should not be executed as neither doChannels nor selectedChannels is given
-
   // selectedChannels is not given, doChannels enables or disables all
-  if (selectedChannels == std::string("noselected")) {
-    args.doAllChannels = args.doAnyChannel = args.doMelt = args.doCreep = args.doCavity = doChannels;
+  if (args.selectedChannels == std::string("noselected")) {
+    args.doAllChannels = args.doAnyChannel = args.doMelt = args.doCreep = args.doCavity = args.doChannels;
   }
   // selectedChannels is given but its empty. We assume that no channels will be applied.
-  else if (selectedChannels.empty()) {
+  else if (args.selectedChannels.empty()) {
     args.doAllChannels = args.doAnyChannel = false;
     args.doMelt = args.doCreep = args.doCavity = false;
   }
   // selectedChannels is given and contains some input.
   else {
     // check if melt is applied
-    args.doMelt = selectedChannels.find("melt") != std::string::npos;
+    args.doMelt = args.selectedChannels.find("melt") != std::string::npos;
     // check if creep is applied
-    args.doCreep = selectedChannels.find("creep") != std::string::npos;
+    args.doCreep = args.selectedChannels.find("creep") != std::string::npos;
     // check if cavity is applied
-    args.doCavity = selectedChannels.find("cavity") != std::string::npos;
+    args.doCavity = args.selectedChannels.find("cavity") != std::string::npos;
     // if channels were applied set doAllChannels and doAnyChannel
     args.doAllChannels = (args.doMelt && args.doCreep && args.doCavity);
     args.doAnyChannel = (args.doMelt || args.doCreep || args.doCavity);
+  }
+}
+
+void sanityChecks(CUASArgs const &args) {
+  if (args.nonLinearIters < 0) {
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.nonLinearIters = <{}> < 0. Exiting.", args.nonLinearIters);
+    exit(1);
   }
 }
 
