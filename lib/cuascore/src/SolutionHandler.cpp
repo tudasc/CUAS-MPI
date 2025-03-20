@@ -243,6 +243,15 @@ void SolutionHandler::storeData(CUASSolver const &solver, CUASModel const &model
   }
 }
 
+void SolutionHandler::storeCUASGlobals() {
+  // compile time CUASConstants
+  file->addGlobalAttribute("version", version());
+  file->addGlobalAttribute("TINY", TINY);
+  file->addGlobalAttribute("NOFLOW_VALUE", NOFLOW_VALUE);
+  file->addGlobalAttribute("RHO_ICE", RHO_ICE);
+  file->addGlobalAttribute("SPY", SPY);
+}
+
 void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   // TODO: The code below will break soon or later if somebody changes CUASArgs
   //       This should be done in an automated way, e.g. by using 'reflection'.
@@ -291,14 +300,9 @@ void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
   file->addGlobalAttribute("thresholdThicknessUDS", args.thresholdThicknessUDS);
   file->addGlobalAttribute("disableNonNegative", args.disableNonNegative);
   file->addGlobalAttribute("args.nonLinearIters", args.nonLinearIters);
+}
 
-  // compile time CUASConstants
-  file->addGlobalAttribute("version", version());
-  file->addGlobalAttribute("TINY", TINY);
-  file->addGlobalAttribute("NOFLOW_VALUE", NOFLOW_VALUE);
-  file->addGlobalAttribute("RHO_ICE", RHO_ICE);
-  file->addGlobalAttribute("SPY", SPY);
-
+void SolutionHandler::storeCoordinates(CUASArgs const &args) {
   // copy lat/lon lat_bnds/lon_bnds from input file if needed
   if (!args.coordinatesFile.empty()) {
     CUAS_INFO_RANK0("Copy coordinates from {}", args.coordinatesFile)
@@ -332,7 +336,9 @@ void SolutionHandler::storeMutableModelInformation(CUASSolver const &solver, con
 
 void SolutionHandler::storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
                                         CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator) {
+  storeCUASGlobals();
   storeCUASArgs(args);
+  storeCoordinates(args);
 
   storeConstantModelInformation(model);
   storeMutableModelInformation(solver, model);

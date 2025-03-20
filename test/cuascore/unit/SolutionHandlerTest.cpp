@@ -4,6 +4,8 @@
  * https://github.com/tudasc/CUAS-MPI/LICENSE.txt
  */
 
+#define CUAS_UNITTEST_ENVIRONMENT
+
 #include "SolutionHandler.h"
 
 #include "CUASModel.h"
@@ -18,6 +20,14 @@ int mpiSize;
 
 TEST(SolutionHandlerTest, constructor) {
   CUAS::SolutionHandler handler("SolutionHandlerConstructor.nc", GRID_SIZE_X, GRID_SIZE_Y, "normal");
+}
+
+TEST(SolutionHandlerTest, storeCUASArgs) {
+  CUAS::SolutionHandler handler("SolutionHandlerCUASArgs.nc", GRID_SIZE_X, GRID_SIZE_Y, "normal");
+  CUAS::CUASArgs args;
+  std::vector argv = {"SolutionHandlerTest.exe"};
+  parseArgs(static_cast<int>(argv.size()), const_cast<char **>(argv.data()), args);
+  handler.storeCUASArgs(args);
 }
 
 TEST(SolutionHandlerTest, storeInitialSetup) {

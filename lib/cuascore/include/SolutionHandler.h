@@ -13,7 +13,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace CUAS {
 
@@ -48,8 +47,8 @@ class SolutionHandler {
   // TODO should we base this on CUASModel?
   SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize,
                   bool storeMutable = false);
-  SolutionHandler(SolutionHandler &) = delete;
-  SolutionHandler(SolutionHandler &&) = delete;
+  SolutionHandler(SolutionHandler const &) = delete;
+  SolutionHandler(SolutionHandler const &&) = delete;
   SolutionHandler &operator=(SolutionHandler const &) = delete;
   SolutionHandler &operator=(SolutionHandler const &&) = delete;
   ~SolutionHandler() = default;
@@ -68,7 +67,14 @@ class SolutionHandler {
   // write the values passed as parameters to the NetCDF file
   void storeInitialSetup(CUASSolver const &solver, CUASModel const &model, PETScGrid const &waterSource,
                          CUASArgs const &args, CUASTimeIntegrator const &timeIntegrator);
+  void storeCUASGlobals();
+#ifdef CUAS_UNITTEST_ENVIRONMENT
+ public:
+#endif
   void storeCUASArgs(CUASArgs const &args);
+
+ private:
+  void storeCoordinates(CUASArgs const &args);
   void storeConstantModelInformation(CUASModel const &model);
   void storeMutableModelInformation(CUASSolver const &solver, CUASModel const &model);
   // write the values passed as parameters to the NetCDF file
