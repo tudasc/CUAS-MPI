@@ -13,52 +13,70 @@
 
 namespace CUAS {
 
-struct CUASArgs {
-  PetscScalar Tmax;
-  PetscScalar Tmin;
-  PetscScalar Tinit;
+class CUASArgs {
+ public:
+  // verbosity
+  bool verbose;
+  bool verboseSolver;
+
+  // input and output
+  std::string input;
+  std::string output;
+  std::string coordinatesFile;
+  std::string restart;
+  bool restartNoneZeroInitialGuess;
+
+  // time stepping
   std::string starttime;
   std::string endtime;
   std::string totaltime;
   std::string dt;
-  PetscScalar timeSteppingTheta;
   std::string timeStepFile;
+
+  // output behavior
   int saveEvery;
   std::string saveInterval;
-  PetscScalar conductivity;
+  std::string outputSize;
+
+  // forcing
+  std::string forcingFile;
+  int sizeOfForcingBuffer;
+  bool loopForcing;
+  std::string seaLevelForcing;
+
+  // solver behavior
+  bool directSolver;
+  int nonLinearIters;
+  PetscScalar timeSteppingTheta;
+  bool enableUDS;  // upwind scheme
+  bool disableNonNegative;
+
+  // channel configuration
+  bool doChannels;
+  std::string selectedChannels;
   bool doAllChannels;
   bool doAnyChannel;
   bool doCavity;
   bool doMelt;
   bool doCreep;
+
+  // physics
+  std::string initialHead;
+  PetscScalar Tmax;
+  PetscScalar Tmin;
+  PetscScalar Tinit;
   bool disableUnconfined;
+  PetscScalar conductivity;
   PetscScalar flowConstant;
   PetscScalar roughnessFactor;
   PetscScalar supplyMultiplier;
   PetscScalar layerThickness;
   PetscScalar unconfSmooth;
-  std::string restart;
-  bool restartNoneZeroInitialGuess;
   PetscScalar specificStorage;  // Ss
   PetscScalar specificYield;    // Sy
-  std::string coordinatesFile;
-  std::string forcingFile;
-  int sizeOfForcingBuffer;
-  bool loopForcing;
+  PetscScalar thresholdThicknessUDS;
   PetscScalar basalVelocityIce;
   PetscScalar cavityBeta;
-  std::string initialHead;
-  std::string seaLevelForcing;
-  bool verbose;
-  bool verboseSolver;
-  bool directSolver;
-  std::string input;
-  std::string output;
-  std::string outputSize;
-  bool enableUDS;  // upwind scheme
-  PetscScalar thresholdThicknessUDS;
-  bool disableNonNegative;
-  int nonLinearIters;
 };
 
 void parseArgs(int argc, char **argv, CUASArgs &args);
