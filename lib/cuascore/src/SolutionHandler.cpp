@@ -253,53 +253,20 @@ void SolutionHandler::storeCUASGlobals() {
 }
 
 void SolutionHandler::storeCUASArgs(CUASArgs const &args) {
-  // TODO: The code below will break soon or later if somebody changes CUASArgs
-  //       This should be done in an automated way, e.g. by using 'reflection'.
-  file->addGlobalAttribute("Tmax", args.Tmax);
-  file->addGlobalAttribute("Tmin", args.Tmin);
-  file->addGlobalAttribute("Tinit", args.Tinit);
-  file->addGlobalAttribute("totaltime", args.totaltime);
-  file->addGlobalAttribute("starttime", args.starttime);
-  file->addGlobalAttribute("endtime", args.endtime);
-  file->addGlobalAttribute("dt", args.dt);
-  file->addGlobalAttribute("timeSteppingTheta", args.timeSteppingTheta);
-  file->addGlobalAttribute("timeStepFile", args.timeStepFile);
-  file->addGlobalAttribute("saveEvery", args.saveEvery);
-  file->addGlobalAttribute("conductivity", args.conductivity);
-  file->addGlobalAttribute("doAllChannels", args.doAllChannels);
-  file->addGlobalAttribute("doAnyChannels", args.doAnyChannel);
-  file->addGlobalAttribute("doCavity", args.doCavity);
-  file->addGlobalAttribute("doMelt", args.doMelt);
-  file->addGlobalAttribute("doCreep", args.doCreep);
-  file->addGlobalAttribute("disableUnconfined", args.disableUnconfined);
-  file->addGlobalAttribute("flowConstant", args.flowConstant);
-  file->addGlobalAttribute("roughnessFactor", args.roughnessFactor);
-  file->addGlobalAttribute("supplyMultiplier", args.supplyMultiplier);
-  file->addGlobalAttribute("layerThickness", args.layerThickness);
-  file->addGlobalAttribute("unconfSmooth", args.unconfSmooth);
-  file->addGlobalAttribute("restart", args.restart);
-  file->addGlobalAttribute("restartNoneZeroInitialGuess", args.restartNoneZeroInitialGuess);
-  file->addGlobalAttribute("specificStorage", args.specificStorage);
-  file->addGlobalAttribute("specificYield", args.specificYield);
-  file->addGlobalAttribute("loopForcing", args.loopForcing);
-  file->addGlobalAttribute("coordinatesFile", args.coordinatesFile);
-  file->addGlobalAttribute("forcingFile", args.forcingFile);
-  file->addGlobalAttribute("basalVelocityIce", args.basalVelocityIce);
-  file->addGlobalAttribute("cavityBeta", args.cavityBeta);
-  file->addGlobalAttribute("initialHead", args.initialHead);
-  // ignore (std::string) tempResults,
-  // ignore (bool) version,
-  file->addGlobalAttribute("seaLevelForcing", args.seaLevelForcing);
-  // ignore (bool) verbose and (bool) verboseSolver,
-  file->addGlobalAttribute("directSolver", args.directSolver);
-  file->addGlobalAttribute("input", args.input);
-  file->addGlobalAttribute("output", args.output);
-  file->addGlobalAttribute("outputSize", args.outputSize);
-
-  file->addGlobalAttribute("enableUDS", args.enableUDS);
-  file->addGlobalAttribute("thresholdThicknessUDS", args.thresholdThicknessUDS);
-  file->addGlobalAttribute("disableNonNegative", args.disableNonNegative);
-  file->addGlobalAttribute("args.nonLinearIters", args.nonLinearIters);
+  for (auto &cuasoption : args.cuasOptions) {
+    if (auto cuasoptionint = dynamic_cast<CUASArgs::CUASOptionGeneric<int> *>(cuasoption.get())) {
+      file->addGlobalAttribute(cuasoptionint->optionName, *cuasoptionint->destination);
+    } else if (auto cuasoptionscalar = dynamic_cast<CUASArgs::CUASOptionGeneric<PetscScalar> *>(cuasoption.get())) {
+      file->addGlobalAttribute(cuasoptionscalar->optionName, *cuasoptionscalar->destination);
+    } else if (auto cuasoptionbool = dynamic_cast<CUASArgs::CUASOptionGeneric<bool> *>(cuasoption.get())) {
+      file->addGlobalAttribute(cuasoptionbool->optionName, *cuasoptionbool->destination);
+    } else if (auto cuasoptionstr = dynamic_cast<CUASArgs::CUASOptionGeneric<std::string> *>(cuasoption.get())) {
+      file->addGlobalAttribute(cuasoptionstr->optionName, *cuasoptionstr->destination);
+    } else {
+      CUAS_WARN_RANK0("{}::{}, {} has tried to output the CUASOption {} of type {}. This case is not defined.",
+                      __FILE__, __LINE__, __func__, cuasoption->optionName, getDemangledTypeName(*cuasoption));
+    }
+  }
 }
 
 void SolutionHandler::storeCoordinates(CUASArgs const &args) {

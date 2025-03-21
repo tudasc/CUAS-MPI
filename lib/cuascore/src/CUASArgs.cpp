@@ -10,13 +10,11 @@
 
 #include "Logger.h"
 
-#include "cxxopts.hpp"
-
 #include <iostream>
 
 namespace CUAS {
 
-inline void defineArgs(cxxopts::Options &options);
+inline void defineArgs(CUASArgs &args, cxxopts::Options &options);
 
 inline void handleHelpAndVersion(cxxopts::Options const &options, cxxopts::ParseResult const &result);
 
@@ -29,7 +27,7 @@ inline void sanityChecks(CUASArgs const &args);
 void parseArgs(int argc, char **argv, CUASArgs &args) {
   cxxopts::Options options("CUAS", "MPI parallel version of CUAS");
 
-  defineArgs(options);
+  defineArgs(args, options);
 
   auto result = options.parse(argc, argv);
 
@@ -48,140 +46,16 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
   }
 }
 
-inline void defineArgs(cxxopts::Options &options) {
+inline void defineArgs(CUASArgs &args, cxxopts::Options &options) {
   options.positional_help("INPUT [OUTPUT]").show_positional_help();
 
   options.add_options()("h,help", "Print help")("version", "Show version information");
 
-  // clang-format off
-  options
-    .add_options()
-      ("v,verbose",
-       "Verbose output. Disables Progressbar")
-      ("verboseSolver",
-       "Verbose Solver output.")
-      ("directSolver",
-       "Set PETSc options for MUMPS+PARMETIS.")
-      ("input",
-       "Netcdf input file.",
-       cxxopts::value<std::string>()->default_value(""))
-      ("output",
-       "Netcdf output file.",
-       cxxopts::value<std::string>()->default_value("out.nc"))
-      ("outputSize",
-       "Netcdf output file size. ('small', 'normal', 'large')",
-        cxxopts::value<std::string>()->default_value("normal"))
-      ("totaltime",
-       "The total time, which is simulated (starttime + totaltime == endtime). Use either totaltime or endtime. Example: --totaltime '3 years 1 week'",
-       cxxopts::value<std::string>()->default_value(""))
-      ("starttime",
-       "The time of the first point in time. Example: --starttime '3 years 1 week'",
-       cxxopts::value<std::string>()->default_value(""))
-      ("endtime",
-       "The last point in time (starttime + totaltime == endtime). Use either totaltime or endtime. Example: --endtime '3 years 1 week'",
-       cxxopts::value<std::string>()->default_value(""))
-      ("dt",
-       "Time step length. Example: --dt '12 hours' or --dt 1 day",
-       cxxopts::value<std::string>()->default_value(""))
-      ("timeSteppingTheta",
-       "Time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson (0 <= theta <= 1)",
-       cxxopts::value<PetscScalar>()->default_value("1.0"))
-      ("timeStepFile",
-       "NetCDF input file to read a time step array",
-       cxxopts::value<std::string>()->default_value(""))
-      ("saveEvery",
-       "Save to NetCDF every nth timestep (deprecated).",
-       cxxopts::value<int>()->default_value("0"))
-      ("saveInterval",
-       "Save to NetCDF whenever the interval is finished. Example: --saveInterval '5 days'",
-       cxxopts::value<std::string>()->default_value(""))
-      ("conductivity",
-       "Conductivity of layer.",
-       cxxopts::value<PetscScalar>()->default_value("10"))
-      ("doChannels",
-       "Evolve channels?")
-      ("selectedChannels",
-       "select an individual channel configuration",
-       cxxopts::value<std::string>()->default_value("noselected"))
-      ("disableUnconfined",
-       "Disable unconfined aquifer case.")
-      ("x,Tmax",
-       "Maximum T to be allowed in the evolution.",
-       cxxopts::value<PetscScalar>()->default_value("20.0"))
-      ("i,Tmin",
-       "Minimum T to be allowed in the evolution.",
-       cxxopts::value<PetscScalar>()->default_value("0.0000001"))
-      ("Tinit",
-       "Inital T to be used in the evolution.",
-       cxxopts::value<PetscScalar>()->default_value("0.2"))
-      ("flowConstant",
-       "Ice Flow Constant A.",
-       cxxopts::value<PetscScalar>()->default_value("5e-25"))
-      ("roughnessFactor",
-       "Roughness factor for opening term.",
-       cxxopts::value<PetscScalar>()->default_value("1.0"))
-      ("supplyMultiplier",
-       "Multiplier for supply.",
-       cxxopts::value<PetscScalar>()->default_value("1.0"))
-      ("layerThickness",
-       "Water layer thickness (m)",
-       cxxopts::value<PetscScalar>()->default_value("0.1"))
-      ("unconfSmooth",
-       "Unconfined confined transition (m)",
-       cxxopts::value<PetscScalar>()->default_value("0.0"))
-      ("restart",
-       "Restart from this file.",
-       cxxopts::value<std::string>()->default_value(""))
-      ("restartNoneZeroInitialGuess",
-       "sets solution vector during restart",
-       cxxopts::value<bool>()->default_value("true"))
-      ("specificStorage",
-       "Specific storage, Ss (unit: m-1)",
-       cxxopts::value<PetscScalar>()->default_value("0.0000982977696"))
-      ("specificYield",
-       "Specific yield, Sy (unit: 1)",
-       cxxopts::value<PetscScalar>()->default_value("0.4"))
-      ("disableNonNegative",
-       "disable maintain non-negativity (psi >= 0)")
-      ("nonLinearIters",
-       "Number of non-linear sub-iterations.",
-       cxxopts::value<int>()->default_value("0"))
-      ("enableUDS",
-       "Enable upwind difference scheme (UDS). The default is the central difference scheme (CDS).")
-      ("thresholdThicknessUDS",
-       "Threshold for UDS scheme (m). Common choices are zero or layer thickness.",
-       cxxopts::value<PetscScalar>()->default_value("0.0"))
-      ("basalVelocityIce",
-       "Basal velocity of the ice (m/s)",
-       cxxopts::value<PetscScalar>()->default_value("1e-6"))
-      ("cavityBeta",
-       "cavity opening parameter",
-       cxxopts::value<PetscScalar>()->default_value("5e-4"))
-      ("initialHead",
-       "Initial value for head. Argument must be 'Nzero', 'Nopc', 'low', 'mid', 'high', 'topg' or a valid number",
-       cxxopts::value<std::string>()->default_value("Nzero"))
-      ("sizeOfForcingBuffer",
-       "Time slices to use in Forcing Buffer (TimeForcing --> BufferedForcing). Value has to be -1 or >= 2 (default -1 --> load all).",
-       cxxopts::value<int>()->default_value("-1"))
-      ("loopForcing",
-       "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.")
-      ("forcingFile",
-       "Defines an input file (NetCDF) to create a forcing. "
-       "A list of multiple files is possible (Separator ;). "
-       "Each file has to provide a field named 'bmelt'. "
-       "Example: --forcingFile 'filepath;filepath'",
-       cxxopts::value<std::string>()->default_value(""))
-      ("coordinatesFile",
-       "file containing lat/lon grids to copied into the output file (NetCDF)",
-       cxxopts::value<std::string>()->default_value(""))
-      ("seaLevelForcing",
-       "Apply sea level forcing from NetCDF scalar time series file.",
-       cxxopts::value<std::string>()->default_value(""));
-  // clang-format on
+  for (auto &cuasoption : args.cuasOptions) {
+    cuasoption->init(options);
+  }
 
-  options.add_options()("positional",
-                        "Positional arguments: these are the arguments that are entered without an option.",
-                        cxxopts::value<std::vector<std::string>>());
+  options.add_options()("positional", "Do not use.", cxxopts::value<std::vector<std::string>>());
 
   options.parse_positional({"input", "output", "positional"});
 }
@@ -213,50 +87,9 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
     exit(1);
   }
 
-  args.Tmax = result["Tmax"].as<PetscScalar>();
-  args.Tmin = result["Tmin"].as<PetscScalar>();
-  args.Tinit = result["Tinit"].as<PetscScalar>();
-
-  // need to be parsed
-  args.totaltime = result["totaltime"].as<std::string>();
-  args.starttime = result["starttime"].as<std::string>();
-  args.endtime = result["endtime"].as<std::string>();
-  args.dt = result["dt"].as<std::string>();
-  args.timeStepFile = result["timeStepFile"].as<std::string>();
-  args.saveEvery = result["saveEvery"].as<int>();
-  args.saveInterval = result["saveInterval"].as<std::string>();
-  args.conductivity = result["conductivity"].as<PetscScalar>();
-  args.disableUnconfined = result["disableUnconfined"].as<bool>();
-  args.flowConstant = result["flowConstant"].as<PetscScalar>();
-  args.roughnessFactor = result["roughnessFactor"].as<PetscScalar>();
-  args.supplyMultiplier = result["supplyMultiplier"].as<PetscScalar>();
-  args.layerThickness = result["layerThickness"].as<PetscScalar>();
-  args.unconfSmooth = result["unconfSmooth"].as<PetscScalar>();
-  args.restart = result["restart"].as<std::string>();
-  args.restartNoneZeroInitialGuess = result["restartNoneZeroInitialGuess"].as<bool>();
-  args.specificStorage = result["specificStorage"].as<PetscScalar>();
-  args.specificYield = result["specificYield"].as<PetscScalar>();
-  args.sizeOfForcingBuffer = result["sizeOfForcingBuffer"].as<int>();
-  args.loopForcing = result["loopForcing"].as<bool>();
-  args.coordinatesFile = result["coordinatesFile"].as<std::string>();
-  args.forcingFile = result["forcingFile"].as<std::string>();
-  args.basalVelocityIce = result["basalVelocityIce"].as<PetscScalar>();
-  args.cavityBeta = result["cavityBeta"].as<PetscScalar>();
-  args.initialHead = result["initialHead"].as<std::string>();
-  args.seaLevelForcing = result["seaLevelForcing"].as<std::string>();
-  args.verbose = result["verbose"].as<bool>();
-  args.verboseSolver = result["verboseSolver"].as<bool>();
-  args.directSolver = result["directSolver"].as<bool>();
-  args.input = result["input"].as<std::string>();
-  args.output = result["output"].as<std::string>();
-  args.outputSize = result["outputSize"].as<std::string>();  // todo: check valid keywords ('small', 'normal', 'large')
-  args.timeSteppingTheta = result["timeSteppingTheta"].as<PetscScalar>();
-  args.enableUDS = result["enableUDS"].as<bool>();
-  args.thresholdThicknessUDS = result["thresholdThicknessUDS"].as<PetscScalar>();
-  args.disableNonNegative = result["disableNonNegative"].as<bool>();
-  args.nonLinearIters = result["nonLinearIters"].as<int>();
-  args.selectedChannels = result["selectedChannels"].as<std::string>();
-  args.doChannels = result["doChannels"].as<bool>();
+  for (auto &cuasoption : args.cuasOptions) {
+    cuasoption->parse(result);
+  }
 }
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result) {
@@ -288,6 +121,141 @@ void sanityChecks(CUASArgs const &args) {
     CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.nonLinearIters = <{}> < 0. Exiting.", args.nonLinearIters);
     exit(1);
   }
+}
+
+void CUASArgs::setup() {
+  std::string description;
+
+  // verbosity
+  description = "Verbose output. Disables Progressbar";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("v,verbose", description, &verbose));
+  description = "Verbose Solver output.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("verboseSolver", description, &verboseSolver));
+
+  // input and output
+  description = "NetCDF input file.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("input", description, &input));
+  description = "NetCDF output file.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("output", description, &output));
+  description = "file containing lat/lon grids to copied into the output file (NetCDF)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<std::string>>("coordinatesFile", description, &coordinatesFile));
+  description = "Restart from this file.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("restart", description, &restart));
+  description = "sets solution vector during restart";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("restartNoneZeroInitialGuess", description,
+                                                                     &restartNoneZeroInitialGuess));
+
+  // time stepping
+  description = "The time of the first point in time. Example: --starttime '3 years 1 week'";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("starttime", description, &starttime));
+  description =
+      "The last point in time (starttime + totaltime == endtime). Use either totaltime or endtime. Example: --endtime "
+      "'3 years 1 week'";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("endtime", description, &endtime));
+  description =
+      "The total time, which is simulated (starttime + totaltime == endtime). Use either totaltime or endtime. "
+      "Example: --totaltime '3 years 1 week'";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("totaltime", description, &totaltime));
+  description = "Time step length. Example: --dt '12 hours' or --dt 1 day";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("dt", description, &dt));
+  description = "NetCDF input file to read a time step array";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<std::string>>("timeStepFile", description, &timeStepFile));
+
+  // output behavior
+  description = "Save to NetCDF every nth timestep (deprecated).";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<int>>("saveEvery", description, &saveEvery));
+  description = "Save to NetCDF whenever the interval is finished. Example: --saveInterval '5 days'";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<std::string>>("saveInterval", description, &saveInterval));
+  description = "Netcdf output file size. ('small', 'normal', 'large', 'xlarge')";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("outputSize", description, &outputSize));
+
+  // forcing
+  description =
+      "Defines an input file (NetCDF) to create a forcing. A list of multiple files is possible (Separator ;). Each "
+      "file has to provide a field named 'bmelt'. Example: --forcingFile 'filepath;filepath'";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("forcingFile", description, &forcingFile));
+  description =
+      "Time slices to use in Forcing Buffer (TimeForcing --> BufferedForcing). Value has to be -1 or >= 2 (default -1 "
+      "--> load all).";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<int>>("sizeOfForcingBuffer", description, &sizeOfForcingBuffer));
+  description =
+      "Loop the forcing when total time is longer than forcing. Otherwise the last step of the forcing is used.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("loopForcing", description, &loopForcing));
+  description = "Apply sea level forcing from NetCDF scalar time series file.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<std::string>>("seaLevelForcing", description, &seaLevelForcing));
+
+  // solver behavior
+  description = "Set PETSc options for MUMPS+PARMETIS.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("directSolver", description, &directSolver));
+  description = "Number of non-linear sub-iterations.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<int>>("nonLinearIters", description, &nonLinearIters));
+  description = "Time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson (0 <= theta <= 1)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("timeSteppingTheta", description, &timeSteppingTheta));
+  description = "Enable upwind difference scheme (UDS). The default is the central difference scheme (CDS).";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("enableUDS", description, &enableUDS));
+  description = "disable maintain non-negativity (psi >= 0)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<bool>>("disableNonNegative", description, &disableNonNegative));
+
+  // channel configuration
+  description = "Evolve channels?";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<bool>>("doChannels", description, &doChannels));
+  description = "select an individual channel configuration";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<std::string>>("selectedChannels", description, &selectedChannels));
+
+  // physics
+  description =
+      "Initial value for head. Argument must be 'Nzero', 'Nopc', 'low', 'mid', 'high', 'topg' or a valid number";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<std::string>>("initialHead", description, &initialHead));
+  description = "Maximum T to be allowed in the evolution.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<PetscScalar>>("x,Tmax", description, &Tmax));
+  description = "Minimum T to be allowed in the evolution.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<PetscScalar>>("i,Tmin", description, &Tmin));
+  description = "Initial T to be used in the evolution.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<PetscScalar>>("Tinit", description, &Tinit));
+  description = "Disable unconfined aquifer case.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<bool>>("disableUnconfined", description, &disableUnconfined));
+  description = "Conductivity of layer.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("conductivity", description, &conductivity));
+  description = "Ice Flow Constant A.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("flowConstant", description, &flowConstant, "5e-25"));
+  description = "Roughness factor for opening term.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("roughnessFactor", description, &roughnessFactor));
+  description = "Multiplier for supply.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("supplyMultiplier", description, &supplyMultiplier));
+  description = "Water layer thickness (m)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("layerThickness", description, &layerThickness));
+  description = "Unconfined confined transition (m)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("unconfSmooth", description, &unconfSmooth));
+  description = "Specific storage, Ss (unit: m-1)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("specificStorage", description, &specificStorage));
+  description = "Specific yield, Sy (unit: 1)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("specificYield", description, &specificYield));
+  description = "Threshold for UDS scheme (m). Common choices are zero or layer thickness.";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("thresholdThicknessUDS", description, &thresholdThicknessUDS));
+  description = "Basal velocity of the ice (m/s)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("basalVelocityIce", description, &basalVelocityIce, "1e-6"));
+  description = "cavity opening parameter";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("cavityBeta", description, &cavityBeta, "5e-4"));
 }
 
 }  // namespace CUAS
