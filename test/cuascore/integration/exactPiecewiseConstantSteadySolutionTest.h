@@ -115,6 +115,13 @@ class TestSolver : public CUAS::CUASSolver {
     currHead->setConst(0.5 * (head_x0 + head_xL));
     currHead->setRealBoundary(head_x0, PETScGrid::Direction::West);
     currHead->setRealBoundary(head_xL, PETScGrid::Direction::East);
+
+    // no-flow transmissivity (the test should not depend on the solver to correct this)
+    // the order is important for the corner points
+    currTransmissivity->setRealBoundary(NOFLOW_VALUE, PETScGrid::Direction::North);
+    currTransmissivity->setRealBoundary(NOFLOW_VALUE, PETScGrid::Direction::South);
+    currTransmissivity->setRealBoundary(layerTransmissivities.back(), PETScGrid::Direction::East);
+    currTransmissivity->setRealBoundary(layerTransmissivities.front(), PETScGrid::Direction::West);
   }
 
   /** TODO */
@@ -154,8 +161,8 @@ std::unique_ptr<CUAS::CUASModel> fillModelData(int nx, int ny) {
 
   auto n = std::floor(std::log2(res));
   if (std::pow(2, n) != res) {
-    CUAS_WARN_RANK0("{}: dx = {} found. A power of two (dx = 2^(-n), n = 1, 2, ...) is prefered. Exiting.",
-                    __PRETTY_FUNCTION__, res);
+    CUAS_WARN_RANK0("{}: dx = {} found. A power of two (dx = 2^(-n), n = 1, 2, ...) is preferred.", __PRETTY_FUNCTION__,
+                    res);
   }
   for (int i = 0; i < model.xAxis.size(); ++i) {
     model.xAxis[i] = layerBoundaries.front() + i * res;

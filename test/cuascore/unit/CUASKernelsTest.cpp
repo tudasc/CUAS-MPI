@@ -7,6 +7,8 @@
 #include "CUASKernels.h"
 
 #include "PETScGrid.h"
+#include <cmath>
+#include <cstdlib>
 
 // #define TESTS_DUMP_NETCDF
 #ifdef TESTS_DUMP_NETCDF
@@ -983,6 +985,216 @@ TEST(CUASKernelsTest, updateEffectiveAquiferProperties) {
   file.write("effective_storativity", Seff, 0);
 
 #endif
+}
+
+TEST(CUASKernelsTest, blockInflow) {
+  ASSERT_EQ(mpiSize, MPI_SIZE);
+
+  // constexpr auto SHMIP_NX = 66;  // 122 would be the full domain
+  constexpr auto SHMIP_NX = 10;  // 122 would be the full domain
+  constexpr auto SHMIP_NY = 23;
+
+  std::array<std::array<PetscScalar, SHMIP_NX>, SHMIP_NY> transmissivity_blockInflow = {
+      {{1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1, 1, 1, 1, 1, 1, 1, 1},
+       {100, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+       {100, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+       {100, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1, 1, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14}}};
+
+  std::array<std::array<PetscScalar, SHMIP_NX>, SHMIP_NY> transmissivity_blockInflowInv = {
+      {{1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 100, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 100, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 100, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {100, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+       {100, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+       {100, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 100, 1, 1, 1, 1, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 100, 1, 1, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 100, 1, 1, 1, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 100, 1},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14},
+       {1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14, 1e-14}}};
+
+  // input
+  PETScGrid hydraulicHead(SHMIP_NX, SHMIP_NY);
+  PETScGrid hydraulicTransmissivity(SHMIP_NX, SHMIP_NY);
+  PETScGrid bndMask(SHMIP_NX, SHMIP_NY);
+  PETScGrid bedElevation(SHMIP_NX, SHMIP_NY);
+  PETScGrid iceThickness(SHMIP_NX, SHMIP_NY);
+  PETScGrid result_blockInflow(SHMIP_NX, SHMIP_NY);
+  PETScGrid result_blockInflowInv(SHMIP_NX, SHMIP_NY);
+
+  constexpr PetscScalar Twater = 100.0;
+
+  // SHMIP valley glacier parameters
+  // domain length
+  constexpr auto xend = 6.0e3;
+  constexpr auto yend = 550.;
+  // surface parameters
+  constexpr auto beta = 0.25;
+
+  constexpr auto s2 = 100. / xend;
+  constexpr auto min_thick = 1.0;
+  // bed parameters
+  constexpr auto g1 = .5e-6;
+  constexpr auto alpha = 3.;
+  constexpr auto bench_para = 300. / xend;
+  constexpr auto para = bench_para;  // could also be bed_para
+
+  {
+    auto mask = bndMask.getWriteHandle();
+    auto head = hydraulicHead.getWriteHandle();
+    auto trans = hydraulicTransmissivity.getWriteHandle();
+    auto topg = bedElevation.getWriteHandle();
+    auto thk = iceThickness.getWriteHandle();
+    auto cornerX = bndMask.getCornerX();
+    auto cornerY = bndMask.getCornerY();
+
+    for (int row = 0; row < bndMask.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < bndMask.getLocalNumOfCols(); ++col) {
+        auto x = ((cornerX + col) * 50.0) - 50.0;  // add another line of points to the east
+        auto y = ((cornerY + row) * 50.0) - yend;
+
+        // surface
+        auto surf = 100. * pow(x + 200., beta) + s2 * x - pow(2.0e10, beta) + min_thick;
+        auto s_xend = 100. * pow(xend + 200., beta) + s2 * xend - 100. * pow(200., beta) + min_thick;
+
+        // helper functions
+        auto f_func = para * x + pow(x, 2) * (s_xend - para * 6.0e3) / pow(6.0e3, 2);
+        auto f_Bench = bench_para * x + pow(x, 2) * (s_xend - bench_para * 6.0e3) / pow(6.0e3, 2);
+        auto g_func = 0.5e-6 * pow(std::abs(y), 3);
+        auto h_func = (5 - 4.5 * x / 6.0e3) * (surf - f_func) / (surf - f_Bench);
+        // bed elevation
+        topg(row, col) = f_func + g_func * h_func;
+        // ice thickness
+        thk(row, col) = std::max(surf - topg(row, col), 0.0);
+
+        if (thk(row, col) > 0.0) {
+          mask(row, col) = (PetscScalar)COMPUTE_FLAG;
+          trans(row, col) = 1.0;  // arbitrary value
+        } else {
+          mask(row, col) = (PetscScalar)NOFLOW_FLAG;
+          trans(row, col) = NOFLOW_VALUE;
+        }
+        head(row, col) = 0.9 * thk(row, col) + topg(row, col);
+        // head(row, col) = topg(row, col) + 42.0;  // debug
+      }
+    }
+  }
+
+  // loop though again and set all points next to active cuas mask to outflow
+  // we can't use mask with ghosted read and write, so use thk instead.
+  {
+    auto mask = bndMask.getWriteHandle();
+    auto trans = hydraulicTransmissivity.getWriteHandle();
+    auto &thk = iceThickness.getReadHandle();
+
+    auto cornerX = bndMask.getCornerX();
+    auto cornerY = bndMask.getCornerY();
+    auto cornerXGhost = bndMask.getCornerXGhost();
+    auto cornerYGhost = bndMask.getCornerYGhost();
+
+    for (int row = 0; row < bndMask.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < bndMask.getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)NOFLOW_FLAG) {
+          auto j = row + (cornerY - cornerYGhost);  // ghostLocalRow
+          auto i = col + (cornerX - cornerXGhost);  // ghostLocalCol
+
+          // neighborhood of 4 connected pixels (1-connectivity)
+          if (thk(j, i + 1, GHOSTED) > 0.0 || thk(j, i - 1, GHOSTED) > 0.0 || thk(j + 1, i, GHOSTED) > 0.0 ||
+              thk(j - 1, i, GHOSTED) > 0.0) {
+            mask(row, col) = (PetscScalar)DIRICHLET_LAKE_FLAG;
+            trans(row, col) = Twater;
+          }
+        }
+      }
+    }
+  }
+
+  result_blockInflow.copy(hydraulicTransmissivity);
+  CUAS::blockInflow(result_blockInflow, bndMask, hydraulicHead, Twater);
+
+  result_blockInflowInv.copy(hydraulicTransmissivity);
+  CUAS::blockInflowInv(result_blockInflowInv, bndMask, hydraulicHead, Twater);
+
+#ifdef TESTS_DUMP_NETCDF
+  // Gets information about the currently running test.
+  // Do NOT delete the returned object - it's managed by the UnitTest class.
+  const testing::TestInfo *const test_info = testing::UnitTest::GetInstance()->current_test_info();
+  auto filename = std::string(test_info->test_suite_name())
+                      .append(std::string("_-_"))
+                      .append(std::string(test_info->name()))
+                      .append(std::string(".nc"));
+
+  CUAS::NetCDFFile file(filename, SHMIP_NX, SHMIP_NY);
+  file.defineGrid("bndMask", LIMITED);
+  file.defineGrid("transmissivity", LIMITED);
+  file.defineGrid("head", LIMITED);
+  file.defineGrid("topg", LIMITED);
+  file.defineGrid("thk", LIMITED);
+  file.defineGrid("transmissivity_blockInflow", LIMITED);
+  file.defineGrid("transmissivity_blockInflowInv", LIMITED);
+  file.write("bndMask", bndMask, 0);
+  file.write("transmissivity", hydraulicTransmissivity, 0);
+  file.write("head", hydraulicHead, 0);
+  file.write("topg", bedElevation, 0);
+  file.write("thk", iceThickness, 0);
+  file.write("transmissivity_blockInflow", result_blockInflow, 0);
+  file.write("transmissivity_blockInflowInv", result_blockInflowInv, 0);
+#endif
+
+  // check pixel by pixel
+  {
+    auto &result = result_blockInflow.getReadHandle();
+    int cornerX = result_blockInflow.getCornerX();
+    int cornerY = result_blockInflow.getCornerY();
+    for (int row = 0; row < result_blockInflow.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result_blockInflow.getLocalNumOfCols(); ++col) {
+        ASSERT_EQ(result(row, col), transmissivity_blockInflow[cornerY + row][cornerX + col]);
+      }
+    }
+  }
+
+  // check pixel by pixel
+  {
+    auto &result = result_blockInflowInv.getReadHandle();
+    int cornerX = result_blockInflowInv.getCornerX();
+    int cornerY = result_blockInflowInv.getCornerY();
+    for (int row = 0; row < result_blockInflowInv.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result_blockInflowInv.getLocalNumOfCols(); ++col) {
+        ASSERT_EQ(result(row, col), transmissivity_blockInflowInv[cornerY + row][cornerX + col]);
+      }
+    }
+  }
 }
 
 int main(int argc, char *argv[]) {

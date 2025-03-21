@@ -121,6 +121,21 @@ void sanityChecks(CUASArgs const &args) {
     CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.nonLinearIters = <{}> < 0. Exiting.", args.nonLinearIters);
     exit(1);
   }
+
+  // outflow boundary conditions
+  if (args.Twater < 0.0) {
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.Twater = <{}> < 0.0. Exiting.", args.Twater);
+    exit(1);
+  }
+  if (args.blockInflow < 0 || args.blockInflow > 2) {
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.blockInflow= <{}> < 0 or > 2. Exiting.", args.blockInflow);
+    exit(1);
+  }
+  if (args.Twater < 0.0) {
+    CUAS_ERROR("CUASArgs.cpp: parseArgs(): args.dirichletBCWaterDepth = <{}> < 0.0. Exiting.",
+               args.dirichletBCWaterDepth);
+    exit(1);
+  }
 }
 
 void CUASArgs::setup() {
@@ -256,6 +271,23 @@ void CUASArgs::setup() {
   description = "cavity opening parameter";
   cuasOptions.emplace_back(
       std::make_unique<CUASOptionGeneric<PetscScalar>>("cavityBeta", description, &cavityBeta, "5e-4"));
+
+  // outflow boundary conditions
+  description = "Transmissivity for water (ocean or lake)";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<PetscScalar>>("Twater", description, &Twater));
+
+  description = "Water depth used to set the head at river and lake locations (m)";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<PetscScalar>>("dirichletBCWaterDepth", description, &dirichletBCWaterDepth));
+
+  description =
+      "Select how we block inflow at outflow boundaries. 0: no blocking, 1: outflow if all the neighbours suggest "
+      "outflow, 2: outflow if any of the the neighbours suggest outflow.";
+  cuasOptions.emplace_back(std::make_unique<CUASOptionGeneric<int>>("blockInflow", description, &blockInflow));
+
+  description = "apply boundary values for 'ocean' and 'outflow' consistent to the bnd_mask";
+  cuasOptions.emplace_back(
+      std::make_unique<CUASOptionGeneric<bool>>("applyRestartChecks", description, &applyRestartChecks));
 }
 
 }  // namespace CUAS

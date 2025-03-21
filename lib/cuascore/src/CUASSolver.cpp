@@ -176,28 +176,32 @@ void CUASSolver::prepare() {
     exit(1);
   }
 
-  // after restart apply checks and set values consistent to cuas mask
-  {
+  // after restart apply checks and set values consistent to the bnd_mask
+  if (args->applyRestartChecks) {
     auto trans = currTransmissivity->getWriteHandle();
     auto head = currHead->getWriteHandle();
     auto &mask = model->bndMask->getReadHandle();
+    auto &topg = model->topg->getReadHandle();
 
-    auto rows = currTransmissivity->getLocalNumOfRows();
-    auto cols = currTransmissivity->getLocalNumOfCols();
-
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        if (mask(i, j) == (PetscScalar)NOFLOW_FLAG) {
+    for (int row = 0; row < currHead->getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < currHead->getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)NOFLOW_FLAG) {
           // no-flow must be obtained after restart
-          trans(i, j) = NOFLOW_VALUE;
-        } else if (mask(i, j) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
-          // ensure proper ocean bc's after restart
-          trans(i, j) = args->Tmax;
-          head(i, j) = 0.0;
+          trans(row, col) = NOFLOW_VALUE;
+        } else if (mask(row, col) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
+          // ensure proper ocean bc's after restart from e.g. interpolated fields
+          trans(row, col) = args->Twater;
+          head(row, col) = 0.0;  // sea-level
+        } else if (mask(row, col) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
+          // fixme: This enables outflow again, although it might have been disabled due to "inflow"
+          //        in a previous run.
+          trans(row, col) = args->Twater;
+          head(row, col) = args->dirichletBCWaterDepth + topg(row, col);
         }
       }
     }
   }
+
   dirichletValues->copy(*currHead);               // store initial values as dirichlet values for this run
   nextTransmissivity->copy(*currTransmissivity);  // otherwise invalid for bnd:mask == DIRICHLET_FLAG
 
@@ -347,6 +351,13 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
     for (auto iter = 0; iter < totalIters; ++iter) {
       // CUAS_INFO_RANK0("CUASSolver.cpp::solve() sub-iter {}/{}: dt = {}", iter+1, totalIters, dtIter)
 
+      // user decides if and how the inflow is blocked at teh outflow boundaries
+      if (args->blockInflow == 1) {
+        blockInflow(*currTransmissivity, *model->bndMask, *currHead, args->Twater);
+      } else if (args->blockInflow == 2) {
+        blockInflowInv(*currTransmissivity, *model->bndMask, *currHead, args->Twater);
+      }
+
       // Teff (at the center and at the interfaces) and Seff
       updateAquiferProperties();  // fixme: has been called already outside the loop. See preComputation():
 
@@ -377,14 +388,13 @@ bool CUASSolver::updateHeadAndTransmissivity(CUASTimeIntegrator const &timeInteg
     //
     if (args->doAnyChannel) {
       doChannels(*nextTransmissivity, *currTransmissivity, *creep, *melt, *cavity, *model->bndMask, args->Tmin,
-                 args->Tmax, static_cast<double>(dt));
+                 args->Tmax, args->Twater, static_cast<double>(dt));
       // eps_T = np.max(np.abs(T - currTransmissivity))
       Teps = nextTransmissivity->getMaxAbsDiff(*currTransmissivity) / static_cast<double>(dt);
       // switch pointers
       currTransmissivity.swap(nextTransmissivity);
 
       if (args->verboseSolver) {
-        // Fixme: This reports only eps and res for the last solve if args->nonLinearIters > 0
         CUAS_INFO_RANK0("SOLVER(T): {:{}d} {:{}d} {:.5e}", timeStepIndex, maxDigitsIndex, currTime, maxDigitsTime, Teps)
       }
     }
