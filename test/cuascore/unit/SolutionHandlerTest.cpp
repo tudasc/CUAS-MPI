@@ -25,8 +25,6 @@ TEST(SolutionHandlerTest, constructor) {
 TEST(SolutionHandlerTest, storeCUASArgs) {
   CUAS::SolutionHandler handler("SolutionHandlerCUASArgs.nc", GRID_SIZE_X, GRID_SIZE_Y, "normal");
   CUAS::CUASArgs args;
-  std::vector argv = {"SolutionHandlerTest.exe"};
-  parseArgs(static_cast<int>(argv.size()), const_cast<char **>(argv.data()), args);
   handler.storeCUASArgs(args);
 }
 
