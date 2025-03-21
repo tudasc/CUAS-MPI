@@ -78,6 +78,12 @@ TEST(CUASArgs, defaults) {
   ASSERT_EQ(args.thresholdThicknessUDS, 0.0);
   ASSERT_EQ(args.basalVelocityIce, 1e-6);
   ASSERT_EQ(args.cavityBeta, 5e-4);
+
+  // outflow boundary conditions
+  ASSERT_EQ(args.Twater, 100.0);
+  ASSERT_EQ(args.dirichletBCWaterDepth, 1.0);
+  ASSERT_EQ(args.blockInflow, 1);
+  ASSERT_EQ(args.applyRestartChecks, false);
 }
 
 TEST(CUASArgs, allOpts) {
@@ -124,7 +130,11 @@ TEST(CUASArgs, allOpts) {
                        "--initialHead=topg",
                        "--specificStorage=0.000977696",
                        "--specificYield=0.8",
-                       "--basalVelocityIce=3e-6"};
+                       "--basalVelocityIce=3e-6",
+                       "--Twater=80.0",
+                       "--dirichletBCWaterDepth=0.1",
+                       "--blockInflow=2",
+                       "--applyRestartChecks"};
 
   CUAS::CUASArgs args;
   parseArgs(static_cast<int>(input.size()), const_cast<char **>(input.data()), args);
@@ -191,6 +201,12 @@ TEST(CUASArgs, allOpts) {
   ASSERT_EQ(args.thresholdThicknessUDS, 0.1);
   ASSERT_EQ(args.basalVelocityIce, 3e-6);
   ASSERT_EQ(args.cavityBeta, 3.14);
+
+  // outflow boundary conditions
+  ASSERT_EQ(args.Twater, 80.0);
+  ASSERT_EQ(args.dirichletBCWaterDepth, 0.1);
+  ASSERT_EQ(args.blockInflow, 2);
+  ASSERT_EQ(args.applyRestartChecks, true);
 }
 
 TEST(CUASArgs, shorts) {

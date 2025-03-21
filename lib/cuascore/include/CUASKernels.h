@@ -445,12 +445,13 @@ inline void clamp(PETScGrid &inout, PetscScalar const minimum, PetscScalar const
  * @param bndMask (1)
  * @param Tmin (m^2/s)
  * @param Tmax (m^2/s)
+ * @param Twater (m^2/s) transmissivity used for ocean or outflow BCs
  * @param dt_secs time step length (s)
  */
 inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &hydraulicTransmissivity,
                        PETScGrid const &aCreep, PETScGrid const &aMelt, PETScGrid const &aCavity,
                        PETScGrid const &bndMask, PetscScalar const Tmin, PetscScalar const Tmax,
-                       PetscScalar const dt_secs) {
+                       PetscScalar const Twater, PetscScalar const dt_secs) {
   if (!aMelt.isCompatible(hydraulicTransmissivity) || !aCreep.isCompatible(hydraulicTransmissivity) ||
       !aCavity.isCompatible(hydraulicTransmissivity) ||
       !newHydraulicTransmissivity.isCompatible(hydraulicTransmissivity)) {
@@ -466,22 +467,14 @@ inline void doChannels(PETScGrid &newHydraulicTransmissivity, PETScGrid const &h
     auto &creep = aCreep.getReadHandle();    // dT/dt_creep
     auto &cavity = aCavity.getReadHandle();  // dT/dt_cavity
     auto &mask = bndMask.getReadHandle();
-    for (int j = 0; j < newHydraulicTransmissivity.getLocalNumOfRows(); ++j) {
-      for (int i = 0; i < newHydraulicTransmissivity.getLocalNumOfCols(); ++i) {
-        if (mask(j, i) == (PetscScalar)COMPUTE_FLAG) {
+    for (int row = 0; row < newHydraulicTransmissivity.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < newHydraulicTransmissivity.getLocalNumOfCols(); ++col) {
+        // no else, because we take care of other cases in set initial conditions or
+        // after reading in the initial conditions from a "restart" file
+        if (mask(row, col) == (PetscScalar)COMPUTE_FLAG) {
           // update with clamp
-          auto newValue = T_n(j, i) + (creep(j, i) + melt(j, i) + cavity(j, i)) * dt_secs;
-          T(j, i) = std::clamp(newValue, Tmin, Tmax);
-        } else if (mask(j, i) == (PetscScalar)NOFLOW_FLAG) {
-          T(j, i) = NOFLOW_VALUE;
-        } else if (mask(j, i) == (PetscScalar)DIRICHLET_OCEAN_FLAG || mask(j, i) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
-          T(j, i) = Tmax;  // todo: better use Tocean here
-        } else if (mask(j, i) == (PetscScalar)DIRICHLET_FLAG) {
-          // Do nothing. If the head is as Dirichlet BC assume the transmissivity is also given.
-          // T(j, i) = T_n(j, i); // fixme: here or in CUASSolver.cpp ? actual done in CUASSolver
-        } else {
-          CUAS_ERROR("CUASKernels.h: doChannels was called with unknown bndMask value {}. Exiting.", mask(j, i))
-          exit(1);
+          auto newValue = T_n(row, col) + (creep(row, col) + melt(row, col) + cavity(row, col)) * dt_secs;
+          T(row, col) = std::clamp(newValue, Tmin, Tmax);
         }
       }
     }
@@ -561,6 +554,26 @@ inline void setInitialHeadFromArgs(PETScGrid &result, PETScGrid const &bndMask, 
           "{}: args->initialHead needs to be 'Nzero', 'Nopc', 'low', 'mid', 'high', 'topg' or valid number. Exiting.",
           __PRETTY_FUNCTION__)
       exit(1);
+    }
+  }
+
+  // duplicate some code from prepare() to make sure the ocean head is at sea level
+  {
+    auto head = result.getWriteHandle();
+    auto &mask = bndMask.getReadHandle();
+    auto &topg = bedElevation.getReadHandle();
+    for (int row = 0; row < result.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < result.getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
+          // ensure proper ocean bc's after restart
+          head(row, col) = seaLevel;
+        }
+        // fixme: This may lead to unexpected initial conditions for artificial geometries
+        //        as SHMIP or Schoof et al., 2012
+        if (mask(row, col) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
+          head(row, col) = args.dirichletBCWaterDepth + topg(row, col);  // this may violate positivePreserving
+        }
+      }
     }
   }
 
@@ -966,6 +979,135 @@ inline void preserveNonNegativePsi(PETScGrid const &bedElevation, PETScGrid cons
         if (psi < 0.0) {
           head(row, col) -= psi;
           conservationError(row, col) -= psi;
+        }
+      }
+    }
+  }
+}
+
+/** Close outflow boundaries in case they are actually inflow boundaries.
+ *
+ * With the flux being proportional to the gradient of the head, we close the boundary
+ * (set the boundary transmissivity to no-flow), if the head at the boundary is above
+ * any of the active (bndMask==COMPUTE_FLAG) neighbours.
+ *
+ * @param hydraulicTransmissivity
+ * @param bndMask
+ * @param hydraulicHead
+ * @param outflowTransmissivity
+ */
+inline void blockInflow(PETScGrid &hydraulicTransmissivity, PETScGrid const &bndMask, PETScGrid &hydraulicHead,
+                        PetscScalar outflowTransmissivity) {
+  if (!bndMask.isCompatible(hydraulicHead) || !bndMask.isCompatible(hydraulicTransmissivity)) {
+    CUAS_ERROR("CUASKernels.h: blockInflow() was called with incompatible PETScGrids. Exiting.")
+    exit(1);
+  }
+
+  // FIXME: check for suction at outflow boundary condition
+  {
+    auto const cornerX = bndMask.getCornerX();
+    auto const cornerY = bndMask.getCornerY();
+    auto cornerXGhost = bndMask.getCornerXGhost();
+    auto cornerYGhost = bndMask.getCornerYGhost();
+
+    auto &mask = bndMask.getReadHandle();
+    auto &head = hydraulicHead.getReadHandle();
+    auto trans = hydraulicTransmissivity.getWriteHandle();
+
+    for (int row = 0; row < bndMask.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < bndMask.getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
+          // Set defaults for outflow BC (open outflow boundary)
+          trans(row, col) = outflowTransmissivity;  // args->Twater;
+
+          // check if we need to change something
+
+          auto j = row + (cornerY - cornerYGhost);
+          auto i = col + (cornerX - cornerXGhost);
+          auto head_P = head(j, i, GHOSTED);
+
+          if (mask(j, i + 1, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P > head(j, i + 1, GHOSTED)) {
+            // forbidden flux into the ice
+            trans(row, col) = NOFLOW_VALUE;
+          }
+
+          if (mask(j, i - 1, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P > head(j, i - 1, GHOSTED)) {
+            // forbidden flux into the ice
+            trans(row, col) = NOFLOW_VALUE;
+          }
+
+          if (mask(j + 1, i, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P > head(j + 1, i, GHOSTED)) {
+            // forbidden flux into the ice
+            trans(row, col) = NOFLOW_VALUE;
+          }
+
+          if (mask(j - 1, i, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P > head(j - 1, i, GHOSTED)) {
+            // forbidden flux into the ice
+            trans(row, col) = NOFLOW_VALUE;
+          }
+        }
+      }
+    }
+  }
+}
+
+/** Close outflow boundaries in case they are actually inflow boundaries.
+ *
+ * With the flux being proportional to the gradient of the head, we open the boundary
+ * (set the boundary transmissivity to outflowTransmissivity), if the head at the boundary is
+ * below or equal to any of the active (bndMask==COMPUTE_FLAG) neighbours.
+ *
+ * @param hydraulicTransmissivity
+ * @param bndMask
+ * @param hydraulicHead
+ * @param outflowTransmissivity
+ */
+inline void blockInflowInv(PETScGrid &hydraulicTransmissivity, PETScGrid const &bndMask, PETScGrid &hydraulicHead,
+                           PetscScalar outflowTransmissivity) {
+  if (!bndMask.isCompatible(hydraulicHead) || !bndMask.isCompatible(hydraulicTransmissivity)) {
+    CUAS_ERROR("CUASKernels.h: blockInflowInv() was called with incompatible PETScGrids. Exiting.")
+    exit(1);
+  }
+
+  // FIXME: check for suction at outflow boundary condition
+  {
+    auto const cornerX = bndMask.getCornerX();
+    auto const cornerY = bndMask.getCornerY();
+    auto cornerXGhost = bndMask.getCornerXGhost();
+    auto cornerYGhost = bndMask.getCornerYGhost();
+
+    auto &mask = bndMask.getReadHandle();
+    auto &head = hydraulicHead.getReadHandle();
+    auto trans = hydraulicTransmissivity.getWriteHandle();
+
+    for (int row = 0; row < bndMask.getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < bndMask.getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
+          // Set defaults for outflow BC (open outflow boundary)
+
+          trans(row, col) = NOFLOW_VALUE;
+
+          // check if we need to change something
+
+          auto j = row + (cornerY - cornerYGhost);
+          auto i = col + (cornerX - cornerXGhost);
+          auto head_P = head(j, i, GHOSTED);
+
+          if (mask(j, i + 1, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P < head(j, i + 1, GHOSTED)) {
+            trans(row, col) = outflowTransmissivity;
+          }
+
+          if (mask(j, i - 1, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P < head(j, i - 1, GHOSTED)) {
+            trans(row, col) = outflowTransmissivity;
+          }
+
+          if (mask(j + 1, i, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P < head(j + 1, i, GHOSTED)) {
+            trans(row, col) = outflowTransmissivity;
+          }
+
+          if (mask(j - 1, i, GHOSTED) == (PetscScalar)COMPUTE_FLAG && head_P < head(j - 1, i, GHOSTED)) {
+            trans(row, col) = outflowTransmissivity;
+          }
         }
       }
     }

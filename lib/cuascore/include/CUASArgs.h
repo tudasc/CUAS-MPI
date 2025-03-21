@@ -96,6 +96,12 @@ class CUASArgs {
   PetscScalar basalVelocityIce = 1e-6;
   PetscScalar cavityBeta = 5e-4;
 
+  // outflow boundary conditions
+  PetscScalar Twater = 100.0;
+  PetscScalar dirichletBCWaterDepth = 1.0;
+  int blockInflow = 1;
+  bool applyRestartChecks = false;
+
  public:
   class CUASOption {
    public:
