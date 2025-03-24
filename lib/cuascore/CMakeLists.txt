@@ -19,6 +19,8 @@ add_dependencies(cuascore gitversion)
 add_netcdf(cuascore)
 
 add_cxxopts(cuascore)
+add_yamlcpp(cuascore)
+
 add_spdlog(cuascore)
 
 install(TARGETS cuascore DESTINATION lib)

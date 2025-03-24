@@ -1,0 +1,9 @@
+name: "Simple Config"
+enabled: true
+attributes:
+  id: 123
+  value: 3.14
+  features: ["feature1", "feature3"]
+input: "in.txt"
+output: "out.txt"
+random: 32523423

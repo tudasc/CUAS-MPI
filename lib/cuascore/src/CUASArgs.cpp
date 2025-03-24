@@ -10,15 +10,18 @@
 
 #include "Logger.h"
 
+#include <fstream>
 #include <iostream>
 
 namespace CUAS {
 
 inline void defineArgs(CUASArgs &args, cxxopts::Options &options);
 
-inline void handleHelpAndVersion(cxxopts::Options const &options, cxxopts::ParseResult const &result);
+inline void handleSpecials(CUASArgs const &args, cxxopts::Options const &options, cxxopts::ParseResult const &result);
 
 inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result);
+
+inline void writeDefaultsToYaml(CUASArgs const &args, std::string const &filename);
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result);
 
@@ -31,9 +34,9 @@ void parseArgs(int argc, char **argv, CUASArgs &args) {
 
   auto result = options.parse(argc, argv);
 
-  handleHelpAndVersion(options, result);
-
   parseCUASArgs(args, result);
+
+  handleSpecials(args, options, result);
 
   // check if all channels or any channels should be applied
   evaluateDoChannels(args, result);
@@ -51,6 +54,13 @@ inline void defineArgs(CUASArgs &args, cxxopts::Options &options) {
 
   options.add_options()("h,help", "Print help")("version", "Show version information");
 
+  options.add_options()("configFile", "Reads CUASArgs from a YAML config file.",
+                        cxxopts::value<std::string>()->default_value(""));
+  options.add_options()("defaultConfigToFile",
+                        "Write all CUASArgs default values to the file 'default.config.yaml' or an explicitly "
+                        "specified file name. This can be used as a starting point for your own config file.",
+                        cxxopts::value<std::string>()->implicit_value("default.config.yaml"));
+
   for (auto &cuasoption : args.cuasOptions) {
     cuasoption->init(options);
   }
@@ -60,7 +70,7 @@ inline void defineArgs(CUASArgs &args, cxxopts::Options &options) {
   options.parse_positional({"input", "output", "positional"});
 }
 
-inline void handleHelpAndVersion(cxxopts::Options const &options, cxxopts::ParseResult const &result) {
+inline void handleSpecials(CUASArgs const &args, cxxopts::Options const &options, cxxopts::ParseResult const &result) {
   if (result.count("help")) {
     std::cout << options.help({""}) << std::endl;
     exit(0);
@@ -68,6 +78,12 @@ inline void handleHelpAndVersion(cxxopts::Options const &options, cxxopts::Parse
 
   if (result.count("version")) {
     std::cout << version() << std::endl;
+    exit(0);
+  }
+
+  if (result.count("defaultConfigToFile")) {
+    std::string filename = result["defaultConfigToFile"].as<std::string>();
+    writeDefaultsToYaml(args, filename);
     exit(0);
   }
 }
@@ -87,9 +103,47 @@ inline void parseCUASArgs(CUASArgs &args, cxxopts::ParseResult const &result) {
     exit(1);
   }
 
-  for (auto &cuasoption : args.cuasOptions) {
-    cuasoption->parse(result);
+  args.configFile = result["configFile"].as<std::string>();
+  if (!args.configFile.empty()) {
+    YAML::Node configFile;
+    try {
+      configFile = YAML::LoadFile(args.configFile);
+    } catch (const YAML::BadFile &e) {
+      CUAS_ERROR("{}::{}, {}. Exiting.", __FILE__, __LINE__, e.what())
+      exit(1);
+    }
+    for (auto &cuasoption : args.cuasOptions) {
+      cuasoption->parse(result, &configFile);
+    }
+  } else {
+    for (auto &cuasoption : args.cuasOptions) {
+      cuasoption->parse(result, nullptr);
+    }
   }
+}
+
+inline void writeDefaultsToYaml(CUASArgs const &args, std::string const &filename) {
+  YAML::Node config;
+
+  for (auto &cuasoption : args.cuasOptions) {
+    if (auto cuasoptionint = dynamic_cast<CUASArgs::CUASOptionGeneric<int> *>(cuasoption.get())) {
+      config[cuasoptionint->optionName] = *cuasoptionint->destination;
+    } else if (auto cuasoptionscalar = dynamic_cast<CUASArgs::CUASOptionGeneric<PetscScalar> *>(cuasoption.get())) {
+      config[cuasoptionscalar->optionName] = *cuasoptionscalar->destination;
+    } else if (auto cuasoptionbool = dynamic_cast<CUASArgs::CUASOptionGeneric<bool> *>(cuasoption.get())) {
+      config[cuasoptionbool->optionName] = *cuasoptionbool->destination;
+    } else if (auto cuasoptionstr = dynamic_cast<CUASArgs::CUASOptionGeneric<std::string> *>(cuasoption.get())) {
+      config[cuasoptionstr->optionName] = *cuasoptionstr->destination;
+    } else {
+      CUAS_WARN_RANK0("{}::{}, {} has tried to output the CUASOption {} of type {}. This case is not defined.",
+                      __FILE__, __LINE__, __func__, cuasoption->optionName, getDemangledTypeName(*cuasoption));
+    }
+  }
+
+  // write yaml node to file
+  std::ofstream fout(filename);
+  fout << config;
+  fout.close();
 }
 
 inline void evaluateDoChannels(CUASArgs &args, cxxopts::ParseResult const &result) {

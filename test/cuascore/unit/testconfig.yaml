@@ -1,0 +1,9 @@
+disableNonNegative: false
+doChannels: true
+selectedChannels: "melt"
+initialHead: mid
+Tmax: 17
+Tmin: 0.314
+Tinit: 0.13234
+disableUnconfined: true
+conductivity: 7

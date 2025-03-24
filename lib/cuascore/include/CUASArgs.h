@@ -13,6 +13,7 @@
 #include "utilities.h"
 
 #include "cxxopts.hpp"
+#include "yaml-cpp/yaml.h"
 
 #include <string>
 #include <vector>
@@ -31,6 +32,9 @@ class CUASArgs {
 
  private:
   void setup();
+
+ public:
+  std::string configFile = "";
 
  public:
   // verbosity
@@ -131,7 +135,7 @@ class CUASArgs {
     std::string defaultValue;
 
    public:
-    virtual void parse(cxxopts::ParseResult const &result) = 0;
+    virtual void parse(cxxopts::ParseResult const &result, YAML::Node *configFile) = 0;
     virtual void init(cxxopts::Options &options) = 0;
   };
 
@@ -158,8 +162,17 @@ class CUASArgs {
     ValueType *destination;
 
    public:
-    void parse(cxxopts::ParseResult const &result) override {
-      *destination = result[optionName].template as<ValueType>();
+    void parse(cxxopts::ParseResult const &result, YAML::Node *configFile) override {
+      // prefer cxxopts, if the option is not explicitly defined, check definition in option file, else use default
+      if (result.count(optionName)) {
+        *destination = result[optionName].template as<ValueType>();
+      } else if (configFile) {
+        auto &config = *configFile;
+        if (config[optionName].IsDefined()) {
+          *destination = config[optionName].template as<ValueType>();
+        }
+      }
+      // else do nothing and keep default value
     }
     void init(cxxopts::Options &options) override {
       options.add_options()(optionIdentifier, description, cxxopts::value<ValueType>()->default_value(defaultValue));
