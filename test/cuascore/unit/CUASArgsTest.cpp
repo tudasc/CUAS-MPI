@@ -440,6 +440,159 @@ TEST(CUASArgs, positionalOpts) {
   ASSERT_EQ(args.cavityBeta, 5e-4);
 }
 
+TEST(CUASArgs, yamlConfig) {
+  std::vector input = {"CUASArgsTest.exe", "--configFile=testconfig.yaml"};
+
+  CUAS::CUASArgs args;
+  parseArgs(static_cast<int>(input.size()), const_cast<char **>(input.data()), args);
+
+  // verbosity
+  ASSERT_EQ(args.verbose, false);
+  ASSERT_EQ(args.verboseSolver, false);
+
+  // input and output
+  ASSERT_EQ(args.input, "");
+  ASSERT_EQ(args.output, "out.nc");
+  ASSERT_EQ(args.coordinatesFile, "");
+  ASSERT_EQ(args.restart, "");
+  ASSERT_EQ(args.restartNoneZeroInitialGuess, true);
+
+  // time stepping
+  ASSERT_EQ(args.starttime, "");
+  ASSERT_EQ(args.endtime, "");
+  ASSERT_EQ(args.totaltime, "");
+  ASSERT_EQ(args.dt, "");
+  ASSERT_EQ(args.timeStepFile, "");
+
+  // output behavior
+  ASSERT_EQ(args.saveEvery, 0);
+  ASSERT_EQ(args.saveInterval, "");
+  ASSERT_EQ(args.outputSize, "normal");
+
+  // forcing
+  ASSERT_EQ(args.forcingFile, "");
+  ASSERT_EQ(args.sizeOfForcingBuffer, -1);
+  ASSERT_EQ(args.loopForcing, false);
+  ASSERT_EQ(args.seaLevelForcing, "");
+
+  // solver behavior
+  ASSERT_EQ(args.directSolver, false);
+  ASSERT_EQ(args.nonLinearIters, 0);
+  ASSERT_EQ(args.timeSteppingTheta, 1.0);
+  ASSERT_EQ(args.enableUDS, false);
+  ASSERT_EQ(args.disableNonNegative, false);
+
+  // channel configuration
+  ASSERT_EQ(args.doChannels, true);
+  ASSERT_EQ(args.selectedChannels, "melt");
+  ASSERT_EQ(args.doAllChannels, false);
+  ASSERT_EQ(args.doAnyChannel, true);
+  ASSERT_EQ(args.doCavity, false);
+  ASSERT_EQ(args.doMelt, true);
+  ASSERT_EQ(args.doCreep, false);
+
+  // physics
+  ASSERT_EQ(args.initialHead, "mid");
+  ASSERT_EQ(args.Tmax, 17.0);
+  ASSERT_EQ(args.Tmin, 0.314);
+  ASSERT_EQ(args.Tinit, 0.13234);
+  ASSERT_EQ(args.disableUnconfined, true);
+  ASSERT_EQ(args.conductivity, 7.0);
+  ASSERT_EQ(args.flowConstant, 5e-25);
+  ASSERT_EQ(args.roughnessFactor, 1.0);
+  ASSERT_EQ(args.supplyMultiplier, 1.0);
+  ASSERT_EQ(args.layerThickness, 0.1);
+  ASSERT_EQ(args.unconfSmooth, 0.0);
+  ASSERT_EQ(args.specificStorage, 0.0000982977696);
+  ASSERT_EQ(args.specificYield, 0.4);
+  ASSERT_EQ(args.thresholdThicknessUDS, 0.0);
+  ASSERT_EQ(args.basalVelocityIce, 1e-6);
+  ASSERT_EQ(args.cavityBeta, 5e-4);
+
+  // outflow boundary conditions
+  ASSERT_EQ(args.Twater, 100.0);
+  ASSERT_EQ(args.dirichletBCWaterDepth, 1.0);
+  ASSERT_EQ(args.blockInflow, 1);
+  ASSERT_EQ(args.applyRestartChecks, false);
+}
+
+TEST(CUASArgs, hybridConfig) {
+  std::vector input = {"CUASArgsTest.exe", "--configFile=testconfig.yaml", "--Tmin=0.0997",
+                       "--input=input.nc", "--doChannels=false",           "--nonLinearIters=2"};
+
+  CUAS::CUASArgs args;
+  parseArgs(static_cast<int>(input.size()), const_cast<char **>(input.data()), args);
+
+  // verbosity
+  ASSERT_EQ(args.verbose, false);
+  ASSERT_EQ(args.verboseSolver, false);
+
+  // input and output
+  ASSERT_EQ(args.input, "input.nc");
+  ASSERT_EQ(args.output, "out.nc");
+  ASSERT_EQ(args.coordinatesFile, "");
+  ASSERT_EQ(args.restart, "");
+  ASSERT_EQ(args.restartNoneZeroInitialGuess, true);
+
+  // time stepping
+  ASSERT_EQ(args.starttime, "");
+  ASSERT_EQ(args.endtime, "");
+  ASSERT_EQ(args.totaltime, "");
+  ASSERT_EQ(args.dt, "");
+  ASSERT_EQ(args.timeStepFile, "");
+
+  // output behavior
+  ASSERT_EQ(args.saveEvery, 0);
+  ASSERT_EQ(args.saveInterval, "");
+  ASSERT_EQ(args.outputSize, "normal");
+
+  // forcing
+  ASSERT_EQ(args.forcingFile, "");
+  ASSERT_EQ(args.sizeOfForcingBuffer, -1);
+  ASSERT_EQ(args.loopForcing, false);
+  ASSERT_EQ(args.seaLevelForcing, "");
+
+  // solver behavior
+  ASSERT_EQ(args.directSolver, false);
+  ASSERT_EQ(args.nonLinearIters, 2);
+  ASSERT_EQ(args.timeSteppingTheta, 1.0);
+  ASSERT_EQ(args.enableUDS, false);
+  ASSERT_EQ(args.disableNonNegative, false);
+
+  // channel configuration
+  ASSERT_EQ(args.doChannels, false);
+  ASSERT_EQ(args.selectedChannels, "melt");
+  ASSERT_EQ(args.doAllChannels, false);
+  ASSERT_EQ(args.doAnyChannel, true);
+  ASSERT_EQ(args.doCavity, false);
+  ASSERT_EQ(args.doMelt, true);
+  ASSERT_EQ(args.doCreep, false);
+
+  // physics
+  ASSERT_EQ(args.initialHead, "mid");
+  ASSERT_EQ(args.Tmax, 17.0);
+  ASSERT_EQ(args.Tmin, 0.0997);
+  ASSERT_EQ(args.Tinit, 0.13234);
+  ASSERT_EQ(args.disableUnconfined, true);
+  ASSERT_EQ(args.conductivity, 7.0);
+  ASSERT_EQ(args.flowConstant, 5e-25);
+  ASSERT_EQ(args.roughnessFactor, 1.0);
+  ASSERT_EQ(args.supplyMultiplier, 1.0);
+  ASSERT_EQ(args.layerThickness, 0.1);
+  ASSERT_EQ(args.unconfSmooth, 0.0);
+  ASSERT_EQ(args.specificStorage, 0.0000982977696);
+  ASSERT_EQ(args.specificYield, 0.4);
+  ASSERT_EQ(args.thresholdThicknessUDS, 0.0);
+  ASSERT_EQ(args.basalVelocityIce, 1e-6);
+  ASSERT_EQ(args.cavityBeta, 5e-4);
+
+  // outflow boundary conditions
+  ASSERT_EQ(args.Twater, 100.0);
+  ASSERT_EQ(args.dirichletBCWaterDepth, 1.0);
+  ASSERT_EQ(args.blockInflow, 1);
+  ASSERT_EQ(args.applyRestartChecks, false);
+}
+
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
   PetscInitialize(&argc, &argv, nullptr, nullptr);

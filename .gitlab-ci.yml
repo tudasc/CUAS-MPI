@@ -94,6 +94,15 @@ install-cuas:
     - cmake --install $CUAS_BUILD_DIR --prefix $CUAS_INSTALL_DIR
 
 
+test-thirdparty:
+  stage: unit-test
+  needs: ["install-cuas"]
+  script:
+    - cd $CUAS_WORK_PATH
+    - cd $CUAS_INSTALL_DIR/test/thirdparty
+    - ./test-yamlcpp
+
+
 test-petscwrapper:
   stage: unit-test
   needs: ["install-cuas"]
@@ -140,6 +149,7 @@ test-cuas:
     - pushd $CUAS_INSTALL_DIR/bin
     - mpirun -n 1 ./cuas.exe --version >> version.txt
     - mpirun -n 1 ./cuas.exe --help >> help.txt
+    - mpirun -n 1 ./cuas.exe --defaultConfigToFile
     - popd
     - cd $CUAS_INSTALL_DIR/test/cuascore/integration
     - mpirun -n 9 --timeout 60 ./test-noData
