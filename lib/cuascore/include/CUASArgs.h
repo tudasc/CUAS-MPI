@@ -158,7 +158,9 @@ class CUASArgs {
     ValueType *destination;
 
    public:
-    void parse(cxxopts::ParseResult const &result) override { *destination = result[optionName].as<ValueType>(); }
+    void parse(cxxopts::ParseResult const &result) override {
+      *destination = result[optionName].template as<ValueType>();
+    }
     void init(cxxopts::Options &options) override {
       options.add_options()(optionIdentifier, description, cxxopts::value<ValueType>()->default_value(defaultValue));
     }

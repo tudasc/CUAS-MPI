@@ -35,6 +35,7 @@ variables:
   OPENMPI_VERSION: 4.0
   PETSC_VERSION: 3.14
   LIBNETCDF_VERSION: 4.7
+  CLANG_VERSION: 17.0.6
   LLVM_VERSION: 12.0.1
   PYTHON_VERSION: 3.9.5
 
@@ -68,6 +69,21 @@ build-cuas:
     - cd $CUAS_WORK_PATH
     - cmake -B $CUAS_BUILD_DIR -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
     - cmake --build $CUAS_BUILD_DIR --verbose --parallel $(cat /proc/cpuinfo | grep processor | wc -l)
+
+
+build-cuas-clang:
+  stage: build
+  needs: ["build-cuas"]
+  before_script:
+    - *output-directories
+    - *lb-setup
+    - module load clang/$CLANG_VERSION
+    - export OMPI_CC=clang
+    - export OMPI_CXX=clang++
+  script:
+    - cd $CUAS_WORK_PATH
+    - cmake -B $CUAS_BUILD_DIR-clang -DCMAKE_BUILD_TYPE=Release -DCUAS_ENABLE_TESTS=ON -DPETSC_DIR=$PETSC_ROOT -DNETCDF_DIR=$LIBNETCDF_ROOT
+    - cmake --build $CUAS_BUILD_DIR-clang --verbose --parallel $(cat /proc/cpuinfo | grep processor | wc -l)
 
 
 install-cuas:
