@@ -137,11 +137,11 @@ void restartFromNetCDF(CUAS::CUASSolver &solver, std::string const &restartFile,
  * CUAS-MPI main function
  */
 int main(int argc, char *argv[]) {
-  CUAS::CUASArgs args;
-  parseArgs(argc, argv, args);
-
   PetscInitialize(&argc, &argv, nullptr, nullptr);
   {
+    CUAS::CUASArgs args;
+    parseArgs(argc, argv, args);
+
     CUAS::ModelReader reader(args.input);
     auto model = reader.fillModelFromNetcdf();
 
