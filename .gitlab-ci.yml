@@ -116,6 +116,18 @@ test-petscwrapper:
     - mpirun -n 4 --timeout 60 ./test-fillgrid
 
 
+test-netcdfwrapper:
+  stage: unit-test
+  needs: ["install-cuas"]
+  script:
+    - cd $CUAS_WORK_PATH
+    - cd $CUAS_INSTALL_DIR/test/netcdfwrapper/unit
+    - mpirun -n 1 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 2 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 3 --timeout 60 ./test-NetCDFFile
+    - mpirun -n 4 --timeout 60 ./test-NetCDFFile
+
+
 test-cuascore:
   stage: unit-test
   needs: ["install-cuas"]
@@ -130,10 +142,6 @@ test-cuascore:
     - mpirun -n 1 --timeout 60 ./test-systemmatrix
     - mpirun -n 4 --timeout 60 ./test-systemmatrix
     - mpirun -n 6 --timeout 60 ./test-fillNoData
-    - mpirun -n 1 --timeout 60 ./test-NetCDFFile
-    - mpirun -n 2 --timeout 60 ./test-NetCDFFile
-    - mpirun -n 3 --timeout 60 ./test-NetCDFFile
-    - mpirun -n 4 --timeout 60 ./test-NetCDFFile
     - mpirun -n 4 --timeout 60 ./test-SolutionHandler
     - mpirun -n 4 --timeout 60 ./test-initialHead
     #- mpirun -n 1 --timeout 60 ./test-ModelReader

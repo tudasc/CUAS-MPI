@@ -5,7 +5,6 @@
  */
 
 #include "NetCDFFile.h"
-#include "timeparse.h"
 
 #include "gtest/gtest.h"
 
@@ -264,7 +263,7 @@ TEST(NetCDFFileTest, readTimeArrayOfDifferentTypes) {
   std::string fileName = "readTimeArray.nc";
 
   // CUAS data type for time, this is also "long" but could change in the future
-  std::vector<CUAS::timeSecs> time(TIME_LEN);
+  std::vector<long> time(TIME_LEN);
   // default types
   std::vector<double> time_double(TIME_LEN);
   std::vector<float> time_float(TIME_LEN);
@@ -276,7 +275,7 @@ TEST(NetCDFFileTest, readTimeArrayOfDifferentTypes) {
   std::vector<unsigned short> time_ushort(TIME_LEN);
 
   for (short i = 0; i < TIME_LEN; ++i) {
-    time[i] = (CUAS::timeSecs)i;
+    time[i] = (long)i;
     time_double[i] = (double)i;
     time_float[i] = (float)i;
     time_long[i] = (long)i;
@@ -336,7 +335,7 @@ TEST(NetCDFFileTest, readTimeArrayOfDifferentTypes) {
                                        "time_short",  "time_uint",  "time_ushort"};
 
   for (auto &name : varNames) {
-    std::vector<CUAS::timeSecs> time_in(nt);
+    std::vector<long> time_in(nt);
     // std::cout << name << std::endl;
     file.read(name, time_in);
     for (int i = 0; i < nt; ++i) {

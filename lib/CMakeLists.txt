@@ -1,2 +1,3 @@
 add_subdirectory(petscwrapper)
+add_subdirectory(netcdfwrapper)
 add_subdirectory(cuascore)
