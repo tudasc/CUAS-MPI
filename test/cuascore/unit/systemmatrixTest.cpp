@@ -60,7 +60,7 @@ TEST(fillMatrixTest, randomValuesSystemmatrixDeprecated) {
 
   PETScGrid gridB(NX, NY);
   Mat petscA;
-  DMCreateMatrix(gridB.dm, &petscA);
+  DMCreateMatrix(gridB.getDM(), &petscA);
   PETScMatrix matA(petscA);
 
   CUAS::systemmatrixDeprecated(matA, gridB, SeGrid, effTrans, dx, dtsecs, theta, u_nGrid, forcing->getCurrent(0),
@@ -100,9 +100,9 @@ TEST(fillMatrixTest, randomValuesSystemmatrixDeprecated) {
   // check equality of sum(A*b)
   {
     PETScGrid productGrid(NX, NY);
-    MatMult(petscA, gridB.global, productGrid.global);
+    MatMult(petscA, gridB.getGlobal(), productGrid.getGlobal());
     PetscScalar sum;
-    VecSum(productGrid.global, &sum);
+    VecSum(productGrid.getGlobal(), &sum);
     ASSERT_DOUBLE_EQ(sum, 6708180545601.590820);
   }
 }
@@ -158,7 +158,7 @@ TEST(fillMatrixTest, randomValues) {
 
   PETScGrid gridB(NX, NY);
   Mat petscA;
-  DMCreateMatrix(gridB.dm, &petscA);
+  DMCreateMatrix(gridB.getDM(), &petscA);
   PETScMatrix matA(petscA);
 
   CUAS::updateInterfaceTransmissivityCDS(effTransEast, effTransWest, effTransNorth, effTransSouth, bndMaskGrid,
@@ -201,9 +201,9 @@ TEST(fillMatrixTest, randomValues) {
   // check equality of sum(A*b)
   {
     PETScGrid productGrid(NX, NY);
-    MatMult(petscA, gridB.global, productGrid.global);
+    MatMult(petscA, gridB.getGlobal(), productGrid.getGlobal());
     PetscScalar sum;
-    VecSum(productGrid.global, &sum);
+    VecSum(productGrid.getGlobal(), &sum);
     ASSERT_DOUBLE_EQ(sum, 6708180545601.590820);
   }
 }
@@ -259,7 +259,7 @@ TEST(fillMatrixTest, randomValues3x3) {
 
   PETScGrid gridB(gridedge, gridedge);
   Mat petscA;
-  DMCreateMatrix(gridB.dm, &petscA);
+  DMCreateMatrix(gridB.getDM(), &petscA);
   PETScMatrix matA(petscA);
 
   CUAS::updateInterfaceTransmissivityCDS(effTransEast, effTransWest, effTransNorth, effTransSouth, bndMaskGrid,
@@ -271,9 +271,9 @@ TEST(fillMatrixTest, randomValues3x3) {
   // check equality of sum(A*b)
   {
     PETScGrid product(gridedge, gridedge);
-    MatMult(petscA, gridB.global, product.global);
+    MatMult(petscA, gridB.getGlobal(), product.getGlobal());
     PetscScalar sum;
-    VecSum(product.global, &sum);
+    VecSum(product.getGlobal(), &sum);
     ASSERT_DOUBLE_EQ(sum, -1339558223.324310);
   }
 }

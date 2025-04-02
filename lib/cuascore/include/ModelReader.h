@@ -35,6 +35,12 @@ class ModelReader {
 
  public:
   explicit ModelReader(std::string const &fileName);
+  ModelReader(ModelReader const &) = delete;
+  ModelReader &operator=(ModelReader const &) = delete;
+  ModelReader(ModelReader &&) = delete;
+  ModelReader &operator=(ModelReader &&) = delete;
+  ~ModelReader() = default;
+
   std::unique_ptr<CUASModel> fillModelFromNetcdf();
   static void restartFromFile(CUASSolver &solver, std::string const &restartFile, bool restartNoneZeroInitialGuess);
 

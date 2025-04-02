@@ -27,10 +27,10 @@ class BufferedForcing : public Forcing {
   explicit BufferedForcing(std::unique_ptr<NetCDFFile> &ncFile, std::string const &fieldName, int nx, int ny,
                            int numberOfSlicesPerLoad = 10, PetscScalar multiplier = 1.0, PetscScalar offset = 0.0,
                            bool loopForcing = false);
-  BufferedForcing(const BufferedForcing &) = delete;
+  BufferedForcing(BufferedForcing const &) = delete;
   BufferedForcing &operator=(BufferedForcing const &) = delete;
-  BufferedForcing(const BufferedForcing &&) = delete;
-  BufferedForcing &operator=(BufferedForcing const &&) = delete;
+  BufferedForcing(BufferedForcing &&) = delete;
+  BufferedForcing &operator=(BufferedForcing &&) = delete;
   ~BufferedForcing() override = default;
 
   // member functions

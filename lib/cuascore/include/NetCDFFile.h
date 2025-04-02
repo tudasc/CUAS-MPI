@@ -74,9 +74,16 @@ class NetCDFFile {
 
  public:
   // open file
-  NetCDFFile(std::string const &fileName, char mode);
+  explicit NetCDFFile(std::string const &fileName, char mode);
   // create file
-  NetCDFFile(std::string const &fileName, int dimX, int dimY);
+  explicit NetCDFFile(std::string const &fileName, int dimX, int dimY);
+
+  NetCDFFile(NetCDFFile const &) = delete;
+  NetCDFFile &operator=(NetCDFFile const &) = delete;
+  NetCDFFile(NetCDFFile &&) = delete;
+  NetCDFFile &operator=(NetCDFFile &&) = delete;
+  ~NetCDFFile();
+
   // gets the fileId
   int getFileId() const { return fileId; };
   // gets the number of dimensions in the netcdf file
@@ -163,8 +170,6 @@ class NetCDFFile {
 
   //! \brief Get a text attribute.
   std::string readTextAttribute(std::string const &varName, std::string const &attName);
-
-  ~NetCDFFile();
 
   // Return a string containing the name of the type defined in netcdf.h
   static std::string getTypeName(nc_type varType);

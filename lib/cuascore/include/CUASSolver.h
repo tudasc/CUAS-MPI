@@ -21,10 +21,10 @@ namespace CUAS {
 class CUASSolver {
  public:
   explicit CUASSolver(CUASModel *model, CUASArgs const *args, SolutionHandler *solutionHandler = nullptr);
-  CUASSolver(CUASSolver &) = delete;
-  CUASSolver(CUASSolver &&) = delete;
+  CUASSolver(CUASSolver const &) = delete;
   CUASSolver &operator=(CUASSolver const &) = delete;
-  CUASSolver &operator=(CUASSolver const &&) = delete;
+  CUASSolver(CUASSolver &&) = delete;
+  CUASSolver &operator=(CUASSolver &&) = delete;
   ~CUASSolver() { DMDestroy(&dm); }
 
   // member functions

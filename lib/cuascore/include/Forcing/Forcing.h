@@ -16,10 +16,10 @@ namespace CUAS {
 class Forcing {
  public:
   explicit Forcing() = default;
-  Forcing(const Forcing &) = delete;
+  Forcing(Forcing const &) = delete;
   Forcing &operator=(Forcing const &) = delete;
-  Forcing(const Forcing &&) = delete;
-  Forcing &operator=(Forcing const &&) = delete;
+  Forcing(Forcing &&) = delete;
+  Forcing &operator=(Forcing &&) = delete;
   virtual ~Forcing() = default;
 
   // member functions

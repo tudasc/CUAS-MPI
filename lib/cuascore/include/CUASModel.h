@@ -21,10 +21,10 @@ namespace CUAS {
 class CUASModel : public WaterSource {
  public:
   explicit CUASModel(int numOfCols, int numOfRows);
-  CUASModel(CUASModel &) = delete;
+  CUASModel(CUASModel const &) = delete;
   CUASModel &operator=(CUASModel const &) = delete;
   CUASModel(CUASModel &&) = delete;
-  CUASModel &operator=(CUASModel const &&) = delete;
+  CUASModel &operator=(CUASModel &&) = delete;
   ~CUASModel() = default;
 
   // member functions
