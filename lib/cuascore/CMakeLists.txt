@@ -4,7 +4,6 @@ add_library(
   src/CUASArgs.cpp
   src/systemmatrix.cpp
   src/CUASSolver.cpp
-  src/NetCDFFile.cpp
   src/SolutionHandler.cpp
   src/ModelReader.cpp
   src/utilities.cpp
@@ -13,10 +12,9 @@ add_library(
 target_include_directories(cuascore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_link_libraries(cuascore petscwrapper)
+target_link_libraries(cuascore netcdfwrapper)
 
 add_dependencies(cuascore gitversion)
-
-add_netcdf(cuascore)
 
 add_cxxopts(cuascore)
 add_yamlcpp(cuascore)
