@@ -38,10 +38,10 @@ class CUASTimeIntegrator {
       maxNextDt = timeSteps[1] - timeSteps[0];
     }
   }
-  CUASTimeIntegrator(CUASTimeIntegrator &) = delete;
+  CUASTimeIntegrator(CUASTimeIntegrator const &) = delete;
   CUASTimeIntegrator &operator=(CUASTimeIntegrator const &) = delete;
   CUASTimeIntegrator(CUASTimeIntegrator &&) = delete;
-  CUASTimeIntegrator &operator=(CUASTimeIntegrator const &&) = delete;
+  CUASTimeIntegrator &operator=(CUASTimeIntegrator &&) = delete;
   ~CUASTimeIntegrator() = default;
 
   // member

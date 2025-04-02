@@ -27,10 +27,10 @@ class TimeDependentForcing : public Forcing {
  public:
   explicit TimeDependentForcing(std::vector<std::unique_ptr<PETScGrid>> &forcing, std::vector<timeSecs> const &time,
                                 PetscScalar multiplier = 1.0, PetscScalar offset = 0.0, bool loopForcing = false);
-  TimeDependentForcing(const TimeDependentForcing &) = delete;
+  TimeDependentForcing(TimeDependentForcing const &) = delete;
   TimeDependentForcing &operator=(TimeDependentForcing const &) = delete;
-  TimeDependentForcing(const TimeDependentForcing &&) = delete;
-  TimeDependentForcing &operator=(TimeDependentForcing const &&) = delete;
+  TimeDependentForcing(TimeDependentForcing &&) = delete;
+  TimeDependentForcing &operator=(TimeDependentForcing &&) = delete;
   ~TimeDependentForcing() override = default;
 
   // member functions

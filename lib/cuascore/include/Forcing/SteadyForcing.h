@@ -25,10 +25,10 @@ class SteadyForcing : public Forcing {
     SteadyForcing::applyMultiplier(multiplier);
     SteadyForcing::applyOffset(offset);
   }
-  SteadyForcing(const SteadyForcing &) = delete;
+  SteadyForcing(SteadyForcing const &) = delete;
   SteadyForcing &operator=(SteadyForcing const &) = delete;
-  SteadyForcing(const SteadyForcing &&) = delete;
-  SteadyForcing &operator=(SteadyForcing const &&) = delete;
+  SteadyForcing(SteadyForcing &&) = delete;
+  SteadyForcing &operator=(SteadyForcing &&) = delete;
   ~SteadyForcing() override = default;
 
   // member functions

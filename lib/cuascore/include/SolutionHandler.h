@@ -45,12 +45,12 @@ class SolutionHandler {
  public:
   // use this constructor if you want to determine the shape of the solution on your own
   // TODO should we base this on CUASModel?
-  SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize,
-                  bool storeMutable = false);
+  explicit SolutionHandler(std::string const &fileName, int dimX, int dimY, std::string const &outputSize,
+                           bool storeMutable = false);
   SolutionHandler(SolutionHandler const &) = delete;
-  SolutionHandler(SolutionHandler const &&) = delete;
   SolutionHandler &operator=(SolutionHandler const &) = delete;
-  SolutionHandler &operator=(SolutionHandler const &&) = delete;
+  SolutionHandler(SolutionHandler &&) = delete;
+  SolutionHandler &operator=(SolutionHandler &&) = delete;
   ~SolutionHandler() = default;
 
   // member functions

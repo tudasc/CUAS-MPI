@@ -27,10 +27,10 @@ class ScalarTimeDependentForcing : public Forcing {
   explicit ScalarTimeDependentForcing(int nx, int ny, int rowIndex, int colIndex, std::vector<PetscScalar> &timeSeries,
                                       std::vector<timeSecs> const &time, PetscScalar multiplier = 1.0,
                                       PetscScalar offset = 0.0, bool loopForcing = false);
-  ScalarTimeDependentForcing(const ScalarTimeDependentForcing &) = delete;
+  ScalarTimeDependentForcing(ScalarTimeDependentForcing const &) = delete;
   ScalarTimeDependentForcing &operator=(ScalarTimeDependentForcing const &) = delete;
-  ScalarTimeDependentForcing(const ScalarTimeDependentForcing &&) = delete;
-  ScalarTimeDependentForcing &operator=(ScalarTimeDependentForcing const &&) = delete;
+  ScalarTimeDependentForcing(ScalarTimeDependentForcing &&) = delete;
+  ScalarTimeDependentForcing &operator=(ScalarTimeDependentForcing &&) = delete;
   ~ScalarTimeDependentForcing() override = default;
 
   // member functions

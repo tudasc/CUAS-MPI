@@ -22,7 +22,7 @@ namespace CUAS {
 
 class CUASArgs {
  public:
-  CUASArgs() { setup(); }
+  explicit CUASArgs() { setup(); }
   ~CUASArgs() = default;
   // CUASArgs cannot be copied because cuasOptions is not copyable
   CUASArgs(CUASArgs const &) = delete;

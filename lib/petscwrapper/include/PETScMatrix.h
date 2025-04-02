@@ -32,8 +32,9 @@
  */
 
 class PETScMatrix {
+  friend class PETScSolver;
+
  public:
-  // constructor
   explicit PETScMatrix(int numOfRows, int numOfCols) : nRows(numOfRows), nCols(numOfCols) {
     MatCreate(PETSC_COMM_WORLD, &mat);
     MatSetSizes(mat, PETSC_DECIDE, PETSC_DECIDE, numOfRows, numOfCols);
@@ -41,29 +42,36 @@ class PETScMatrix {
     MatSetUp(mat);
   }
   explicit PETScMatrix(Mat mat) : mat(mat) { MatGetSize(mat, &nRows, &nCols); }
-  PETScMatrix(PETScMatrix &) = delete;
+  PETScMatrix(PETScMatrix const &) = delete;
+  PETScMatrix &operator=(PETScMatrix const &) = delete;
   PETScMatrix(PETScMatrix &&) = delete;
+  PETScMatrix &operator=(PETScMatrix &&) = delete;
   ~PETScMatrix() { MatDestroy(&mat); }
 
-  // getter
-  Mat getRaw() { return mat; }
-  int getNumberOfCols() const { return nCols; }
-  int getNumberOfRows() const { return nRows; }
-  // setter
+  // member functions
+ public:
   void setValue(int row, int col, PetscScalar val) { MatSetValue(mat, row, col, val, INSERT_VALUES); }
   void setZero() { MatZeroEntries(mat); }
-  // utils
+
+  Mat getRaw() { return mat; }
+  int getNumberOfRows() const { return nRows; }
+  int getNumberOfCols() const { return nCols; }
+
   void assemble() {
     MatAssemblyBegin(mat, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(mat, MAT_FINAL_ASSEMBLY);
   }
 
+  // member
+ public:
+  // member
  private:
   Mat mat;
-  int nCols;
   int nRows;
+  int nCols;
 
-  friend class PETScSolver;
+  // member functions
+ private:
 };
 
 #endif

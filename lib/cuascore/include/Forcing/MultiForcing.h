@@ -18,10 +18,10 @@ namespace CUAS {
 class MultiForcing : public Forcing {
  public:
   explicit MultiForcing(int nCols, int nRows) { current = std::make_unique<PETScGrid>(nCols, nRows); }
-  MultiForcing(const MultiForcing &) = delete;
+  MultiForcing(MultiForcing const &) = delete;
   MultiForcing &operator=(MultiForcing const &) = delete;
-  MultiForcing(const MultiForcing &&) = delete;
-  MultiForcing &operator=(MultiForcing const &&) = delete;
+  MultiForcing(MultiForcing &&) = delete;
+  MultiForcing &operator=(MultiForcing &&) = delete;
   ~MultiForcing() override = default;
 
   // member functions
