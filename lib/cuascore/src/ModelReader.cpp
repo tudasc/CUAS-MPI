@@ -5,6 +5,7 @@
  */
 
 #include "ModelReader.h"
+#include "CUASConstants.h"
 
 #include "timeparse.h"
 
@@ -160,7 +161,7 @@ std::unique_ptr<ScalarTimeDependentForcing> ModelReader::getScalarTimeDependentF
 
   // find index in grid, if any
   int rowIndex, colIndex;
-  auto allowedError = 1.0e-3 * (xAxis[1] - xAxis[0]);  // 0.1% of dx, todo: update after MR181
+  auto allowedError = RELATIVE_GRID_SPACING_ERROR * (xAxis[1] - xAxis[0]);
 
   // search for rowIndex
   {
@@ -170,6 +171,7 @@ std::unique_ptr<ScalarTimeDependentForcing> ModelReader::getScalarTimeDependentF
     auto distLower = p - xAxis[upperBound - 1];
     rowIndex = (distUpper > distLower) ? upperBound - 1 : upperBound;
     if (std::fabs(p - xAxis[rowIndex]) > allowedError) {
+      // given x-coordinate is not on the model grid within position error limit
       CUAS_ERROR("ModelReader.cpp: getScalarTimeDependentForcing(): |xAxis[index] - x| > {}. Exiting.", allowedError)
       exit(1);
     }
@@ -184,7 +186,8 @@ std::unique_ptr<ScalarTimeDependentForcing> ModelReader::getScalarTimeDependentF
     auto distUpper = yAxis[upperBound] - p;
     auto distLower = p - yAxis[upperBound - 1];
     colIndex = (distUpper > distLower) ? upperBound - 1 : upperBound;
-    if (std::fabs(p - yAxis[rowIndex]) > allowedError) {
+    if (std::fabs(p - yAxis[colIndex]) > allowedError) {
+      // given y-coordinate is not on the model grid within position error limit
       CUAS_ERROR("ModelReader.cpp: getScalarTimeDependentForcing(): |yAxis[index] - y| > {}. Exiting.", allowedError)
       exit(1);
     }
