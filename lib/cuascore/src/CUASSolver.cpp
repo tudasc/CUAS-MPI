@@ -91,20 +91,22 @@ void CUASSolver::setup() {
   rateFactorIce->setConst(args->flowConstant);         // todo: read 2d field from file (optional)
   basalVelocityIce->setConst(args->basalVelocityIce);  // todo: read 2d field from file (optional)
 
-  // as in CUAS-python
-  if (args->doAnyChannel) {
-    currTransmissivity->setConst(args->Tinit);
-  } else {
-    currTransmissivity->setConst(args->layerThickness * args->conductivity);
-  }
-
+  currTransmissivity->setConst(args->Tinit);
   {
-    auto T = currTransmissivity->getWriteHandle();
+    // See also CUASSolver::solve() for args->applyRestartChecks
+    auto trans = currTransmissivity->getWriteHandle();
     auto &mask = model->bndMask->getReadHandle();
-    for (int i = 0; i < currTransmissivity->getLocalNumOfRows(); ++i) {
-      for (int j = 0; j < currTransmissivity->getLocalNumOfCols(); ++j) {
-        if (mask(i, j) == (PetscScalar)NOFLOW_FLAG) {
-          T(i, j) = NOFLOW_VALUE;
+    auto &topg = model->topg->getReadHandle();
+    for (int row = 0; row < currHead->getLocalNumOfRows(); ++row) {
+      for (int col = 0; col < currHead->getLocalNumOfCols(); ++col) {
+        if (mask(row, col) == (PetscScalar)NOFLOW_FLAG) {
+          // no-flow must be obtained after restart
+          trans(row, col) = NOFLOW_VALUE;
+        } else if (mask(row, col) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
+          // ensure proper ocean bc's after restart from e.g. interpolated fields
+          trans(row, col) = args->Tmax;
+        } else if (mask(row, col) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
+          trans(row, col) = args->Tmax;
         }
       }
     }
