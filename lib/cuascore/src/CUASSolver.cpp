@@ -104,9 +104,9 @@ void CUASSolver::setup() {
           trans(row, col) = NOFLOW_VALUE;
         } else if (mask(row, col) == (PetscScalar)DIRICHLET_OCEAN_FLAG) {
           // ensure proper ocean bc's after restart from e.g. interpolated fields
-          trans(row, col) = args->Tmax;
+          trans(row, col) = args->Twater;
         } else if (mask(row, col) == (PetscScalar)DIRICHLET_LAKE_FLAG) {
-          trans(row, col) = args->Tmax;
+          trans(row, col) = args->Twater;
         }
       }
     }
